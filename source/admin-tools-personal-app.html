@@ -1103,7 +1103,7 @@ function rolOpNaaste(medewerker,naasteId){return (medewerker.naasteRechten||{})[
 function naasteRechtenRow(p){
  var naasten=personenVanType('naaste');
  if(!naasten.length)return '<p class="empty-msg">Geen naasten in deze groep.</p>';
- var rollen=ROLLEN.medewerker.groep.filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return naasten.map(function(n){
   var huidig=(p.naasteRechten||{})[n.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n))+'<div class="pinfo"><div class="naam">'+naam(n)+'</div></div>'+
@@ -1125,7 +1125,7 @@ function wireNaasteRechten(container,onchange){
 function medewerkerRechtenRow(naasteId){
  var medewerkers=personenVanType('medewerker');
  if(!medewerkers.length)return '<p class="empty-msg">Geen medewerkers in deze groep.</p>';
- var rollen=ROLLEN.medewerker.groep.filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return medewerkers.map(function(m){
   var huidig=rolOpNaaste(m,naasteId)||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
@@ -1148,7 +1148,7 @@ function rolOpMedewerker(medewerker,otherId){return (medewerker.medewerkerRechte
 function medewerkerPeerRow(p){
  var peers=personenVanType('medewerker').filter(function(m){return m.id!==p.id;});
  if(!peers.length)return '<p class="empty-msg">Geen andere medewerkers in deze groep.</p>';
- var rollen=ROLLEN.medewerker.groep.filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN.medewerker.medewerkers.filter(function(r){return r!=='Geen';});
  return peers.map(function(m){
   var huidig=(p.medewerkerRechten||{})[m.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
