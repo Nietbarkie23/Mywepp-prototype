@@ -1585,6 +1585,7 @@ function renderDigibord(){
 renderDigibord();
 el('digibord-opslaan').addEventListener('click',function(){
  el('digibord-bevestiging').innerHTML='<div class="bevestiging reveal">Digibord-instellingen opgeslagen voor '+huidigeGroep+'.</div>';
+ verzondenTimer=setTimeout(function(){show('pp-hub');},1500);
 });
 
 /* ============== CLIENT-APP (MOBIEL) ============== */
