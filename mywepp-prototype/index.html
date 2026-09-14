@@ -835,14 +835,28 @@ function setGrootAvatar(elId,p){
 
 /* ============== ADMIN TOOLS: data ============== */
 var GROEPEN=['De Boomgaard','De Wilgenhof','Dagbesteding Centrum'];
-var ROLLEN={medewerker:['Begeleider','Teamleider','Invaller','Stagiair','Geen'],naaste:['Naaste — basis','Naaste — uitgebreid','Geen']};
+/* Rechtenset-namen overgenomen uit het echte MyWepp rechtensets-scherm (Admin Tools > Rechtensets),
+   per categorie zodat elke schaal (globaal/groep/cliënten/gebruikers) zijn eigen realistische sets heeft. */
+var ROLLEN={
+ medewerker:{
+  globaal:['Admin','Admin met recht op infobord en tools','Financiële Admin','Medewerker met statistiekrecht','Medewerker','Vrijwilliger','Bord inlog','Geen'],
+  groep:['Groep admin','Medewerker','Nieuws redacteur','Bord inlog','Geen'],
+  clienten:['Medewerker met prikbord en dossier','Medewerker met prikbord','Medewerker','Bord inlog','Geen'],
+  medewerkers:['Roosteraar met bekijk recht en profiel','Roosteraar met bekijkrecht','Roosteraar','Geen']
+ },
+ naaste:{
+  globaal:['Mantelzorger','Geen'],
+  groep:['Mantelzorger','Mantelzorger zonder agenda met participatie 1e lijn','Mantelzorger simpel','Geen'],
+  clienten:['Mantelzorger +prikbord +dossier','Mantelzorger met prikbord','Mantelzorger alleen agenda en watchphone','Mantelzorger','Geen']
+ }
+};
 var RECHTEN={
  medewerker:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'},{k:'clienten',l:'Cliënten (alle cliënten in de groep)'},{k:'medewerkers',l:'Recht op andere medewerkers'}],
  naaste:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'}]
 };
 var orgDefault={
- medewerker:{globaal:{rol:'Begeleider',opt:[]},groep:{rol:'Begeleider',opt:['Teamleider']},clienten:{rol:'Begeleider',opt:[]},medewerkers:{rol:'Geen',opt:[]}},
- naaste:{globaal:{rol:'Naaste — basis',opt:[]},groep:{rol:'Naaste — basis',opt:['Naaste — uitgebreid']}}
+ medewerker:{globaal:{rol:'Medewerker',opt:[]},groep:{rol:'Medewerker',opt:['Groep admin']},clienten:{rol:'Medewerker',opt:['Medewerker met prikbord']},medewerkers:{rol:'Geen',opt:[]}},
+ naaste:{globaal:{rol:'Mantelzorger',opt:[]},groep:{rol:'Mantelzorger',opt:['Mantelzorger simpel']}}
 };
 var groupOverride={};
 var bulkSel={groepen:{}, type:'medewerker', werk:{}};
@@ -864,8 +878,8 @@ function rechtenRows(container,type,data,onchange){
   return '<div class="rechtrow" data-k="'+r.k+'">'+
    '<div class="top"><b>'+r.l+'</b></div>'+
    '<div class="rechtgrid">'+
-    '<div class="field"><label>Standaardrol</label><select data-role="'+r.k+'">'+ROLLEN[type].map(function(rol){return '<option'+(rol===cur.rol?' selected':'')+'>'+rol+'</option>';}).join('')+'</select></div>'+
-    '<div class="field"><label>Optionele rollen</label><div class="optlist" data-opt="'+r.k+'">'+ROLLEN[type].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';}).map(function(rol){
+    '<div class="field"><label>Standaardrol</label><select data-role="'+r.k+'">'+ROLLEN[type][r.k].map(function(rol){return '<option'+(rol===cur.rol?' selected':'')+'>'+rol+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>Optionele rollen</label><div class="optlist" data-opt="'+r.k+'">'+ROLLEN[type][r.k].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';}).map(function(rol){
       var on=cur.opt.indexOf(rol)>-1;
       return '<label class="optchip'+(on?' on':'')+'"><input type="checkbox" value="'+rol+'" '+(on?'checked':'')+'>'+rol+'</label>';
     }).join('')+'</div></div>'+
@@ -989,9 +1003,9 @@ var STATE_COLOR={nieuw:'var(--moss)',gewijzigd:'var(--amber)',verwijderd:'var(--
 var people=[
  {id:1,type:'client',voor:'Elif',achter:'Yildiz',mail:'',groepen:['De Boomgaard']},
  {id:2,type:'client',voor:'Bram',achter:'Smit',mail:'',groepen:['De Boomgaard']},
- {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Begeleider',contactpersoon:true,clientRechten:{1:'Begeleider',2:'Begeleider'}},
- {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',tel:'06 23 45 67 89',groepen:['De Boomgaard','De Wilgenhof'],rol:'Begeleider',contactpersoon:false,clientRechten:{2:'Invaller'}},
- {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',tel:'06 34 56 78 90',groepen:['De Boomgaard'],rol:'Naaste — basis',clientRechten:{1:'Naaste — basis'}}
+ {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Admin met recht op infobord en tools',contactpersoon:true,clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
+ {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',tel:'06 23 45 67 89',groepen:['De Boomgaard','De Wilgenhof'],rol:'Medewerker',contactpersoon:false,clientRechten:{2:'Medewerker'}},
+ {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',tel:'06 34 56 78 90',groepen:['De Boomgaard'],rol:'Mantelzorger',clientRechten:{1:'Mantelzorger met prikbord'}}
 ];
 function rolOpClient(persoon,clientId){return (persoon.clientRechten||{})[clientId]||null;}
 var nextId=6;
@@ -1073,7 +1087,7 @@ function editFormClient(p){
 function clientRechtenRow(p,t){
  var clients=personenVanType('client');
  if(!clients.length)return '<p class="empty-msg">Geen cliënten in deze groep.</p>';
- var rollen=ROLLEN[t].filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN[t].clienten.filter(function(r){return r!=='Geen';});
  return clients.map(function(c){
   var huidig=(p.clientRechten||{})[c.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c))+'<div class="pinfo"><div class="naam">'+naam(c)+'</div></div>'+
@@ -1096,7 +1110,7 @@ function rolOpNaaste(medewerker,naasteId){return (medewerker.naasteRechten||{})[
 function naasteRechtenRow(p){
  var naasten=personenVanType('naaste');
  if(!naasten.length)return '<p class="empty-msg">Geen naasten in deze groep.</p>';
- var rollen=ROLLEN.medewerker.filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN.medewerker.groep.filter(function(r){return r!=='Geen';});
  return naasten.map(function(n){
   var huidig=(p.naasteRechten||{})[n.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n))+'<div class="pinfo"><div class="naam">'+naam(n)+'</div></div>'+
@@ -1118,7 +1132,7 @@ function wireNaasteRechten(container,onchange){
 function medewerkerRechtenRow(naasteId){
  var medewerkers=personenVanType('medewerker');
  if(!medewerkers.length)return '<p class="empty-msg">Geen medewerkers in deze groep.</p>';
- var rollen=ROLLEN.medewerker.filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN.medewerker.groep.filter(function(r){return r!=='Geen';});
  return medewerkers.map(function(m){
   var huidig=rolOpNaaste(m,naasteId)||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
@@ -1141,7 +1155,7 @@ function rolOpMedewerker(medewerker,otherId){return (medewerker.medewerkerRechte
 function medewerkerPeerRow(p){
  var peers=personenVanType('medewerker').filter(function(m){return m.id!==p.id;});
  if(!peers.length)return '<p class="empty-msg">Geen andere medewerkers in deze groep.</p>';
- var rollen=ROLLEN.medewerker.filter(function(r){return r!=='Geen';});
+ var rollen=ROLLEN.medewerker.groep.filter(function(r){return r!=='Geen';});
  return peers.map(function(m){
   var huidig=(p.medewerkerRechten||{})[m.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
@@ -1172,7 +1186,7 @@ function editFormPersoon(p,t){
   (p.mail&&p.mail.indexOf('@mywepp.nl')>-1?'<p class="mini" style="color:var(--brick)">'+(t==='medewerker'?'Een medewerker':'Een naaste')+' heeft een eigen adres — geen MyWepp-adres.</p>':'')+
   '<div class="sublistlabel">Rollen en rechten</div>'+
   '<div class="row">'+
-   '<div class="field"><label>Globaal</label><select data-f="rol" data-id="'+p.id+'">'+ROLLEN[t].filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'+
+   '<div class="field"><label>Globaal</label><select data-f="rol" data-id="'+p.id+'">'+ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'+
    '<div class="field"><label>Groep</label><select data-f="groep" data-id="'+p.id+'">'+GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('')+'</select></div>'+
   '</div>'+
   (p._nieuweGroep?'<p class="mini" style="color:var(--amber)">Wordt bij doorvoeren verplaatst naar '+p._nieuweGroep+'.</p>':'')+
@@ -1248,7 +1262,7 @@ function personRechtenRow(clientId){
  if(!betrokkenen.length)return '<p class="empty-msg">Nog niemand gekoppeld.</p>';
  return betrokkenen.map(function(b){
   var huidig=rolOpClient(b,clientId)||'';
-  var rollen=ROLLEN[b.type].filter(function(r){return r!=='Geen';});
+  var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
   return '<div class="personrow">'+avatarHtml(naam(b))+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
    '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
@@ -1339,7 +1353,7 @@ function openProfielPersoon(id,t){
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  el('pp-typerol').value=t;
- el('pp-globaal').innerHTML=ROLLEN[t].filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
+ el('pp-globaal').innerHTML=ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
  el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
@@ -1456,7 +1470,7 @@ function pushNew(t){
   }
  }else{
   var eff=effectiveFor(huidigeGroep,t).data;
-  basis.rol=eff.globaal.rol!=='Geen'?eff.globaal.rol:ROLLEN[t][0];
+  basis.rol=eff.globaal.rol!=='Geen'?eff.globaal.rol:ROLLEN[t].globaal[0];
   if(t==='medewerker'){
    basis.clientRechten={};
    if(eff.clienten.rol!=='Geen')personenVanType('client').forEach(function(c){basis.clientRechten[c.id]=eff.clienten.rol;});
@@ -1888,7 +1902,7 @@ function renderCaInstellingen(){
 }
 
 /* --- Mijn profiel (eigen account medewerker) --- */
-var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Begeleider',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
+var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Groep admin',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
 function mockQrSvg(){
  var n=12,cells='';
  for(var y=0;y<n;y++){
