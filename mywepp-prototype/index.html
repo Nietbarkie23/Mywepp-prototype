@@ -1319,6 +1319,7 @@ function pushNew(t){
  people.push(basis);
  el('acc-'+t).classList.remove('closed');
  renderAcc(t);if(t==='client')renderAcc('medewerker');updateTally();
+ if(t==='client')openProfielClient(basis.id); else openProfielPersoon(basis.id,t);
 }
 document.querySelectorAll('[data-add]').forEach(function(b){b.addEventListener('click',function(){pushNew(b.getAttribute('data-add'));});});
 document.querySelectorAll('[data-toggle]').forEach(function(b){b.addEventListener('click',function(){el(b.getAttribute('data-toggle')).classList.toggle('closed');});});
