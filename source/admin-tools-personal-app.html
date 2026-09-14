@@ -295,7 +295,7 @@ td.dot{text-align:center}
 .conceptbadge{font-size:12px;font-weight:600;color:var(--moss);background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:999px;padding:2px 10px;margin-left:10px;vertical-align:middle}
 .tellingen{font-size:13px;color:var(--ink-soft);margin:0 0 4px}
 
-/* --- Cliënt-app (mobiel) --- */
+/* --- MyWepp Personal (mobiel) --- */
 .phoneframe{max-width:390px;margin:0 auto 40px;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow)}
 .phonetop{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
 #ca-sos-btn{background:var(--brick);color:#fff;border-color:var(--brick);border-radius:999px;font-size:11px;font-weight:700;padding:5px 12px;letter-spacing:.03em}
@@ -419,7 +419,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <div class="topbar" id="maintabs-bar" style="padding-top:0">
     <div class="maintabs">
       <button type="button" class="on" data-view="personal">Groepsprofiel</button>
-      <button type="button" data-view="clientapp">Cliënt-app</button>
+      <button type="button" data-view="clientapp">MyWepp Personal</button>
       <button type="button" data-view="admin" id="tab-admin" hidden>Admin Tools</button>
     </div>
   </div>
@@ -748,8 +748,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 <!-- ===================== CLIENT-APP (MOBIEL) ===================== -->
 <div id="view-clientapp" hidden>
   <div class="intro" style="padding-bottom:10px">
-    <h1>Cliënt-app</h1>
-    <p>MyWepp Personal zoals een medewerker die voor één cliënt gebruikt, op de telefoon.</p>
+    <h1>MyWepp Personal</h1>
+    <p>Zoals een medewerker die voor één cliënt gebruikt, op de telefoon.</p>
     <a class="appswitch" id="ca-open-op-telefoon" href="?app=client" target="_blank" rel="noopener">📱 Open als app op je telefoon<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
   </div>
   <div class="ctxbar">Cliënt <select id="ca-client-select"></select></div>
@@ -1129,7 +1129,8 @@ function renderAcc(t){
  box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
  Array.prototype.forEach.call(box.querySelectorAll('[data-editrow]'),function(b){
   b.addEventListener('click',function(){
-   var p=findPerson(+b.getAttribute('data-editrow'));p._editing=!p._editing;renderAcc(t);
+   var id=+b.getAttribute('data-editrow');
+   if(t==='client')openProfielClient(id); else openProfielPersoon(id,t);
   });
  });
  Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
@@ -1773,13 +1774,11 @@ function renderCaInstellingen(){
  el('ca-instellingen-terug').addEventListener('click',renderCaInfo);
  el('ca-mijn-profiel').addEventListener('click',renderMijnProfiel);
  el('ca-donker-toggle').addEventListener('change',function(){document.documentElement.setAttribute('data-theme',this.checked?'dark':'light');});
- el('ca-wachtwoord').addEventListener('click',function(){
-  openModal('<h3>Wachtwoord wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
-  el('modal-snap').addEventListener('click',closeModal);
- });
+ el('ca-wachtwoord').addEventListener('click',openWachtwoordModal);
  el('ca-uitloggen').addEventListener('click',function(){
-  openModal('<h3>Uitloggen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
-  el('modal-snap').addEventListener('click',closeModal);
+  openModal('<h3>Uitloggen</h3><div class="msec"><p>Weet je zeker dat je wilt uitloggen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Uitloggen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-bevestig').addEventListener('click',function(){closeModal();renderLoginScherm();});
  });
  el('ca-instellingen-opslaan').addEventListener('click',function(){
   Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-inst]'),function(inp){
@@ -1860,6 +1859,64 @@ function renderMijnProfiel(){
     closeModal();renderMijnProfiel();
    });
   }
+ });
+}
+function openWachtwoordModal(){
+ openModal('<h3>Wachtwoord wijzigen</h3>'+
+  '<div class="field"><label>Huidig wachtwoord</label><input type="password" id="ww-huidig"></div>'+
+  '<div class="field"><label>Nieuw wachtwoord</label><input type="password" id="ww-nieuw"><p class="mini" style="margin:4px 0 0">Minstens 8 tekens.</p></div>'+
+  '<div class="field"><label>Bevestig nieuw wachtwoord</label><input type="password" id="ww-bevestig"></div>'+
+  '<p class="mini" id="ww-fout" style="color:var(--brick)" hidden></p>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Wachtwoord wijzigen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var huidig=el('ww-huidig').value,nieuw=el('ww-nieuw').value,bevestig=el('ww-bevestig').value,fout='';
+  if(!huidig)fout='Vul je huidige wachtwoord in.';
+  else if(nieuw.length<8)fout='Nieuw wachtwoord moet minstens 8 tekens zijn.';
+  else if(nieuw!==bevestig)fout='De wachtwoorden komen niet overeen.';
+  el('ww-fout').textContent=fout;el('ww-fout').hidden=!fout;
+  if(fout)return;
+  openModal('<h3>Wachtwoord wijzigen</h3><div class="msec"><p>Je wachtwoord is gewijzigd.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+}
+function renderLoginScherm(){
+ var html='<div style="padding:30px 10px;text-align:center">';
+ html+='<h2 style="margin:0 0 4px">Welkom!</h2>';
+ html+='<p class="mini" style="margin:0 0 20px">Log in om verder te gaan.</p>';
+ html+='<div class="field" style="text-align:left"><label>E-mailadres</label><input id="login-mail" placeholder="naam@voorbeeld.nl" value="'+MIJN_PROFIEL.mail+'"></div>';
+ html+='<div class="field" style="text-align:left"><label>Wachtwoord</label><input type="password" id="login-ww" placeholder="Wachtwoord"></div>';
+ html+='<div class="togglerow" style="border:0;padding:6px 0"><span>Ingelogd blijven</span><label class="toggle"><input type="checkbox" id="login-blijven" checked><span class="track"></span><span class="knob"></span></label></div>';
+ html+='<button type="button" class="ghost small" style="width:100%;margin:6px 0 14px" id="login-vergeten">Wachtwoord vergeten?</button>';
+ html+='<p class="mini" id="login-fout" style="color:var(--brick)" hidden>Vul je e-mailadres en wachtwoord in.</p>';
+ html+='<button type="button" class="primary" style="width:100%" id="login-inloggen">Inloggen</button>';
+ html+='</div>';
+ el('ca-body').innerHTML=html;
+ el('login-vergeten').addEventListener('click',function(){
+  openModal('<h3>Wachtwoord vergeten</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+ el('login-inloggen').addEventListener('click',function(){
+  var ok=el('login-mail').value.trim()&&el('login-ww').value;
+  el('login-fout').hidden=!!ok;
+  if(!ok)return;
+  if(MIJN_PROFIEL.tweestaps)renderLogin2fa(); else renderCaInfo();
+ });
+}
+function renderLogin2fa(){
+ var html='<div style="padding:30px 10px;text-align:center">';
+ html+='<h2 style="margin:0 0 4px">Welkom!</h2>';
+ html+='<p class="mini" style="margin:0 0 20px">Vul de beveiligingscode in van je authenticator-app.</p>';
+ html+='<div class="field"><input id="login-2fa-code" maxlength="6" placeholder="6 cijfers" style="text-align:center;letter-spacing:.3em;font-size:20px"></div>';
+ html+='<p class="mini" id="login-2fa-fout" style="color:var(--brick)" hidden>Vul een geldige 6-cijferige code in.</p>';
+ html+='<button type="button" class="primary" style="width:100%;margin-top:10px" id="login-2fa-controleren">Controleren en inloggen</button>';
+ html+='<p class="mini" style="margin-top:16px">Geen toegang tot je beveiligingscode? Neem contact op met je beheerder of support.</p>';
+ html+='</div>';
+ el('ca-body').innerHTML=html;
+ el('login-2fa-controleren').addEventListener('click',function(){
+  var code=el('login-2fa-code').value.trim(),ok=/^\d{6}$/.test(code);
+  el('login-2fa-fout').hidden=ok;
+  if(ok)renderCaInfo();
  });
 }
 
