@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gebruikersbeheer & Standaardrollen</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-180.png">
@@ -180,8 +180,12 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .pinfo .mail{font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:999px;background:var(--brick-bg);color:var(--brick);border:1px solid var(--brick-line)}
 .rowbtns{display:flex;gap:6px;flex:0 0 auto}
-.iconbtn{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center}
+.iconbtn{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:999px;border:0;background:var(--accent);color:#fff}
+.iconbtn:hover{filter:brightness(1.1);border-color:transparent}
 .iconbtn svg{width:16px;height:16px}
+.iconbtn.danger{background:var(--brick);color:#fff}
+.iconbtn.tiny{width:22px;height:22px}
+.iconbtn.tiny svg{width:12px;height:12px}
 .empty-msg{font-size:13.5px;color:var(--ink-faint);padding:10px 2px}
 
 .steps{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-faint);padding-bottom:16px}
@@ -257,6 +261,15 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .digirow:last-child{border-bottom:0}
 .digirow .dtxt b{display:block;font-size:14.5px;font-weight:500}
 .digirow .dtxt span{font-size:12.5px;color:var(--ink-soft)}
+.digiscreen{background:#0F1A2B;border-radius:14px;padding:18px;color:#E9EDF2;display:grid;grid-template-columns:1fr 1fr;gap:12px;box-shadow:0 10px 30px -12px rgba(15,26,43,.5)}
+.digiscreen-empty{grid-column:1/-1;text-align:center;color:#7C8AA0;font-size:13.5px;padding:30px 0}
+.digicard{background:#182741;border-radius:10px;padding:12px 14px;grid-column:span 1}
+.digicard.wide{grid-column:1/-1}
+.digicard h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#7FA8D6;font-weight:700}
+.digicard .drow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:4px 0;color:#E9EDF2}
+.digicard .drow .dot{width:8px;height:8px;border-radius:999px;flex:0 0 8px;margin-right:8px;display:inline-block}
+.digicard .dsub{font-size:11.5px;color:#8C99AF}
+@media(max-width:520px){.digiscreen{grid-template-columns:1fr}}
 
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -287,7 +300,7 @@ td.dot{text-align:center}
 .conceptbadge{font-size:12px;font-weight:600;color:var(--moss);background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:999px;padding:2px 10px;margin-left:10px;vertical-align:middle}
 .tellingen{font-size:13px;color:var(--ink-soft);margin:0 0 4px}
 
-/* --- Cliënt-app (mobiel) --- */
+/* --- MyWepp Personal (mobiel) --- */
 .phoneframe{max-width:390px;margin:0 auto 40px;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow)}
 .phonetop{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
 #ca-sos-btn{background:var(--brick);color:#fff;border-color:var(--brick);border-radius:999px;font-size:11px;font-weight:700;padding:5px 12px;letter-spacing:.03em}
@@ -305,7 +318,7 @@ td.dot{text-align:center}
 .doelcard .dtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .doelcard .dtop b{font-size:14px}
 .rapport{background:var(--paper);border-radius:var(--radius-sm);padding:9px 10px;margin-top:8px;font-size:13px}
-.rapport .rmeta{font-size:11px;color:var(--ink-faint);margin-bottom:3px}
+.rapport .rmeta{font-size:11px;color:var(--ink-faint);margin-bottom:3px;display:flex;justify-content:space-between;align-items:center}
 .emojirow{display:flex;gap:5px;margin-top:6px}
 .emojirow button{padding:2px 7px;font-size:13px;border-radius:999px}
 .emojirow button.selected{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
@@ -316,6 +329,14 @@ td.dot{text-align:center}
 .mediathumb{width:100%;aspect-ratio:16/9;border-radius:8px;margin-top:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;transition:transform .15s ease,filter .15s ease;position:relative}
 .mediathumb:hover{transform:scale(1.015);filter:brightness(1.05)}
 .mediathumb.video,.mediathumb-lg.video{background-image:linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;background-color:#e4e4e4}
+.mapthumb{margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--accent-bg);color:var(--accent);font-size:12px;font-weight:500;cursor:pointer;transition:filter .15s ease}
+.mapthumb:hover{filter:brightness(.96)}
+.audiobar{margin-top:8px;padding:8px 10px;border-radius:999px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;gap:8px;cursor:pointer;transition:filter .15s ease}
+.audiobar:hover{filter:brightness(.97)}
+.audiobar .playbtn-sm{width:22px;height:22px;flex:0 0 22px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+.audiobar .playbtn-sm svg{width:10px;height:10px;fill:#fff}
+.audiobar .waveform{flex:1;color:var(--accent);font-size:14px;letter-spacing:1px;overflow:hidden;white-space:nowrap}
+.audiobar .adur{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
 .playbtn{width:46px;height:46px;border-radius:999px;background:rgba(20,20,20,.55);display:flex;align-items:center;justify-content:center}
 .playbtn svg{width:17px;height:17px;fill:#fff;margin-left:3px}
 .mediathumb-lg{width:100%;aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
@@ -333,7 +354,7 @@ td.dot{text-align:center}
 .agendacard .atxt span{font-size:12px;color:var(--ink-soft)}
 
 .ikboekcard{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
-.ikboekcard .imeta{font-size:11px;color:var(--ink-faint);margin-bottom:4px}
+.ikboekcard .imeta{font-size:11px;color:var(--ink-faint);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
 
 .minitabs{display:flex;gap:6px;margin-bottom:12px}
 .minitabs button{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 13px;font-size:12.5px;color:var(--ink-soft)}
@@ -413,7 +434,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <div class="topbar" id="maintabs-bar" style="padding-top:0">
     <div class="maintabs">
       <button type="button" class="on" data-view="personal">Groepsprofiel</button>
-      <button type="button" data-view="clientapp">Cliënt-app</button>
+      <button type="button" data-view="clientapp">MyWepp Personal</button>
       <button type="button" data-view="admin" id="tab-admin" hidden>Admin Tools</button>
     </div>
   </div>
@@ -505,7 +526,13 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
       <div class="hubcard togglerow" style="border-top:1px solid var(--line)">
         <span>Tweestapsverificatie verplicht</span>
-        <label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label>
+        <label class="toggle"><input type="checkbox" id="hub-tweestaps" checked><span class="track"></span><span class="knob"></span></label>
+      </div>
+      <div class="hubcard" style="display:block;border-top:1px solid var(--line)">
+        <b style="display:block;margin-bottom:6px;font-size:13.5px">Opmerking</b>
+        <p class="mini" style="margin:0 0 8px">Dit overleggen met het beheerteam voordat je het formulier update.</p>
+        <textarea id="hub-opmerking" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>
+        <p class="mini" id="hub-bevestiging" style="color:var(--moss);min-height:16px;margin:6px 0 0"></p>
       </div>
     </div>
 
@@ -630,6 +657,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">MyWepp Digibord beheren</h1><p>Bepaal welke onderdelen op het Digibord van deze groep te zien zijn.</p></div>
     <div class="panel" style="padding:0" id="digibord-lijst"></div>
+    <div class="sublistlabel" style="margin-top:20px">Voorbeeldweergave</div>
+    <p class="mini" style="margin:-6px 0 10px">Zo ziet het Digibord van deze groep er nu uit. Verandert live mee met de schakelaars hierboven.</p>
+    <div class="digiscreen" id="digibord-preview"></div>
     <div class="actions end" style="border:0"><button type="button" class="primary" id="digibord-opslaan">Opslaan</button></div>
     <div id="digibord-bevestiging"></div>
   </div>
@@ -648,6 +678,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel" style="overflow-x:auto"><table id="stat-table" style="border:0;box-shadow:none"></table></div>
     <div class="panel"><div class="body" id="stat-kalender"></div></div>
     <p class="mini">Klik op een dag in de kalender voor de dagdetails per cliënt.</p>
+    <div class="sublistlabel" style="margin-top:20px">MyWepp Digibord gebruik</div>
+    <div class="panel" style="overflow-x:auto"><table id="stat-digibord-table" style="border:0;box-shadow:none"></table></div>
   </div>
 
   <!-- ============ MAALTIJDEN ============ -->
@@ -739,8 +771,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 <!-- ===================== CLIENT-APP (MOBIEL) ===================== -->
 <div id="view-clientapp" hidden>
   <div class="intro" style="padding-bottom:10px">
-    <h1>Cliënt-app</h1>
-    <p>MyWepp Personal zoals een medewerker die voor één cliënt gebruikt, op de telefoon.</p>
+    <h1>MyWepp Personal</h1>
+    <p>Zoals een medewerker die voor één cliënt gebruikt, op de telefoon.</p>
     <a class="appswitch" id="ca-open-op-telefoon" href="?app=client" target="_blank" rel="noopener">📱 Open als app op je telefoon<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
   </div>
   <div class="ctxbar">Cliënt <select id="ca-client-select"></select></div>
@@ -960,6 +992,12 @@ var nextId=6;
 var huidigeGroep=GROEPEN[0];
 el('pp-groep-naam').textContent=huidigeGroep;
 el('hub-groepnaam').textContent=huidigeGroep;
+function hubBevestig(tekst){
+ el('hub-bevestiging').textContent=tekst;
+ setTimeout(function(){var b=el('hub-bevestiging');if(b)b.textContent='';},2000);
+}
+el('hub-tweestaps').addEventListener('change',function(){hubBevestig('Wijziging opgeslagen.');});
+el('hub-opmerking').addEventListener('blur',function(){if(el('hub-opmerking').value.trim())hubBevestig('Opmerking opgeslagen.');});
 
 function naam(p){return p.voor+' '+p.achter;}
 function personenVanType(t){return people.filter(function(p){return p.type===t&&!p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});}
@@ -1120,7 +1158,8 @@ function renderAcc(t){
  box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
  Array.prototype.forEach.call(box.querySelectorAll('[data-editrow]'),function(b){
   b.addEventListener('click',function(){
-   var p=findPerson(+b.getAttribute('data-editrow'));p._editing=!p._editing;renderAcc(t);
+   var id=+b.getAttribute('data-editrow');
+   if(t==='client')openProfielClient(id); else openProfielPersoon(id,t);
   });
  });
  Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
@@ -1201,8 +1240,8 @@ el('pc-opslaan').addEventListener('click',function(){
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAcc('client');updateTally();show('pp-formulier');
 });
-function openFotoModal(elId){
- var p=findPerson(huidigProfielId);if(!p)return;
+function openFotoModal(elId,persoon){
+ var p=persoon||findPerson(huidigProfielId);if(!p)return;
  var voorbeeldStyle=p.foto?('background-image:url('+p.foto+');background-size:cover;background-position:center'):('background:'+avatarGradient(naam(p)));
  var nieuweFoto=p.foto||null;
  openModal('<h3>Profielfoto wijzigen</h3>'+
@@ -1389,6 +1428,7 @@ document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener(
  var target=b.getAttribute('data-open');
  if(target==='pp-statistieken')renderStatTable();
  if(target==='pp-maaltijden')renderMaaltijdKalender();
+ if(target==='pp-digibord')renderDigibordPreview();
  show(target);
 });});
 var LOGBOEK=[
@@ -1503,6 +1543,22 @@ function renderStatTable(){
  html+='</tbody>';
  el('stat-table').innerHTML=clienten.length?html:'<tbody><tr><td class="empty-msg">Geen cliënten in deze groep.</td></tr></tbody>';
  renderStatKalender();
+ renderStatDigibord();
+}
+function renderStatDigibord(){
+ var vandaag=new Date(2026,8,14);
+ var rows=DIGIBORD.filter(function(d){return d.on;}).map(function(d){
+  var daysAgo=avatarHash(d.k+huidigeGroep)%12;
+  var datum=new Date(vandaag);datum.setDate(datum.getDate()-daysAgo);
+  return {label:d.l,daysAgo:daysAgo,datumStr:datum.getDate()+' '+MAAND_AFK[datum.getMonth()],langGeleden:daysAgo>7};
+ });
+ var html='<thead><tr><th>Onderdeel</th><th>Laatste bezoek</th><th>Status</th></tr></thead><tbody>';
+ html+=rows.length?rows.map(function(r){
+  return '<tr><td>'+r.label+'</td><td>'+(r.daysAgo===0?'Vandaag':r.datumStr+' ('+r.daysAgo+' dagen geleden)')+'</td><td>'+
+   (r.langGeleden?'<span class="badge">Langer dan 7 dagen geleden</span>':'<span class="badge" style="background:var(--moss-bg);color:var(--moss);border-color:var(--moss-line)">Actief</span>')+'</td></tr>';
+ }).join(''):'<tr><td class="empty-msg" colspan="3">Geen onderdelen actief op het Digibord.</td></tr>';
+ html+='</tbody>';
+ el('stat-digibord-table').innerHTML=html;
 }
 function renderStatKalender(){
  var year=+el('stat-jaar').value,month=el('stat-maand').selectedIndex;
@@ -1577,14 +1633,32 @@ var DIGIBORD=[
  {k:'maaltijdenbord',l:'Maaltijdenbord',s:'Toont het menu van vandaag',on:true},
  {k:'kalenderbord',l:'Kalenderbord',s:'Algemene afspraken van de groep',on:false}
 ];
+var CLIENTDATA={};
+function digiOn(k){return DIGIBORD.filter(function(d){return d.k===k;})[0].on;}
+function renderDigibordPreview(){
+ var clienten=personenVanType('client'),medewerkers=personenVanType('medewerker');
+ var cards=[];
+ if(digiOn('informatiebord'))cards.push('<div class="digicard wide"><h4>Informatiebord</h4><div class="drow">📢 Vrijdag is er een gezamenlijk koffie-uurtje om 15:00 in de huiskamer.</div></div>');
+ if(digiOn('aanwezigheid'))cards.push('<div class="digicard"><h4>Aanwezigheidsbord</h4>'+(clienten.length?clienten.map(function(c){var aanw=avatarHash(naam(c))%3!==0;return '<div class="drow"><span><span class="dot" style="background:'+(aanw?'var(--moss)':'var(--brick)')+'"></span>'+naam(c)+'</span><span class="dsub">'+(aanw?'Aanwezig':'Afwezig')+'</span></div>';}).join(''):'<div class="dsub">Geen cliënten in deze groep.</div>')+'</div>');
+ if(digiOn('dagprogramma')){
+  var progItems=clienten.map(function(c){var d=ensureClientData(c.id);var a=d.agenda[0];return a?{tijd:a.tijd,tekst:naam(c)+' — '+a.titel}:null;}).filter(Boolean).sort(function(a,b){return a.tijd.localeCompare(b.tijd);});
+  cards.push('<div class="digicard"><h4>Dagprogramma</h4>'+(progItems.length?progItems.map(function(i){return '<div class="drow"><span>'+i.tekst+'</span><span class="dsub">'+i.tijd+'</span></div>';}).join(''):'<div class="dsub">Geen programma-items vandaag.</div>')+'</div>');
+ }
+ if(digiOn('takenbord'))cards.push('<div class="digicard"><h4>Takenbord</h4>'+['Afwas inruimen','Planten water geven','Was vouwen'].map(function(t,i){return '<div class="drow"><span><span class="dot" style="background:'+(i===0?'var(--moss)':'var(--line-strong)')+'"></span>'+t+'</span><span class="dsub">'+(i===0?'Gedaan':'Open')+'</span></div>';}).join('')+'</div>');
+ if(digiOn('dienstenbord'))cards.push('<div class="digicard"><h4>Dienstenbord</h4>'+(medewerkers.length?medewerkers.map(function(m,i){return '<div class="drow"><span>'+naam(m)+'</span><span class="dsub">'+(i===0?'Vandaag':'Morgen')+'</span></div>';}).join(''):'<div class="dsub">Geen medewerkers in deze groep.</div>')+'</div>');
+ if(digiOn('maaltijdenbord'))cards.push('<div class="digicard"><h4>Maaltijdenbord</h4><div class="drow"><span>Ontbijt</span><span class="dsub">Volkoren & fruit</span></div><div class="drow"><span>Lunch</span><span class="dsub">Soep & broodjes</span></div><div class="drow"><span>Diner</span><span class="dsub">Stamppot</span></div></div>');
+ if(digiOn('kalenderbord'))cards.push('<div class="digicard wide"><h4>Kalenderbord</h4><div class="drow"><span>Koffie-uurtje</span><span class="dsub">Vrijdag 15:00</span></div><div class="drow"><span>Familiedag</span><span class="dsub">Zaterdag 24 sep</span></div></div>');
+ el('digibord-preview').innerHTML=cards.length?cards.join(''):'<div class="digiscreen-empty">Niets aangevinkt — het Digibord toont nu niks.</div>';
+}
 function renderDigibord(){
  el('digibord-lijst').innerHTML=DIGIBORD.map(function(d){
   return '<div class="digirow"><div class="dtxt"><b>'+d.l+'</b><span>'+d.s+'</span></div>'+
    '<label class="toggle"><input type="checkbox" data-dk="'+d.k+'" '+(d.on?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
  }).join('');
  Array.prototype.forEach.call(el('digibord-lijst').querySelectorAll('[data-dk]'),function(c){
-  c.addEventListener('change',function(){DIGIBORD.filter(function(d){return d.k===c.getAttribute('data-dk');})[0].on=c.checked;});
+  c.addEventListener('change',function(){DIGIBORD.filter(function(d){return d.k===c.getAttribute('data-dk');})[0].on=c.checked;renderDigibordPreview();});
  });
+ renderDigibordPreview();
 }
 renderDigibord();
 el('digibord-opslaan').addEventListener('click',function(){
@@ -1594,8 +1668,7 @@ el('digibord-opslaan').addEventListener('click',function(){
 
 /* ============== CLIENT-APP (MOBIEL) ============== */
 var caClientId=null, caTab='info';
-var EMOJIS=['👍','❤️','😊','👏'];
-var CLIENTDATA={};
+var EMOJIS=['👍','❤️','😊','✅'];
 function ensureClientData(id){
  if(CLIENTDATA[id])return CLIENTDATA[id];
  var d={
@@ -1612,10 +1685,11 @@ function ensureClientData(id){
   ],
   ikboek:[
    {id:1,tekst:'Mooie wandeling gemaakt in het park, genoten van de zon.',tijd:'07-09-2026',mediaType:'video',reacties:{'❤️':3,'😊':1}}
-  ]
+  ],
+  customChats:[]
  };
  var nid=100+id*10;
- d._nextDoelId=nid+1;d._nextRapportId=nid+50;d._nextAgendaId=nid+100;d._nextIkboekId=nid+150;
+ d._nextDoelId=nid+1;d._nextRapportId=nid+50;d._nextAgendaId=nid+100;d._nextIkboekId=nid+150;d._nextChatId=nid+200;
  CLIENTDATA[id]=d;
  return d;
 }
@@ -1736,26 +1810,158 @@ function renderCaInstellingen(){
  html+=caToggleRow('Grote tekst','groteTekst',w);
  html+='<div class="togglerow"><span>Donkere modus</span><label class="toggle"><input type="checkbox" id="ca-donker-toggle" '+(document.documentElement.getAttribute('data-theme')==='dark'?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
  html+='<div class="sublistlabel">Account</div>';
+ html+='<button type="button" class="small" style="width:100%;margin-bottom:8px" id="ca-mijn-profiel">Mijn profiel</button>';
  html+='<button type="button" class="small" style="width:100%;margin-bottom:8px" id="ca-wachtwoord">Wachtwoord wijzigen</button>';
  html+='<button type="button" class="danger small" style="width:100%" id="ca-uitloggen">Uitloggen</button>';
  html+='<div class="actions end" style="border:0;margin-top:16px"><button type="button" class="primary" id="ca-instellingen-opslaan">Opslaan</button></div>';
  html+='<div id="ca-instellingen-bevestiging"></div>';
  el('ca-body').innerHTML=html;
  el('ca-instellingen-terug').addEventListener('click',renderCaInfo);
+ el('ca-mijn-profiel').addEventListener('click',renderMijnProfiel);
  el('ca-donker-toggle').addEventListener('change',function(){document.documentElement.setAttribute('data-theme',this.checked?'dark':'light');});
- el('ca-wachtwoord').addEventListener('click',function(){
-  openModal('<h3>Wachtwoord wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
-  el('modal-snap').addEventListener('click',closeModal);
- });
+ el('ca-wachtwoord').addEventListener('click',openWachtwoordModal);
  el('ca-uitloggen').addEventListener('click',function(){
-  openModal('<h3>Uitloggen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
-  el('modal-snap').addEventListener('click',closeModal);
+  openModal('<h3>Uitloggen</h3><div class="msec"><p>Weet je zeker dat je wilt uitloggen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Uitloggen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-bevestig').addEventListener('click',function(){closeModal();renderLoginScherm();});
  });
  el('ca-instellingen-opslaan').addEventListener('click',function(){
   Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-inst]'),function(inp){
    w[inp.getAttribute('data-inst')]=inp.checked;
   });
   el('ca-instellingen-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Instellingen opgeslagen.</div>';
+ });
+}
+
+/* --- Mijn profiel (eigen account medewerker) --- */
+var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Begeleider',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
+function mockQrSvg(){
+ var n=12,cells='';
+ for(var y=0;y<n;y++){
+  for(var x=0;x<n;x++){
+   if(avatarHash(x+'-'+y+'-mywepp-2fa')%2===0)cells+='<rect x="'+(x*10)+'" y="'+(y*10)+'" width="10" height="10" fill="#12161c"/>';
+  }
+ }
+ return '<svg viewBox="0 0 '+(n*10)+' '+(n*10)+'" style="width:150px;height:150px;background:#fff;border:1px solid var(--line);border-radius:6px">'+cells+'</svg>';
+}
+function renderMijnProfiel(){
+ var p=MIJN_PROFIEL;
+ var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="mp-terug">← Terug</button><b style="font-size:15px">Mijn profiel</b></div>';
+ html+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:18px"><div class="hubavatar" id="mp-foto" style="width:64px;height:64px;flex:0 0 64px"></div><button type="button" class="small" id="mp-foto-wijzigen">Kies of maak foto</button></div>';
+ html+='<div class="field"><label>Voornaam</label><input id="mp-voor" value="'+p.voor+'"></div>';
+ html+='<div class="field"><label>Achternaam</label><input id="mp-achter" value="'+p.achter+'"></div>';
+ html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" value="'+p.mobiel+'"></div>';
+ html+='<div class="field"><label>Functie</label><input id="mp-functie" value="'+p.functie+'"></div>';
+ html+='<div class="field"><label>Geboortedatum</label><input type="date" id="mp-geboortedatum" value="'+p.geboortedatum+'"></div>';
+ html+='<div class="field"><label>E-mailadres</label><input id="mp-mail" value="'+p.mail+'"></div>';
+ html+='<div class="sublistlabel">Beveiliging</div>';
+ html+='<div class="togglerow"><span>Tweestapsverificatie</span>'+(p.tweestaps?'<span class="badge" style="background:var(--moss-bg);color:var(--moss);border-color:var(--moss-line)">Actief</span>':'<span class="badge">Niet actief</span>')+'</div>';
+ if(p.tweestaps)html+='<p class="mini" style="margin:-4px 0 8px">Ingesteld op '+p.tweestapsDatum+'.</p>';
+ html+='<button type="button" class="'+(p.tweestaps?'danger':'primary')+' small" style="width:100%;margin-bottom:14px" id="mp-tweestaps-toggle">'+(p.tweestaps?'Uitschakelen':'Aanzetten')+'</button>';
+ html+='<div class="sublistlabel">Extra gegevens</div>';
+ html+='<p class="mini" style="margin-top:-6px">Plaats geen gevoelige informatie in dit veld.</p>';
+ html+='<textarea id="mp-opmerkingen" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:13.5px">'+p.opmerkingen+'</textarea>';
+ html+='<div class="actions end" style="border:0;margin-top:14px"><button type="button" class="primary" id="mp-opslaan">Opslaan</button></div>';
+ html+='<div id="mp-bevestiging"></div>';
+ el('ca-body').innerHTML=html;
+ setGrootAvatar('mp-foto',p);
+ el('mp-terug').addEventListener('click',renderCaInstellingen);
+ el('mp-foto-wijzigen').addEventListener('click',function(){openFotoModal('mp-foto',p);});
+ el('mp-opslaan').addEventListener('click',function(){
+  p.voor=el('mp-voor').value.trim()||p.voor;
+  p.achter=el('mp-achter').value.trim()||p.achter;
+  p.mobiel=el('mp-mobiel').value.trim();
+  p.functie=el('mp-functie').value.trim();
+  p.geboortedatum=el('mp-geboortedatum').value;
+  p.mail=el('mp-mail').value.trim();
+  p.opmerkingen=el('mp-opmerkingen').value;
+  el('mp-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Profiel opgeslagen.</div>';
+ });
+ el('mp-tweestaps-toggle').addEventListener('click',function(){
+  if(p.tweestaps){
+   openModal('<h3>Tweestapsverificatie uitzetten?</h3><div class="msec"><p>Je staat op het punt om tweestapsverificatie uit te zetten. Je account is daarna minder beveiligd. Je logt dan alleen in met je e-mailadres en wachtwoord.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Uitzetten</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-bevestig').addEventListener('click',function(){
+    p.tweestaps=false;p.tweestapsDatum='';closeModal();renderMijnProfiel();
+   });
+  }else{
+   openModal('<h3>Tweestapsverificatie instellen</h3>'+
+    '<div class="msec" style="display:flex;flex-direction:column;align-items:center;gap:12px">'+
+    '<p style="margin:0;text-align:center">Scan de QR-code met je authenticator-app, of gebruik de instelsleutel handmatig.</p>'+
+    mockQrSvg()+
+    '<button type="button" class="ghost small" id="mp-instelsleutel-tonen">Instelsleutel gebruiken</button>'+
+    '<div id="mp-instelsleutel" hidden style="text-align:center"><code style="font-size:13px;letter-spacing:.05em">EW2H 8CXV H7WO V2WD 3Z6F QKZ6 KQVR TFYO</code></div>'+
+    '<div class="field" style="width:100%"><label>Beveiligingscode</label><input id="mp-2fa-code" maxlength="6" placeholder="6 cijfers" style="text-align:center;letter-spacing:.3em;font-size:18px"></div>'+
+    '</div>'+
+    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="mp-2fa-koppelen">Controleren en koppelen</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('mp-instelsleutel-tonen').addEventListener('click',function(){el('mp-instelsleutel').hidden=!el('mp-instelsleutel').hidden;});
+   el('mp-2fa-koppelen').addEventListener('click',function(){
+    var code=el('mp-2fa-code').value.trim();
+    if(!/^\d{6}$/.test(code)){el('mp-2fa-code').style.borderColor='var(--brick)';return;}
+    p.tweestaps=true;
+    p.tweestapsDatum=new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'long',year:'numeric'});
+    closeModal();renderMijnProfiel();
+   });
+  }
+ });
+}
+function openWachtwoordModal(){
+ openModal('<h3>Wachtwoord wijzigen</h3>'+
+  '<div class="field"><label>Huidig wachtwoord</label><input type="password" id="ww-huidig"></div>'+
+  '<div class="field"><label>Nieuw wachtwoord</label><input type="password" id="ww-nieuw"><p class="mini" style="margin:4px 0 0">Minstens 8 tekens.</p></div>'+
+  '<div class="field"><label>Bevestig nieuw wachtwoord</label><input type="password" id="ww-bevestig"></div>'+
+  '<p class="mini" id="ww-fout" style="color:var(--brick)" hidden></p>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Wachtwoord wijzigen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var huidig=el('ww-huidig').value,nieuw=el('ww-nieuw').value,bevestig=el('ww-bevestig').value,fout='';
+  if(!huidig)fout='Vul je huidige wachtwoord in.';
+  else if(nieuw.length<8)fout='Nieuw wachtwoord moet minstens 8 tekens zijn.';
+  else if(nieuw!==bevestig)fout='De wachtwoorden komen niet overeen.';
+  el('ww-fout').textContent=fout;el('ww-fout').hidden=!fout;
+  if(fout)return;
+  openModal('<h3>Wachtwoord wijzigen</h3><div class="msec"><p>Je wachtwoord is gewijzigd.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+}
+function renderLoginScherm(){
+ var html='<div style="padding:30px 10px;text-align:center">';
+ html+='<h2 style="margin:0 0 4px">Welkom!</h2>';
+ html+='<p class="mini" style="margin:0 0 20px">Log in om verder te gaan.</p>';
+ html+='<div class="field" style="text-align:left"><label>E-mailadres</label><input id="login-mail" placeholder="naam@voorbeeld.nl" value="'+MIJN_PROFIEL.mail+'"></div>';
+ html+='<div class="field" style="text-align:left"><label>Wachtwoord</label><input type="password" id="login-ww" placeholder="Wachtwoord"></div>';
+ html+='<div class="togglerow" style="border:0;padding:6px 0"><span>Ingelogd blijven</span><label class="toggle"><input type="checkbox" id="login-blijven" checked><span class="track"></span><span class="knob"></span></label></div>';
+ html+='<button type="button" class="ghost small" style="width:100%;margin:6px 0 14px" id="login-vergeten">Wachtwoord vergeten?</button>';
+ html+='<p class="mini" id="login-fout" style="color:var(--brick)" hidden>Vul je e-mailadres en wachtwoord in.</p>';
+ html+='<button type="button" class="primary" style="width:100%" id="login-inloggen">Inloggen</button>';
+ html+='</div>';
+ el('ca-body').innerHTML=html;
+ el('login-vergeten').addEventListener('click',function(){
+  openModal('<h3>Wachtwoord vergeten</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+ el('login-inloggen').addEventListener('click',function(){
+  var ok=el('login-mail').value.trim()&&el('login-ww').value;
+  el('login-fout').hidden=!!ok;
+  if(!ok)return;
+  if(MIJN_PROFIEL.tweestaps)renderLogin2fa(); else renderCaInfo();
+ });
+}
+function renderLogin2fa(){
+ var html='<div style="padding:30px 10px;text-align:center">';
+ html+='<h2 style="margin:0 0 4px">Welkom!</h2>';
+ html+='<p class="mini" style="margin:0 0 20px">Vul de beveiligingscode in van je authenticator-app.</p>';
+ html+='<div class="field"><input id="login-2fa-code" maxlength="6" placeholder="6 cijfers" style="text-align:center;letter-spacing:.3em;font-size:20px"></div>';
+ html+='<p class="mini" id="login-2fa-fout" style="color:var(--brick)" hidden>Vul een geldige 6-cijferige code in.</p>';
+ html+='<button type="button" class="primary" style="width:100%;margin-top:10px" id="login-2fa-controleren">Controleren en inloggen</button>';
+ html+='<p class="mini" style="margin-top:16px">Geen toegang tot je beveiligingscode? Neem contact op met je beheerder of support.</p>';
+ html+='</div>';
+ el('ca-body').innerHTML=html;
+ el('login-2fa-controleren').addEventListener('click',function(){
+  var code=el('login-2fa-code').value.trim(),ok=/^\d{6}$/.test(code);
+  el('login-2fa-fout').hidden=ok;
+  if(ok)renderCaInfo();
  });
 }
 
@@ -1767,6 +1973,10 @@ function mediaThumbHtml(type,gradient,caption){
  var esc=(caption||'').replace(/"/g,'&quot;');
  if(type==='video')return '<div class="mediathumb video" data-mediatype="video" data-caption="'+esc+'"><div class="playbtn">'+PLAY_SVG+'</div></div>';
  return '<div class="mediathumb" data-mediatype="foto" data-gradient="'+gradient+'" data-caption="'+esc+'" style="background:'+gradient+'">Foto</div>';
+}
+function audioBarHtml(caption){
+ var esc=(caption||'').replace(/"/g,'&quot;');
+ return '<div class="audiobar" data-audiobar="1" data-caption="'+esc+'"><span class="playbtn-sm">'+PLAY_SVG+'</span><span class="waveform">▂▄▆▃▅▇▂▄▆▃▄▇▂</span><span class="adur">0:14</span></div>';
 }
 function openMediaViewer(type,gradient,caption){
  var big=type==='video'
@@ -1784,6 +1994,12 @@ function wireMediaThumbs(container){
  Array.prototype.forEach.call(container.querySelectorAll('.mcell'),function(cell){
   if(cell.dataset.wired)return;cell.dataset.wired='1';
   cell.addEventListener('click',function(){openMediaViewer('foto',cell.style.background,'Gedeeld in dit gesprek');});
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('[data-audiobar]'),function(elm){
+  elm.addEventListener('click',function(){
+   openModal('<h3>Spraakbericht</h3><div class="msec" style="text-align:center"><p>🎧 Spraakbericht wordt afgespeeld…</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+   el('modal-snap').addEventListener('click',closeModal);
+  });
  });
 }
 function emojiRowHtml(attrName,attrValuePrefix,item){
@@ -1804,8 +2020,12 @@ function toggleReactie(item,emoji){
  }
 }
 function rapportCardHtml(doel,r){
- return '<div class="rapport"><div class="rmeta">'+r.auteur+' · '+r.tijd+'</div>'+r.tekst+
+ return '<div class="rapport"><div class="rmeta"><span>'+r.auteur+' · '+r.tijd+(r.dienst?' · '+r.dienst:'')+'</span><span style="display:flex;gap:4px">'+
+  '<button type="button" class="iconbtn tiny" data-editrapport="'+doel.id+'|'+r.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+  '<button type="button" class="iconbtn tiny danger" data-delrapport="'+doel.id+'|'+r.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
+ '</span></div>'+r.tekst+
   (r.media?mediaThumbHtml('foto','linear-gradient(135deg,#3E7CA6,#8C6A45)',doel.titel+' — '+r.tijd):'')+
+  (r.audio?audioBarHtml(doel.titel+' — '+r.tijd):'')+
   emojiRowHtml('data-react',doel.id+'|'+r.id,r)+
  '</div>';
 }
@@ -1821,7 +2041,10 @@ function renderCaDoelen(){
   }).join('') : '<p class="empty-msg">Nog geen rapportages over alle doelen heen.</p>';
  }else{
   html+=d.doelen.map(function(doel){
-   return '<div class="doelcard"><div class="dtop"><b>'+doel.titel+'</b><button type="button" class="small" data-newrapport="'+doel.id+'">+ Rapportage</button></div>'+
+   return '<div class="doelcard"><div class="dtop"><b>'+doel.titel+'</b><div style="display:flex;gap:6px;align-items:center">'+
+    '<button type="button" class="iconbtn tiny" data-editdoel="'+doel.id+'" aria-label="Doel hernoemen">'+PENCIL_SVG+'</button>'+
+    '<button type="button" class="iconbtn tiny danger" data-deldoel="'+doel.id+'" aria-label="Doel verwijderen">'+TRASH_SVG+'</button>'+
+    '<button type="button" class="small" data-newrapport="'+doel.id+'">+ Rapportage</button></div></div>'+
     (doel.rapportages.length? doel.rapportages.slice().reverse().map(function(r){return rapportCardHtml(doel,r);}).join('') : '<p class="empty-msg" style="padding-top:6px">Nog geen rapportages.</p>')+
     '<div id="newrapport-'+doel.id+'"></div>'+
    '</div>';
@@ -1847,14 +2070,27 @@ function renderCaDoelen(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-newrapport]'),function(b){
   b.addEventListener('click',function(){
    var doelId=+b.getAttribute('data-newrapport');
-   el('newrapport-'+doelId).innerHTML='<div class="rapport"><textarea id="rapport-tekst-'+doelId+'" placeholder="Wat is er gebeurd?" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>'+
+   var vandaag=new Date().toISOString().slice(0,10);
+   el('newrapport-'+doelId).innerHTML='<div class="rapport">'+
+    '<div class="row" style="margin-bottom:8px"><div class="field"><label style="font-size:11.5px">Dienst</label><select id="rapport-dienst-'+doelId+'"><option value="">Kies dienst…</option><option>Ochtenddienst</option><option>Middagdienst</option><option>Avonddienst</option></select></div>'+
+    '<div class="field"><label style="font-size:11.5px">Datum</label><input type="date" id="rapport-datum-'+doelId+'" value="'+vandaag+'"></div></div>'+
+    '<textarea id="rapport-tekst-'+doelId+'" placeholder="Wat is er gebeurd?" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>'+
     '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:6px"><input type="checkbox" id="rapport-media-'+doelId+'" style="width:auto">Foto toevoegen</label>'+
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:4px"><input type="checkbox" id="rapport-audio-'+doelId+'" style="width:auto">🎤 Spraakbericht toevoegen</label>'+
+    '<div class="field" style="margin-top:6px"><label style="font-size:11.5px">Bijlagen</label><button type="button" class="small" style="width:100%" id="rapport-bijlage-'+doelId+'">+ Bestanden toevoegen</button></div>'+
     '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="primary small" data-opslaanrapport="'+doelId+'">Plaatsen</button></div></div>';
+   el('rapport-bijlage-'+doelId).addEventListener('click',function(){
+    openModal('<h3>Bestanden toevoegen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+    el('modal-snap').addEventListener('click',closeModal);
+   });
    document.querySelector('[data-opslaanrapport="'+doelId+'"]').addEventListener('click',function(){
     var tekst=el('rapport-tekst-'+doelId).value.trim();if(!tekst)return;
     var media=el('rapport-media-'+doelId).checked;
+    var audio=el('rapport-audio-'+doelId).checked;
+    var dienst=el('rapport-dienst-'+doelId).value;
+    var datum=el('rapport-datum-'+doelId).value;
     var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
-    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',auteur:'Jij',media:media,reacties:{}});
+    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',dienst:dienst,datum:datum,auteur:'Jij',media:media,audio:audio,reacties:{}});
     renderCaDoelen();
    });
   });
@@ -1865,6 +2101,52 @@ function renderCaDoelen(){
    var parts=b.getAttribute('data-react').split('|'),doelId=+parts[0],rapId=+parts[1],emoji=parts[2];
    var doel=d.doelen.filter(function(x){return x.id===doelId;})[0],r=doel.rapportages.filter(function(x){return x.id===rapId;})[0];
    toggleReactie(r,emoji);renderCaDoelen();
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editdoel]'),function(b){
+  b.addEventListener('click',function(){
+   var doel=d.doelen.filter(function(x){return x.id===+b.getAttribute('data-editdoel');})[0];
+   openModal('<h3>Doel hernoemen</h3><div class="field"><label>Titel</label><input id="modal-doel-titel" value="'+doel.titel.replace(/"/g,'&quot;')+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-opslaan').addEventListener('click',function(){
+    var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
+    doel.titel=titel;closeModal();renderCaDoelen();
+   });
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-deldoel]'),function(b){
+  b.addEventListener('click',function(){
+   var doelId=+b.getAttribute('data-deldoel');
+   openModal('<h3>Doel verwijderen</h3><div class="msec"><p>Weet je zeker dat je dit doel en alle rapportages daaronder wilt verwijderen? Dit kan niet ongedaan gemaakt worden.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-bevestig').addEventListener('click',function(){
+    d.doelen=d.doelen.filter(function(x){return x.id!==doelId;});
+    closeModal();renderCaDoelen();
+   });
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editrapport]'),function(b){
+  b.addEventListener('click',function(){
+   var parts=b.getAttribute('data-editrapport').split('|'),doelId=+parts[0],rapId=+parts[1];
+   var doel=d.doelen.filter(function(x){return x.id===doelId;})[0],r=doel.rapportages.filter(function(x){return x.id===rapId;})[0];
+   openModal('<h3>Rapportage bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-rap-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+r.tekst.replace(/</g,'&lt;')+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-opslaan').addEventListener('click',function(){
+    var tekst=el('modal-rap-tekst').value.trim();if(!tekst){el('modal-rap-tekst').style.borderColor='var(--brick)';return;}
+    r.tekst=tekst;closeModal();renderCaDoelen();
+   });
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-delrapport]'),function(b){
+  b.addEventListener('click',function(){
+   var parts=b.getAttribute('data-delrapport').split('|'),doelId=+parts[0],rapId=+parts[1];
+   openModal('<h3>Rapportage verwijderen</h3><div class="msec"><p>Weet je zeker dat je deze rapportage wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-bevestig').addEventListener('click',function(){
+    var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
+    doel.rapportages=doel.rapportages.filter(function(x){return x.id!==rapId;});
+    closeModal();renderCaDoelen();
+   });
   });
  });
 }
@@ -1935,7 +2217,15 @@ function agendaCardHtml(a){
  var extra=[];
  if(a.herinnering&&a.herinnering!=='geen')extra.push('🔔 '+herinneringLabel(a.herinnering));
  if(a.herhaling&&a.herhaling!=='geen')extra.push('🔁 '+herhalingLabel(a.herhaling));
- return '<div class="agendacard"><div class="adate">'+a.datumlabel+'</div><div class="atxt"><b>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
+ if(a.locatie)extra.push('📍 '+a.locatie);
+ if(a.herinnerdAan&&a.herinnerdAan.length){
+  var voornamen=a.herinnerdAan.map(function(id){var p=findPerson(id);return p?naam(p).split(' ')[0]:null;}).filter(Boolean);
+  if(voornamen.length)extra.push('👤 '+voornamen.join(', '));
+ }
+ return '<div class="agendacard">'+
+  '<input type="checkbox" data-klaar="'+a.id+'" '+(a.klaar?'checked':'')+' style="width:auto;flex:0 0 auto" aria-label="Klaar">'+
+  '<div class="adate">'+a.datumlabel+'</div><div class="atxt"><b'+(a.klaar?' style="text-decoration:line-through;opacity:.55"':'')+'>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
+  (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+a.locatie.replace(/"/g,'&quot;')+'">🗺️ '+a.locatie+'</div>':'')+
   (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
 }
 var PIJL_L='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>';
@@ -1959,6 +2249,14 @@ function renderCaAgenda(){
  }
  html+='<button type="button" class="addbtn-row" id="ca-nieuwe-afspraak">+ Afspraak toevoegen</button>';
  el('ca-body').innerHTML=html;
+ wireMediaThumbs(el('ca-body'));
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-klaar]'),function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   var a=d.agenda.filter(function(x){return x.id===+c.getAttribute('data-klaar');})[0];
+   a.klaar=c.checked;renderCaAgenda();
+  });
+ });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-agendaview]'),function(b){
   b.addEventListener('click',function(){caAgendaView=b.getAttribute('data-agendaview');caAgendaDag=null;renderCaAgenda();});
  });
@@ -1979,12 +2277,16 @@ function renderCaAgenda(){
   for(var mi=0;mi<60;mi++)minOpties+='<option'+(mi===0?' selected':'')+'>'+(mi<10?'0'+mi:mi)+'</option>';
   var herinneringOpties=HERINNERING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
   var herhalingOpties=HERHALING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
+  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId);});
+  var herinnerChecklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'+avatarHtmlSized(naam(p),26)+'<input type="checkbox" value="'+p.id+'" class="afspr-herinner" style="width:auto">'+naam(p)+'</label>';}).join('');
   openModal('<h3>Afspraak toevoegen</h3>'+
    '<div class="field"><label>Titel</label><input id="modal-afspr-titel" placeholder="Bijv. Fysiotherapie"></div>'+
    '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="2026-09-20"></div>'+
    '<div class="field"><label>Tijd</label><div class="timerow"><select id="modal-afspr-uur">'+uurOpties+'</select><span>:</span><select id="modal-afspr-min">'+minOpties+'</select></div></div></div>'+
+   '<div class="field"><label>Locatie</label><input id="modal-afspr-locatie" placeholder="Bijv. Buurtcentrum"></div>'+
    '<div class="field"><label>Herinnering</label><select id="modal-afspr-herinnering">'+herinneringOpties+'</select></div>'+
    '<div class="field"><label>Herhalen</label><select id="modal-afspr-herhaling">'+herhalingOpties+'</select></div>'+
+   (betrokkenen.length?'<div class="field"><label>Wie krijgt de herinnering</label>'+herinnerChecklist+'</div>':'')+
    '<label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:12px 0 6px"><input type="checkbox" id="modal-afspr-media" style="width:auto">Foto toevoegen</label>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
@@ -1994,7 +2296,9 @@ function renderCaAgenda(){
    var datumlabel='—';
    if(datumval){var dt=new Date(datumval+'T00:00:00');datumlabel=dt.getDate()+' '+MAAND_AFK[dt.getMonth()];}
    var tijd=el('modal-afspr-uur').value+':'+el('modal-afspr-min').value;
+   var herinnerdAan=Array.from(document.querySelectorAll('.afspr-herinner:checked')).map(function(c){return +c.value;});
    d.agenda.push({id:d._nextAgendaId++,titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
+    locatie:el('modal-afspr-locatie').value.trim(),herinnerdAan:herinnerdAan,klaar:false,
     herinnering:el('modal-afspr-herinnering').value,herhaling:el('modal-afspr-herhaling').value});
    closeModal();renderCaAgenda();
   });
@@ -2005,7 +2309,10 @@ function renderCaAgenda(){
 function renderCaIkboek(){
  var d=ensureClientData(caClientId);
  var html=d.ikboek.length? d.ikboek.slice().reverse().map(function(e){
-  return '<div class="ikboekcard"><div class="imeta">'+e.tijd+'</div>'+e.tekst+
+  return '<div class="ikboekcard"><div class="imeta"><span>'+e.tijd+'</span><span style="display:flex;gap:4px">'+
+   '<button type="button" class="iconbtn tiny" data-editikboek="'+e.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+   '<button type="button" class="iconbtn tiny danger" data-delikboek="'+e.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
+  '</span></div>'+e.tekst+
    (e.mediaType?mediaThumbHtml(e.mediaType,'linear-gradient(135deg,#4A6FA5,#5A8A6E)','Ik-Boek — '+e.tijd):'')+
    emojiRowHtml('data-ikreact',e.id,e)+
   '</div>';
@@ -2033,6 +2340,28 @@ function renderCaIkboek(){
    toggleReactie(e,emoji);renderCaIkboek();
   });
  });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editikboek]'),function(b){
+  b.addEventListener('click',function(){
+   var e=d.ikboek.filter(function(x){return x.id===+b.getAttribute('data-editikboek');})[0];
+   openModal('<h3>Pagina bewerken</h3><div class="field"><label>Wat wil je vastleggen?</label><textarea id="modal-ikb-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+e.tekst.replace(/</g,'&lt;')+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-opslaan').addEventListener('click',function(){
+    var tekst=el('modal-ikb-tekst').value.trim();if(!tekst){el('modal-ikb-tekst').style.borderColor='var(--brick)';return;}
+    e.tekst=tekst;closeModal();renderCaIkboek();
+   });
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-delikboek]'),function(b){
+  b.addEventListener('click',function(){
+   var id=+b.getAttribute('data-delikboek');
+   openModal('<h3>Pagina verwijderen</h3><div class="msec"><p>Weet je zeker dat je deze pagina wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-bevestig').addEventListener('click',function(){
+    d.ikboek=d.ikboek.filter(function(x){return x.id!==id;});
+    closeModal();renderCaIkboek();
+   });
+  });
+ });
 }
 
 /* --- Chat --- */
@@ -2042,15 +2371,31 @@ function chatThreadsForClient(clientId){
  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,clientId);});
  var threads=[{key:'group-'+clientId,naam:'Team '+naam(p),groep:true,defaultLeden:betrokkenen}];
  betrokkenen.filter(function(b){return b.type==='medewerker';}).forEach(function(m){threads.push({key:'1on1-'+m.id,naam:naam(m),groep:false,persoon:m});});
+ var d=ensureClientData(clientId);
+ (d.customChats||[]).forEach(function(c){
+  if(threads.some(function(th){return th.key===c.key;}))return;
+  if(c.groep){
+   threads.push({key:c.key,naam:c.naam,groep:true,defaultLeden:c.leden.map(findPerson).filter(Boolean),leeg:true});
+  }else{
+   var persoon=findPerson(c.persoonId);
+   if(persoon)threads.push({key:c.key,naam:naam(persoon),groep:false,persoon:persoon,leeg:true});
+  }
+ });
  return threads;
 }
-function ensureThread(key,naamThread,groep,defaultLeden){
- if(!CHATSTORE[key])CHATSTORE[key]={
+function ensureThread(key,naamThread,groep,defaultLeden,leeg){
+ if(!CHATSTORE[key])CHATSTORE[key]=leeg?{
   naam:naamThread,
   leden:groep?defaultLeden.map(function(x){return x.id;}):null,
+  _nextMsgId:1,
+  berichten:[]
+ }:{
+  naam:naamThread,
+  leden:groep?defaultLeden.map(function(x){return x.id;}):null,
+  _nextMsgId:3,
   berichten:[
-   {van:naamThread.split(' ')[0],tekst:'Hoi! Hoe gaat het vandaag?',tijd:'09:12'},
-   {van:'Jij',tekst:'Goed, alles rustig verlopen vanmorgen.',tijd:'09:15'}
+   {id:1,van:naamThread.split(' ')[0],tekst:'Hoi! Hoe gaat het vandaag?',tijd:'09:12'},
+   {id:2,van:'Jij',tekst:'Goed, alles rustig verlopen vanmorgen.',tijd:'09:15'}
   ]
  };
  return CHATSTORE[key];
@@ -2058,40 +2403,115 @@ function ensureThread(key,naamThread,groep,defaultLeden){
 var caChatKey=null;
 function renderCaChatList(){
  var threads=chatThreadsForClient(caClientId);
- el('ca-body').innerHTML=threads.map(function(t){
-  var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden),last=th.berichten[th.berichten.length-1];
+ var html=threads.map(function(t){
+  var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg),last=th.berichten[th.berichten.length-1];
   return '<div class="chatlist-row" data-openchat="'+t.key+'">'+avatarHtmlSized(th.naam,38)+
-   '<div class="ctxt"><b>'+th.naam+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+(last?last.van+': '+last.tekst:'')+'</span></div>'+
+   '<div class="ctxt"><b>'+th.naam+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+(last?last.van+': '+last.tekst:'Nog geen berichten')+'</span></div>'+
    '<span class="ctime">'+(last?last.tijd:'')+'</span></div>';
  }).join('');
+ html+='<button type="button" class="addbtn-row" id="ca-nieuw-gesprek">+ Nieuw gesprek</button>';
+ el('ca-body').innerHTML=html;
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-openchat]'),function(row){
   row.addEventListener('click',function(){caChatKey=row.getAttribute('data-openchat');renderCaChatThread();});
+ });
+ el('ca-nieuw-gesprek').addEventListener('click',function(){
+  var betrokkenen=people.filter(function(x){return x.type==='medewerker'&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId);});
+  if(!betrokkenen.length){
+   openModal('<h3>Nieuw gesprek</h3><div class="msec"><p>Geen medewerkers met toegang tot deze cliënt om een gesprek mee te starten.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+   el('modal-snap').addEventListener('click',closeModal);
+   return;
+  }
+  var persoonOpties=betrokkenen.map(function(p){return '<option value="'+p.id+'">'+naam(p)+' — '+(p.type==='naaste'?'Naaste':'Medewerker')+'</option>';}).join('');
+  var checklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px"><input type="checkbox" value="'+p.id+'" class="gesprek-lid" style="width:auto">'+naam(p)+'</label>';}).join('');
+  openModal('<h3>Nieuw gesprek</h3>'+
+   '<div class="minitabs"><button type="button" class="on" data-gesprektype="persoon">Met één persoon</button><button type="button" data-gesprektype="groep">Nieuwe groep</button></div>'+
+   '<div id="gesprek-persoon-veld"><div class="field"><label>Kies iemand</label><select id="modal-gesprek-persoon">'+persoonOpties+'</select></div></div>'+
+   '<div id="gesprek-groep-veld" hidden><div class="field"><label>Groepsnaam</label><input id="modal-gesprek-naam" placeholder="Bijv. Ochtenddienst"></div><div class="field"><label>Leden</label>'+checklist+'</div></div>'+
+   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Starten</button></div>');
+  var type='persoon';
+  document.querySelectorAll('[data-gesprektype]').forEach(function(b){
+   b.addEventListener('click',function(){
+    type=b.getAttribute('data-gesprektype');
+    document.querySelectorAll('[data-gesprektype]').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    el('gesprek-persoon-veld').hidden=type!=='persoon';
+    el('gesprek-groep-veld').hidden=type!=='groep';
+   });
+  });
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-opslaan').addEventListener('click',function(){
+   var d=ensureClientData(caClientId);
+   d.customChats=d.customChats||[];
+   if(type==='persoon'){
+    var pid=+el('modal-gesprek-persoon').value;
+    var key='1on1-'+pid;
+    var bestaatAl=chatThreadsForClient(caClientId).some(function(th){return th.key===key;});
+    if(!bestaatAl)d.customChats.push({key:key,groep:false,persoonId:pid});
+    caChatKey=key;
+   }else{
+    var naamVal=el('modal-gesprek-naam').value.trim();if(!naamVal){el('modal-gesprek-naam').style.borderColor='var(--brick)';return;}
+    var leden=Array.from(document.querySelectorAll('.gesprek-lid:checked')).map(function(c){return +c.value;});
+    if(!leden.length)return;
+    var key='groep-custom-'+(d._nextChatId++);
+    d.customChats.push({key:key,groep:true,naam:naamVal,leden:leden});
+    caChatKey=key;
+   }
+   closeModal();renderCaChatThread();
+  });
  });
 }
 function renderCaChatThread(){
  var threads=chatThreadsForClient(caClientId),t=threads.filter(function(x){return x.key===caChatKey;})[0];
  if(!t){renderCaChatList();return;}
- var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden);
+ var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg);
  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
   '<button type="button" class="ghost small" id="ca-chat-terug">← Terug</button>'+
   '<b style="font-size:13.5px">'+th.naam+'</b>'+
   (t.groep?'<div style="display:flex;gap:6px"><button type="button" class="small" id="ca-chat-media">Media</button><button type="button" class="small" id="ca-chat-leden">Leden</button></div>':'<span></span>')+'</div>';
  html+='<div id="ca-chat-berichten">'+th.berichten.map(function(m){
-  return '<div class="msgrow'+(m.van==='Jij'?' mine':'')+'"><div class="bubble">'+(m.van!=='Jij'?'<b style="font-size:11px;display:block;opacity:.7">'+m.van+'</b>':'')+m.tekst+'</div></div>';
+  var mine=m.van==='Jij';
+  var acties=mine?'<span style="display:flex;gap:2px;align-items:center;margin-right:4px">'+
+   '<button type="button" class="iconbtn tiny" data-editmsg="'+m.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+   '<button type="button" class="iconbtn tiny danger" data-delmsg="'+m.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
+  '</span>':'';
+  return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+m.van+'</b>':'')+m.tekst+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+'</div></div>';
  }).join('')+'</div>';
- if(t.groep)html+='<div class="mediagrid" id="ca-chat-media-grid" hidden>'+Array(6).fill(0).map(function(_,i){return '<div class="mcell" style="background:'+AVCOLORS[i%AVCOLORS.length]+'"></div>';}).join('')+'</div>';
+ if(t.groep){
+  var mediaPeriodes=[{label:'Deze maand',n:4},{label:'Vorige maand',n:3}];
+  html+='<div id="ca-chat-media-grid" hidden>'+mediaPeriodes.map(function(mp,mi){
+   return '<div class="sublistlabel" style="margin-top:'+(mi===0?'10px':'16px')+'">'+mp.label+'</div><div class="mediagrid">'+Array(mp.n).fill(0).map(function(_,i){return '<div class="mcell" style="background:'+AVCOLORS[(mi*4+i)%AVCOLORS.length]+'"></div>';}).join('')+'</div>';
+  }).join('')+'</div>';
+ }
  html+='<div class="chatinputrow"><input id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
  el('ca-body').innerHTML=html;
  wireMediaThumbs(el('ca-body'));
  el('ca-chat-terug').addEventListener('click',renderCaChatList);
  el('ca-chat-send').addEventListener('click',function(){
   var v=el('ca-chat-input').value.trim();if(!v)return;
-  th.berichten.push({van:'Jij',tekst:v,tijd:'nu'});el('ca-chat-input').value='';renderCaChatThread();
+  th.berichten.push({id:th._nextMsgId++,van:'Jij',tekst:v,tijd:'nu'});el('ca-chat-input').value='';renderCaChatThread();
  });
  if(t.groep){
   el('ca-chat-media').addEventListener('click',function(){el('ca-chat-media-grid').hidden=!el('ca-chat-media-grid').hidden;});
   el('ca-chat-leden').addEventListener('click',renderCaGroepBewerken);
  }
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editmsg]'),function(b){
+  b.addEventListener('click',function(){
+   var m=th.berichten.filter(function(x){return x.id===+b.getAttribute('data-editmsg');})[0];
+   openModal('<h3>Bericht bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-msg-tekst" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+m.tekst.replace(/</g,'&lt;')+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-opslaan').addEventListener('click',function(){
+    var tekst=el('modal-msg-tekst').value.trim();if(!tekst){el('modal-msg-tekst').style.borderColor='var(--brick)';return;}
+    m.tekst=tekst;m.bewerkt=true;closeModal();renderCaChatThread();
+   });
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-delmsg]'),function(b){
+  b.addEventListener('click',function(){
+   var id=+b.getAttribute('data-delmsg');
+   th.berichten=th.berichten.filter(function(x){return x.id!==id;});
+   renderCaChatThread();
+  });
+ });
 }
 
 /* --- Chatgroep bewerken --- */
