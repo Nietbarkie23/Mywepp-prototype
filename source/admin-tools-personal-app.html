@@ -324,6 +324,14 @@ td.dot{text-align:center}
 .mediathumb{width:100%;aspect-ratio:16/9;border-radius:8px;margin-top:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;transition:transform .15s ease,filter .15s ease;position:relative}
 .mediathumb:hover{transform:scale(1.015);filter:brightness(1.05)}
 .mediathumb.video,.mediathumb-lg.video{background-image:linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;background-color:#e4e4e4}
+.mapthumb{margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--accent-bg);color:var(--accent);font-size:12px;font-weight:500;cursor:pointer;transition:filter .15s ease}
+.mapthumb:hover{filter:brightness(.96)}
+.audiobar{margin-top:8px;padding:8px 10px;border-radius:999px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;gap:8px;cursor:pointer;transition:filter .15s ease}
+.audiobar:hover{filter:brightness(.97)}
+.audiobar .playbtn-sm{width:22px;height:22px;flex:0 0 22px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+.audiobar .playbtn-sm svg{width:10px;height:10px;fill:#fff}
+.audiobar .waveform{flex:1;color:var(--accent);font-size:14px;letter-spacing:1px;overflow:hidden;white-space:nowrap}
+.audiobar .adur{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
 .playbtn{width:46px;height:46px;border-radius:999px;background:rgba(20,20,20,.55);display:flex;align-items:center;justify-content:center}
 .playbtn svg{width:17px;height:17px;fill:#fff;margin-left:3px}
 .mediathumb-lg{width:100%;aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
@@ -1929,6 +1937,10 @@ function mediaThumbHtml(type,gradient,caption){
  if(type==='video')return '<div class="mediathumb video" data-mediatype="video" data-caption="'+esc+'"><div class="playbtn">'+PLAY_SVG+'</div></div>';
  return '<div class="mediathumb" data-mediatype="foto" data-gradient="'+gradient+'" data-caption="'+esc+'" style="background:'+gradient+'">Foto</div>';
 }
+function audioBarHtml(caption){
+ var esc=(caption||'').replace(/"/g,'&quot;');
+ return '<div class="audiobar" data-audiobar="1" data-caption="'+esc+'"><span class="playbtn-sm">'+PLAY_SVG+'</span><span class="waveform">▂▄▆▃▅▇▂▄▆▃▄▇▂</span><span class="adur">0:14</span></div>';
+}
 function openMediaViewer(type,gradient,caption){
  var big=type==='video'
   ?'<div class="mediathumb-lg video" style="aspect-ratio:16/9"><div class="playbtn" style="width:60px;height:60px">'+PLAY_SVG.replace('viewBox','style="width:22px;height:22px" viewBox')+'</div></div>'
@@ -1945,6 +1957,12 @@ function wireMediaThumbs(container){
  Array.prototype.forEach.call(container.querySelectorAll('.mcell'),function(cell){
   if(cell.dataset.wired)return;cell.dataset.wired='1';
   cell.addEventListener('click',function(){openMediaViewer('foto',cell.style.background,'Gedeeld in dit gesprek');});
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('[data-audiobar]'),function(elm){
+  elm.addEventListener('click',function(){
+   openModal('<h3>Spraakbericht</h3><div class="msec" style="text-align:center"><p>🎧 Spraakbericht wordt afgespeeld…</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+   el('modal-snap').addEventListener('click',closeModal);
+  });
  });
 }
 function emojiRowHtml(attrName,attrValuePrefix,item){
@@ -1970,6 +1988,7 @@ function rapportCardHtml(doel,r){
   '<button type="button" class="iconbtn tiny danger" data-delrapport="'+doel.id+'|'+r.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
  '</span></div>'+r.tekst+
   (r.media?mediaThumbHtml('foto','linear-gradient(135deg,#3E7CA6,#8C6A45)',doel.titel+' — '+r.tijd):'')+
+  (r.audio?audioBarHtml(doel.titel+' — '+r.tijd):'')+
   emojiRowHtml('data-react',doel.id+'|'+r.id,r)+
  '</div>';
 }
@@ -2020,6 +2039,7 @@ function renderCaDoelen(){
     '<div class="field"><label style="font-size:11.5px">Datum</label><input type="date" id="rapport-datum-'+doelId+'" value="'+vandaag+'"></div></div>'+
     '<textarea id="rapport-tekst-'+doelId+'" placeholder="Wat is er gebeurd?" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>'+
     '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:6px"><input type="checkbox" id="rapport-media-'+doelId+'" style="width:auto">Foto toevoegen</label>'+
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:4px"><input type="checkbox" id="rapport-audio-'+doelId+'" style="width:auto">🎤 Spraakbericht toevoegen</label>'+
     '<div class="field" style="margin-top:6px"><label style="font-size:11.5px">Bijlagen</label><button type="button" class="small" style="width:100%" id="rapport-bijlage-'+doelId+'">+ Bestanden toevoegen</button></div>'+
     '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="primary small" data-opslaanrapport="'+doelId+'">Plaatsen</button></div></div>';
    el('rapport-bijlage-'+doelId).addEventListener('click',function(){
@@ -2029,10 +2049,11 @@ function renderCaDoelen(){
    document.querySelector('[data-opslaanrapport="'+doelId+'"]').addEventListener('click',function(){
     var tekst=el('rapport-tekst-'+doelId).value.trim();if(!tekst)return;
     var media=el('rapport-media-'+doelId).checked;
+    var audio=el('rapport-audio-'+doelId).checked;
     var dienst=el('rapport-dienst-'+doelId).value;
     var datum=el('rapport-datum-'+doelId).value;
     var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
-    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',dienst:dienst,datum:datum,auteur:'Jij',media:media,reacties:{}});
+    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',dienst:dienst,datum:datum,auteur:'Jij',media:media,audio:audio,reacties:{}});
     renderCaDoelen();
    });
   });
@@ -2159,7 +2180,15 @@ function agendaCardHtml(a){
  var extra=[];
  if(a.herinnering&&a.herinnering!=='geen')extra.push('🔔 '+herinneringLabel(a.herinnering));
  if(a.herhaling&&a.herhaling!=='geen')extra.push('🔁 '+herhalingLabel(a.herhaling));
- return '<div class="agendacard"><div class="adate">'+a.datumlabel+'</div><div class="atxt"><b>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
+ if(a.locatie)extra.push('📍 '+a.locatie);
+ if(a.herinnerdAan&&a.herinnerdAan.length){
+  var voornamen=a.herinnerdAan.map(function(id){var p=findPerson(id);return p?naam(p).split(' ')[0]:null;}).filter(Boolean);
+  if(voornamen.length)extra.push('👤 '+voornamen.join(', '));
+ }
+ return '<div class="agendacard">'+
+  '<input type="checkbox" data-klaar="'+a.id+'" '+(a.klaar?'checked':'')+' style="width:auto;flex:0 0 auto" aria-label="Klaar">'+
+  '<div class="adate">'+a.datumlabel+'</div><div class="atxt"><b'+(a.klaar?' style="text-decoration:line-through;opacity:.55"':'')+'>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
+  (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+a.locatie.replace(/"/g,'&quot;')+'">🗺️ '+a.locatie+'</div>':'')+
   (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
 }
 var PIJL_L='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>';
@@ -2183,6 +2212,14 @@ function renderCaAgenda(){
  }
  html+='<button type="button" class="addbtn-row" id="ca-nieuwe-afspraak">+ Afspraak toevoegen</button>';
  el('ca-body').innerHTML=html;
+ wireMediaThumbs(el('ca-body'));
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-klaar]'),function(c){
+  c.addEventListener('click',function(e){
+   e.stopPropagation();
+   var a=d.agenda.filter(function(x){return x.id===+c.getAttribute('data-klaar');})[0];
+   a.klaar=c.checked;renderCaAgenda();
+  });
+ });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-agendaview]'),function(b){
   b.addEventListener('click',function(){caAgendaView=b.getAttribute('data-agendaview');caAgendaDag=null;renderCaAgenda();});
  });
@@ -2203,12 +2240,16 @@ function renderCaAgenda(){
   for(var mi=0;mi<60;mi++)minOpties+='<option'+(mi===0?' selected':'')+'>'+(mi<10?'0'+mi:mi)+'</option>';
   var herinneringOpties=HERINNERING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
   var herhalingOpties=HERHALING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
+  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId);});
+  var herinnerChecklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'+avatarHtmlSized(naam(p),26)+'<input type="checkbox" value="'+p.id+'" class="afspr-herinner" style="width:auto">'+naam(p)+'</label>';}).join('');
   openModal('<h3>Afspraak toevoegen</h3>'+
    '<div class="field"><label>Titel</label><input id="modal-afspr-titel" placeholder="Bijv. Fysiotherapie"></div>'+
    '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="2026-09-20"></div>'+
    '<div class="field"><label>Tijd</label><div class="timerow"><select id="modal-afspr-uur">'+uurOpties+'</select><span>:</span><select id="modal-afspr-min">'+minOpties+'</select></div></div></div>'+
+   '<div class="field"><label>Locatie</label><input id="modal-afspr-locatie" placeholder="Bijv. Buurtcentrum"></div>'+
    '<div class="field"><label>Herinnering</label><select id="modal-afspr-herinnering">'+herinneringOpties+'</select></div>'+
    '<div class="field"><label>Herhalen</label><select id="modal-afspr-herhaling">'+herhalingOpties+'</select></div>'+
+   (betrokkenen.length?'<div class="field"><label>Wie krijgt de herinnering</label>'+herinnerChecklist+'</div>':'')+
    '<label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:12px 0 6px"><input type="checkbox" id="modal-afspr-media" style="width:auto">Foto toevoegen</label>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
@@ -2218,7 +2259,9 @@ function renderCaAgenda(){
    var datumlabel='—';
    if(datumval){var dt=new Date(datumval+'T00:00:00');datumlabel=dt.getDate()+' '+MAAND_AFK[dt.getMonth()];}
    var tijd=el('modal-afspr-uur').value+':'+el('modal-afspr-min').value;
+   var herinnerdAan=Array.from(document.querySelectorAll('.afspr-herinner:checked')).map(function(c){return +c.value;});
    d.agenda.push({id:d._nextAgendaId++,titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
+    locatie:el('modal-afspr-locatie').value.trim(),herinnerdAan:herinnerdAan,klaar:false,
     herinnering:el('modal-afspr-herinnering').value,herhaling:el('modal-afspr-herhaling').value});
    closeModal();renderCaAgenda();
   });
@@ -2396,7 +2439,12 @@ function renderCaChatThread(){
   '</span>':'';
   return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+m.van+'</b>':'')+m.tekst+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+'</div></div>';
  }).join('')+'</div>';
- if(t.groep)html+='<div class="mediagrid" id="ca-chat-media-grid" hidden>'+Array(6).fill(0).map(function(_,i){return '<div class="mcell" style="background:'+AVCOLORS[i%AVCOLORS.length]+'"></div>';}).join('')+'</div>';
+ if(t.groep){
+  var mediaPeriodes=[{label:'Deze maand',n:4},{label:'Vorige maand',n:3}];
+  html+='<div id="ca-chat-media-grid" hidden>'+mediaPeriodes.map(function(mp,mi){
+   return '<div class="sublistlabel" style="margin-top:'+(mi===0?'10px':'16px')+'">'+mp.label+'</div><div class="mediagrid">'+Array(mp.n).fill(0).map(function(_,i){return '<div class="mcell" style="background:'+AVCOLORS[(mi*4+i)%AVCOLORS.length]+'"></div>';}).join('')+'</div>';
+  }).join('')+'</div>';
+ }
  html+='<div class="chatinputrow"><input id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
  el('ca-body').innerHTML=html;
  wireMediaThumbs(el('ca-body'));
