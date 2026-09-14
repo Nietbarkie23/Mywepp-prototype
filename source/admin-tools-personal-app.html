@@ -526,7 +526,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
     <div class="panel" style="padding:0">
       <div class="tallywrap">
-        <div class="tallytop"><b id="tally-count">0 wijzigingen</b><span>klaar om te versturen</span></div>
+        <div class="tallytop"><b id="tally-count">0 wijzigingen</b><span>klaar om door te voeren</span></div>
         <div class="tallybar"><span id="tally-nieuw" style="background:var(--moss)"></span><span id="tally-gewijzigd" style="background:var(--amber)"></span><span id="tally-verwijderd" style="background:var(--brick)"></span></div>
       </div>
       <div class="infolink" id="info-toggle">Uitleg over dit formulier <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
@@ -565,7 +565,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
     </div>
 
-    <div class="actions end" style="border:0;margin-top:6px"><button type="button" class="primary" id="verzenden-btn">Aanvraag verzenden</button></div>
+    <div class="actions end" style="border:0;margin-top:6px"><button type="button" class="primary" id="verzenden-btn">Wijzigingen doorvoeren</button></div>
   </div>
 
   <!-- ============ GEARCHIVEERD ============ -->
@@ -579,38 +579,39 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
 
-  <!-- ============ AANVRAAG CONTROLEREN ============ -->
+  <!-- ============ WIJZIGINGEN CONTROLEREN ============ -->
   <div id="pp-controleren" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Aanvraag controleren</div>
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Wijzigingen controleren</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Aanvraag controleren</h1><p>Controleer of onderstaande wijzigingen kloppen. Na versturen kan dit niet meer aangepast worden totdat MyWepp Support de aanvraag heeft verwerkt.</p></div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Wijzigingen controleren</h1><p>Controleer of onderstaande wijzigingen kloppen. Na doorvoeren zijn ze direct actief en kun je ze hier niet meer aanpassen.</p></div>
     <div class="panel" id="controleren-lijst" style="padding:0"></div>
-    <div class="actions"><button type="button" data-back="pp-formulier">Terug naar formulier</button><button type="button" class="primary" id="naar-versturen">Aanvraag versturen</button></div>
+    <div class="actions"><button type="button" data-back="pp-formulier">Terug naar formulier</button><button type="button" class="primary" id="naar-versturen">Wijzigingen doorvoeren</button></div>
   </div>
 
-  <!-- ============ AANVRAAG VERZENDEN ============ -->
+  <!-- ============ WIJZIGINGEN BEVESTIGEN ============ -->
   <div id="pp-versturen" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Aanvraag verzenden</div>
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Bevestigen</div>
       <div class="crumbicons"><button type="button" data-back="pp-controleren" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Aanvraag verzenden</h1><p>MyWepp Support verwerkt deze aanvraag. Laat weten wie zij kunnen bereiken bij vragen.</p></div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Wijzigingen bevestigen</h1><p>De wijzigingen worden direct doorgevoerd. Vul eventueel een contactpersoon in voor als er later vragen zijn.</p></div>
     <div class="panel"><div class="body">
       <div class="row">
-        <div class="field"><label for="av-naam">Contactpersoon</label><input id="av-naam" placeholder="Sandra Bakker"><p class="mini" id="av-naam-fout" style="color:var(--brick)" hidden>Vul de volledige naam in (voor- en achternaam).</p></div>
-        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
+        <div class="field"><label for="av-naam">Contactpersoon (optioneel)</label><input id="av-naam" placeholder="Sandra Bakker"><p class="mini" id="av-naam-fout" style="color:var(--brick)" hidden>Vul de volledige naam in (voor- en achternaam), of laat leeg.</p></div>
+        <div class="field"><label for="av-tel">Telefoonnummer (optioneel)</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers), of laat leeg.</p></div>
       </div>
-      <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de aanvraag gecontroleerd en ga akkoord met versturen.</label></div>
-      <div class="actions end"><button type="button" data-back="pp-controleren">Terug</button><button type="button" class="primary" id="av-versturen" disabled>Aanvraag versturen</button></div>
+      <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>
+      <div class="actions end"><button type="button" data-back="pp-controleren">Terug</button><button type="button" class="primary" id="av-versturen" disabled>Wijzigingen doorvoeren</button></div>
     </div></div>
   </div>
 
-  <!-- ============ AANVRAAG VERZONDEN ============ -->
+  <!-- ============ WIJZIGINGEN DOORGEVOERD ============ -->
   <div id="pp-verzonden" hidden>
-    <div class="intro" style="padding-top:20px"><h1 style="font-size:22px">Aanvraag verzonden</h1></div>
-    <div class="result-ok" style="background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:var(--radius);padding:18px 20px;color:var(--moss);font-size:14.5px;margin-bottom:18px" id="verzonden-tekst"></div>
+    <div class="intro" style="padding-top:20px"><h1 style="font-size:22px">Wijzigingen doorgevoerd</h1></div>
+    <div class="result-ok" style="background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:var(--radius);padding:18px 20px;color:var(--moss);font-size:14.5px;margin-bottom:6px" id="verzonden-tekst"></div>
+    <p class="mini" style="margin:0 0 18px">Je gaat automatisch terug naar het groepsprofiel.</p>
     <div class="actions end" style="border:0"><button type="button" class="primary" data-back="pp-hub">Terug naar groepsprofiel</button></div>
   </div>
 
@@ -764,7 +765,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
 <script>
 function el(i){return document.getElementById(i);}
-function show(id){['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
+var verzondenTimer=null;
+function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
 function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');}
 var AVCOLORS=['#4A6FA5','#3D8C7D','#B0783C','#B0555A','#6E6A96','#3E7CA6','#8C6A45','#5A8A6E'];
@@ -961,7 +963,7 @@ function editFormClient(p){
    ? '<div class="field"><label>E-mailadres</label><input data-f="mail" data-id="'+p.id+'" value="'+(p.mail||'')+'" placeholder="naam@voorbeeld.nl"></div>'
    : '<p class="mini">Wordt: <b>'+genmail+'</b> — MyWepp-adressen worden altijd zonder hoofdletters aangemaakt.</p>')+
   (emailConflict(p)?'<p class="mini" style="color:var(--brick)">Dit e-mailadres is al in gebruik door iemand anders.</p>':'')+
-  '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen uit aanvraag</button><button type="button" class="small" data-fullclient="'+p.id+'">Volledig profiel bewerken →</button></div>'+
+  '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen</button><button type="button" class="small" data-fullclient="'+p.id+'">Volledig profiel bewerken →</button></div>'+
  '</div>';
 }
 function clientRechtenRow(p,t){
@@ -1069,13 +1071,13 @@ function editFormPersoon(p,t){
    '<div class="field"><label>Globaal</label><select data-f="rol" data-id="'+p.id+'">'+ROLLEN[t].filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'+
    '<div class="field"><label>Groep</label><select data-f="groep" data-id="'+p.id+'">'+GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('')+'</select></div>'+
   '</div>'+
-  (p._nieuweGroep?'<p class="mini" style="color:var(--amber)">Wordt bij versturen verplaatst naar '+p._nieuweGroep+'.</p>':'')+
+  (p._nieuweGroep?'<p class="mini" style="color:var(--amber)">Wordt bij doorvoeren verplaatst naar '+p._nieuweGroep+'.</p>':'')+
   '<div class="sublistlabel">Cliënten</div>'+
   clientRechtenRow(p,t)+
   (t==='medewerker'?('<div class="sublistlabel">Medewerkers</div>'+medewerkerPeerRow(p)):'')+
   (t==='medewerker'?('<div class="sublistlabel">Naasten</div>'+naasteRechtenRow(p)):'')+
   (t==='medewerker'?'<label class="contactcheck"><input type="checkbox" data-f="contactpersoon" data-id="'+p.id+'" '+(p.contactpersoon?'checked':'')+'>Markeren als contactpersoon</label>':'')+
-  '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen uit aanvraag</button><button type="button" class="small" data-fullpersoon="'+p.id+'">Volledig profiel bewerken →</button></div>'+
+  '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen</button><button type="button" class="small" data-fullpersoon="'+p.id+'">Volledig profiel bewerken →</button></div>'+
  '</div>';
 }
 
@@ -1263,7 +1265,7 @@ function infoSecties(keys){
  return keys.map(function(k){return '<div class="msec"><b>'+INFOTEXT[k].titel+'</b><p>'+INFOTEXT[k].tekst+'</p></div>';}).join('');
 }
 el('info-toggle').addEventListener('click',function(){
- openModal('<h3>Over dit formulier</h3><div class="msec"><p>Wijzigingen die je hier maakt worden pas echt doorgevoerd nadat je de aanvraag verstuurt. Tot die tijd kun je alles nog aanpassen of ongedaan maken via "Verwijderen uit aanvraag".</p></div>'
+ openModal('<h3>Over dit formulier</h3><div class="msec"><p>Wijzigingen die je hier maakt worden pas echt doorgevoerd nadat je op "Wijzigingen doorvoeren" klikt. Tot die tijd kun je alles nog aanpassen of ongedaan maken via "Verwijderen".</p></div>'
   +infoSecties(['client','medewerker','naaste'])
   +'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Snap ik</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
@@ -1278,7 +1280,7 @@ document.querySelectorAll('[data-help]').forEach(function(b){
 });
 el('formulier-terug').addEventListener('click',function(){
  if(heeftOnopgeslagenWijzigingen()){
-  openModal('<h3>Wijzigingen niet opgeslagen</h3><div class="msec"><p>Je hebt wijzigingen gemaakt die nog niet verstuurd zijn als aanvraag. Als je nu teruggaat, blijft dit concept bewaard en kun je later verdergaan.</p></div>'
+  openModal('<h3>Wijzigingen niet opgeslagen</h3><div class="msec"><p>Je hebt wijzigingen gemaakt die nog niet zijn doorgevoerd. Als je nu teruggaat, blijft dit concept bewaard en kun je later verdergaan.</p></div>'
    +'<div class="modal-actions"><button type="button" id="modal-blijf">Blijf op deze pagina</button><button type="button" class="primary" id="modal-terug">Toch teruggaan</button></div>');
   el('modal-blijf').addEventListener('click',closeModal);
   el('modal-terug').addEventListener('click',function(){closeModal();show('pp-hub');});
@@ -1350,7 +1352,7 @@ function renderGearchiveerd(){
 }
 el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
 
-/* --- Aanvraag: controleren -> versturen -> verzonden --- */
+/* --- Wijzigingen: controleren -> bevestigen -> doorgevoerd --- */
 var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
 function renderControleren(){
  var wijzigingen=people.filter(function(p){return p._state;});
@@ -1358,7 +1360,7 @@ function renderControleren(){
   return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
    '<div class="rtxt"><b>'+naam(p)+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+p.mail:'')+(p._nieuweGroep?' · verplaatst naar '+p._nieuweGroep:'')+'</div>'+
    '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+STATE_LABEL[p._state]+'</span></div>';
- }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om te versturen.</p>';
+ }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om door te voeren.</p>';
 }
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
 el('naar-versturen').addEventListener('click',function(){
@@ -1374,12 +1376,13 @@ function telGeldig(v){
  return v.replace(/\D/g,'').length>=9;
 }
 function checkVersturenKlaar(){
- var naamOk=naamGeldig(el('av-naam').value),telOk=telGeldig(el('av-tel').value);
  var naamLeeg=!el('av-naam').value.trim(),telLeeg=!el('av-tel').value.trim();
+ var naamOk=naamLeeg||naamGeldig(el('av-naam').value);
+ var telOk=telLeeg||telGeldig(el('av-tel').value);
  el('av-naam').style.borderColor=(!naamLeeg&&!naamOk)?'var(--brick)':'';
  el('av-tel').style.borderColor=(!telLeeg&&!telOk)?'var(--brick)':'';
- el('av-naam-fout').hidden=naamLeeg||naamOk;
- el('av-tel-fout').hidden=telLeeg||telOk;
+ el('av-naam-fout').hidden=naamOk;
+ el('av-tel-fout').hidden=telOk;
  el('av-versturen').disabled=!(naamOk&&telOk&&el('av-akkoord').checked);
 }
 ['av-naam','av-tel'].forEach(function(i){el(i).addEventListener('input',checkVersturenKlaar);el(i).addEventListener('blur',checkVersturenKlaar);});
@@ -1403,8 +1406,10 @@ el('av-versturen').addEventListener('click',function(){
  if(ontkoppeld)verwijderdTekst.push(ontkoppeld+' ontkoppeld van '+huidigeGroep);
  if(gearchiveerd)verwijderdTekst.push(gearchiveerd+' gearchiveerd');
  if(verplaatst)verwijderdTekst.push(verplaatst+' verplaatst naar een andere groep');
- el('verzonden-tekst').innerHTML='Je aanvraag ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') is verzonden naar MyWepp Support. We nemen binnen 2 werkdagen contact op met '+(el('av-naam').value.trim()||'de contactpersoon')+'. Tot die tijd kunnen deze wijzigingen niet meer aangepast worden.';
+ var contactzin=el('av-naam').value.trim()?' Bij vragen nemen we contact op met '+el('av-naam').value.trim()+'.':'';
+ el('verzonden-tekst').innerHTML='Je wijzigingen ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin;
  show('pp-verzonden');
+ verzondenTimer=setTimeout(function(){show('pp-hub');},3000);
 });
 
 /* --- Statistieken --- */
