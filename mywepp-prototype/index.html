@@ -606,8 +606,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Aanvraag verzenden</h1><p>MyWepp Support verwerkt deze aanvraag. Laat weten wie zij kunnen bereiken bij vragen.</p></div>
     <div class="panel"><div class="body">
       <div class="row">
-        <div class="field"><label for="av-naam">Contactpersoon</label><input id="av-naam" placeholder="Sandra Bakker"></div>
-        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"></div>
+        <div class="field"><label for="av-naam">Contactpersoon</label><input id="av-naam" placeholder="Sandra Bakker"><p class="mini" id="av-naam-fout" style="color:var(--brick)" hidden>Vul de volledige naam in (voor- en achternaam).</p></div>
+        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
       </div>
       <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de aanvraag gecontroleerd en ga akkoord met versturen.</label></div>
       <div class="actions end"><button type="button" data-back="pp-controleren">Terug</button><button type="button" class="primary" id="av-versturen" disabled>Aanvraag versturen</button></div>
@@ -1370,12 +1370,26 @@ function renderControleren(){
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
 el('naar-versturen').addEventListener('click',function(){
  el('av-naam').value='';el('av-tel').value='';el('av-akkoord').checked=false;el('av-versturen').disabled=true;
+ el('av-naam').style.borderColor='';el('av-tel').style.borderColor='';
+ el('av-naam-fout').hidden=true;el('av-tel-fout').hidden=true;
  show('pp-versturen');
 });
-function checkVersturenKlaar(){
- el('av-versturen').disabled=!(el('av-naam').value.trim()&&el('av-tel').value.trim()&&el('av-akkoord').checked);
+function naamGeldig(v){return /^[A-Za-zÀ-ÖØ-öø-ÿ'-]{2,}(\s+[A-Za-zÀ-ÖØ-öø-ÿ'-]{2,})+$/.test(v.trim());}
+function telGeldig(v){
+ v=v.trim();
+ if(!/^[0-9+\-\s()]+$/.test(v))return false;
+ return v.replace(/\D/g,'').length>=9;
 }
-['av-naam','av-tel'].forEach(function(i){el(i).addEventListener('input',checkVersturenKlaar);});
+function checkVersturenKlaar(){
+ var naamOk=naamGeldig(el('av-naam').value),telOk=telGeldig(el('av-tel').value);
+ var naamLeeg=!el('av-naam').value.trim(),telLeeg=!el('av-tel').value.trim();
+ el('av-naam').style.borderColor=(!naamLeeg&&!naamOk)?'var(--brick)':'';
+ el('av-tel').style.borderColor=(!telLeeg&&!telOk)?'var(--brick)':'';
+ el('av-naam-fout').hidden=naamLeeg||naamOk;
+ el('av-tel-fout').hidden=telLeeg||telOk;
+ el('av-versturen').disabled=!(naamOk&&telOk&&el('av-akkoord').checked);
+}
+['av-naam','av-tel'].forEach(function(i){el(i).addEventListener('input',checkVersturenKlaar);el(i).addEventListener('blur',checkVersturenKlaar);});
 el('av-akkoord').addEventListener('change',checkVersturenKlaar);
 el('av-versturen').addEventListener('click',function(){
  var nieuw=people.filter(function(p){return p._state==='nieuw';}).length;
