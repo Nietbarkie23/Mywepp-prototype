@@ -1288,7 +1288,7 @@ el('formulier-terug').addEventListener('click',function(){
  }
 });
 function pushNew(t){
- var basis={id:nextId++,type:t,voor:'',achter:'',mail:'',groepen:[huidigeGroep],_state:'nieuw',_editing:true};
+ var basis={id:nextId++,type:t,voor:'',achter:'',mail:'',groepen:[huidigeGroep],_state:'nieuw',_editing:false};
  if(t==='client'){
   basis.rechten={};basis._eigenmail=false;
   var effM=effectiveFor(huidigeGroep,'medewerker').data;
