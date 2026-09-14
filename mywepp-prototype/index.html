@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gebruikersbeheer & Standaardrollen</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="theme-color" content="#2660B0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyWepp">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ink:#1D2733; --ink-soft:#66707C; --ink-faint:#98A1AB;
+  --paper:#F1F4F8; --surface:#FFFFFF;
+  --line:#E1E6EC; --line-strong:#C7CFDA;
+  --moss:#2FAE6A; --moss-bg:#E7F7EE; --moss-line:#BEE7D2;
+  --amber:#B4780F; --amber-bg:#FBF1DE; --amber-line:#EFD8A6;
+  --brick:#E14A44; --brick-bg:#FDEBEA; --brick-line:#F5C7C4;
+  --accent:#2660B0; --accent-bg:#E8F0FA; --accent-line:#BFD6EF;
+  --focus:#1B3A63; --radius:10px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(23,35,54,.04), 0 3px 10px -6px rgba(23,35,54,.12);
+}
+:root[data-theme="dark"]{
+  --ink:#E9EDF2; --ink-soft:#A7B0BC; --ink-faint:#77818C;
+  --paper:#12161C; --surface:#1B2029;
+  --line:#2A303B; --line-strong:#3B4350;
+  --moss:#6FCB9A; --moss-bg:#152820; --moss-line:#264636;
+  --amber:#E2B564; --amber-bg:#2E2513; --amber-line:#4B3B1E;
+  --brick:#F09490; --brick-bg:#301C1B; --brick-line:#4E2C2A;
+  --accent:#7FA8D6; --accent-bg:#1B2A3C; --accent-line:#2E4257;
+  --focus:#7FA8D6;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 22px -10px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes sosPulse{0%{box-shadow:0 0 0 0 rgba(225,74,68,.45)}70%{box-shadow:0 0 0 13px rgba(225,74,68,0)}100%{box-shadow:0 0 0 0 rgba(225,74,68,0)}}
+@keyframes tickIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.reveal{animation:fadeSlideIn .3s ease both}
+body{margin:0;background:var(--paper);color:var(--ink);
+ font-family:"Inter",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+ font-size:15.5px;line-height:1.6}
+#view-admin,#view-personal,#view-clientapp,
+#pp-hub,#pp-formulier,#pp-controleren,#pp-versturen,#pp-verzonden,#pp-digibord,#pp-statistieken,#pp-maaltijden,#pp-profiel-client,#pp-profiel-persoon,#pp-gearchiveerd{
+ animation:fadeSlideIn .32s ease both}
+.urow,.personrow,.doelcard,.agendacard,.ikboekcard,.chatlist-row,.msgrow,.digirow,.reviewrow,.rapport,.infocard-row{
+ animation:fadeSlideIn .25s ease both}
+.modal-overlay:not([hidden]){animation:fadeIn .15s ease both}
+.modal-card{animation:popIn .2s cubic-bezier(.2,.8,.3,1.15) both}
+button{transition:transform .1s ease,border-color .15s ease,background-color .15s ease,box-shadow .15s ease}
+button:active{transform:scale(.96)}
+.panel,.urow,.personrow,.doelcard,.agendacard,.ikboekcard,.hubcard{transition:border-color .2s ease,box-shadow .2s ease}
+.hublinks button,.chatlist-row{transition:background-color .15s ease}
+.chev-r{transition:transform .15s ease}
+.hublinks button:hover .chev-r{transform:translateX(3px)}
+.avatar,.hubavatar{transition:transform .18s ease}
+.personrow:hover .avatar,.urow:hover .avatar,.chatlist-row:hover .avatar{transform:scale(1.06)}
+#ca-sos-btn{animation:sosPulse 2.6s ease-in-out infinite}
+.sosbtn{animation:sosPulse 1.8s ease-in-out infinite}
+.bottomnav button{transition:color .15s ease}
+.bottomnav button svg{transition:transform .2s cubic-bezier(.2,.8,.3,1.4)}
+.bottomnav button.on svg{transform:translateY(-2px)}
+.toggle .knob{transition:transform .2s cubic-bezier(.2,.8,.3,1.3)}
+.countchip{transition:color .2s ease}
+.ecount{animation:tickIn .25s cubic-bezier(.2,.8,.3,1.4) both}
+@media (prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 60px}
+h1,h2,h3{text-wrap:balance;font-weight:600;letter-spacing:-0.01em}
+.crumbbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.crumbs{font-size:12.5px;color:var(--accent)}
+.crumbs b{color:var(--accent);font-weight:600}
+.crumbicons{display:flex;gap:6px}
+.crumbicons button{width:30px;height:30px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface)}
+.crumbicons button svg{width:14px;height:14px}
+.countchip{font-size:14px;font-weight:600;color:var(--ink-faint);margin-left:5px}
+.toggle{position:relative;display:inline-block;width:38px;height:22px;flex:0 0 38px}
+.toggle input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer;z-index:1}
+.toggle .track{position:absolute;inset:0;background:var(--line-strong);border-radius:999px;transition:background .15s}
+.toggle .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.toggle input:checked ~ .track{background:var(--moss)}
+.toggle input:checked ~ .knob{transform:translateX(16px)}
+.togglerow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0}
+.togglerow span{font-size:14px}
+
+header.top{border-bottom:1px solid var(--line);background:var(--paper)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 24px;max-width:1080px;margin:0 auto;flex-wrap:wrap}
+.mark{display:flex;align-items:baseline;gap:8px}
+.mark b{font-weight:600;font-size:13px;letter-spacing:.02em;color:var(--ink-faint);text-transform:uppercase}
+.mark span{font-size:12px;color:var(--ink-faint)}
+.rolebar{display:flex;align-items:center;gap:8px}
+.rolebar label{font-size:12px;color:var(--ink-faint)}
+.rolebar select{width:auto;font-size:12.5px;padding:5px 8px;border-color:var(--line)}
+.maintabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px}
+.maintabs button{border:0;background:transparent;padding:7px 16px;border-radius:999px;font-size:13.5px;font-weight:500;color:var(--ink-soft);cursor:pointer}
+.maintabs button.on{background:var(--accent);color:#fff}
+
+.intro{padding:22px 0 16px}
+.intro h1{font-size:22px;margin:0 0 6px;max-width:32ch}
+.intro p{margin:0;color:var(--ink-soft);max-width:70ch;font-size:13.5px}
+
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.tabs .tab{background:transparent;border:0;border-bottom:2px solid transparent;padding:10px 4px;margin-right:20px;font:inherit;font-size:14.5px;font-weight:500;color:var(--ink-soft);cursor:pointer}
+.tabs .tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+
+button{font:inherit;font-size:14px;background:var(--surface);color:var(--ink);
+ border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--ink-soft)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.primary:hover{filter:brightness(1.1)}
+button.primary:disabled{opacity:.4;cursor:not-allowed;filter:none}
+button.ghost{border-color:transparent;background:transparent;color:var(--ink-soft)}
+button.ghost:hover{border-color:var(--line-strong)}
+button.danger{color:var(--brick);border-color:var(--brick-line)}
+button.danger:hover{border-color:var(--brick)}
+button.small{padding:5px 10px;font-size:12.5px;border-radius:8px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:14px;box-shadow:var(--shadow)}
+.panel .head{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.panel .head h2{margin:0;font-size:15px}
+.panel .head .sub{font-size:12.5px;color:var(--ink-soft)}
+.panel .body{padding:16px 18px}
+
+.field label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:5px}
+input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
+ border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.row.three{grid-template-columns:1fr 1fr 1fr}
+.field.chip-select select{width:auto}
+
+.note{border-left:3px solid var(--line-strong);padding:4px 0 4px 12px;margin:4px 0 14px;font-size:13.5px;color:var(--ink-soft)}
+.note.open{border-left-color:var(--amber);background:var(--amber-bg);padding:10px 12px 10px 12px;border-radius:0 var(--radius) var(--radius) 0;color:var(--amber)}
+.note.open b{color:var(--ink)}
+
+.groepkeuze{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);border-radius:999px;padding:6px 13px 6px 10px;font-size:13.5px;cursor:pointer;user-select:none}
+.chip input{width:auto;margin:0}
+.chip.on{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent)}
+
+.typetabs{display:flex;gap:8px;margin:2px 0 18px}
+.typetab{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:6px 15px;font-size:13.5px;cursor:pointer;color:var(--ink-soft)}
+.typetab.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+.rechtrow{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+.rechtrow .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.rechtrow .top b{font-size:14.5px;font-weight:600}
+.tag{font-size:11.5px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.tag.inherit{background:var(--paper);color:var(--ink-faint);border:1px solid var(--line)}
+.tag.override{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
+.rechtgrid{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
+.optlist{display:flex;flex-wrap:wrap;gap:7px}
+.optchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer;color:var(--ink-soft)}
+.optchip input{width:auto;margin:0}
+.optchip.on{background:var(--surface);border-color:var(--ink-soft);color:var(--ink)}
+.mini{font-size:12.5px;color:var(--ink-faint);margin-top:4px}
+
+.actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.actions.end{justify-content:flex-end}
+
+.bevestiging{background:var(--moss-bg);border:1px solid var(--moss-line);color:var(--moss);border-radius:var(--radius);padding:14px 18px;font-size:14px;margin-top:4px}
+
+.ctxbar{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-soft);margin:0 0 18px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.ctxbar select{width:auto;padding:6px 9px;font-size:13.5px}
+
+.grouplist{margin-bottom:26px}
+.grouplist h2{font-size:15px;font-weight:600;margin:0 0 3px}
+.grouplist .sub{font-size:13px;color:var(--ink-soft);margin:0 0 12px}
+.listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.personrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);margin-bottom:8px;box-shadow:var(--shadow)}
+.personrow.archived{opacity:.55}
+.avatar{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex:0 0 36px}
+.pinfo{flex:1;min-width:0}
+.pinfo .naam{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:8px}
+.pinfo .mail{font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:999px;background:var(--brick-bg);color:var(--brick);border:1px solid var(--brick-line)}
+.rowbtns{display:flex;gap:6px;flex:0 0 auto}
+.iconbtn{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center}
+.iconbtn svg{width:16px;height:16px}
+.empty-msg{font-size:13.5px;color:var(--ink-faint);padding:10px 2px}
+
+.steps{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-faint);padding-bottom:16px}
+.steps .on{color:var(--ink);font-weight:600}
+.steps svg{width:13px;height:13px;opacity:.5}
+
+.pagehead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.pagehead button.xback{width:34px;height:34px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center}
+.pagehead h1{margin:0;font-size:20px}
+
+.collapse{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.collapse .chead{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:var(--surface)}
+.collapse .chead b{font-size:14.5px}
+.collapse .cbody{padding:4px 16px 14px;max-height:900px;opacity:1;overflow:hidden;transition:max-height .32s ease,opacity .22s ease,padding .32s ease}
+.collapse.closed .cbody{max-height:0;opacity:0;padding-top:0;padding-bottom:0}
+.chev{transition:transform .15s}
+.collapse.closed .chev{transform:rotate(-90deg)}
+
+.rolepick{display:flex;align-items:center;gap:8px;font-size:13px}
+.rolepick select{width:auto;padding:5px 8px;font-size:13px}
+
+.sublistlabel{font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-faint);margin:16px 0 8px}
+.sublistlabel:first-child{margin-top:0}
+
+.checkline{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin-top:14px}
+.checkline input{width:auto;margin-top:3px}
+.checkline label{font-size:13.5px;color:var(--ink)}
+
+.summarybox{font-size:14.5px;line-height:1.6}
+.summarybox ul{margin:8px 0 0;padding-left:20px}
+.summarybox li{margin-bottom:4px}
+
+.hubcard{display:flex;align-items:center;gap:16px;padding:20px 22px;border-bottom:1px solid var(--line)}
+.hubcard:last-child{border-bottom:0}
+.hubavatar{width:52px;height:52px;border-radius:999px;flex:0 0 52px;background:linear-gradient(135deg,var(--accent),#4A78AC)}
+.hubfields{font-size:13.5px;color:var(--ink-soft);line-height:1.7}
+.hubfields b{color:var(--ink);font-weight:500}
+.hublinks button{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:15px 22px;background:var(--surface);font-size:14.5px;font-weight:500}
+.hublinks button:last-child{border-bottom:0}
+.hublinks button:hover{background:var(--paper)}
+.hublinks .chev-r{width:16px;height:16px;color:var(--ink-faint)}
+
+.tallywrap{padding:14px 22px;border-bottom:1px solid var(--line)}
+.tallytop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:13px;color:var(--ink-soft)}
+.tallytop b{color:var(--ink);font-size:14.5px}
+.tallybar{height:7px;border-radius:999px;overflow:hidden;display:flex;background:var(--line)}
+.tallybar span{height:100%;transition:width .45s cubic-bezier(.25,.8,.25,1)}
+
+.infolink{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px;font-weight:500;color:var(--accent)}
+.infobody{padding:0 22px 16px;font-size:13.5px;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+.infobody[hidden]{display:none}
+
+.acc{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin-bottom:14px;box-shadow:var(--shadow);overflow:hidden}
+.acc-head{display:flex;align-items:center;gap:10px;padding:15px 20px;cursor:pointer}
+.acc-head b{font-size:15px;flex:1}
+.acc-head .chev{color:var(--ink-faint);width:17px;height:17px}
+.acc-body{border-top:1px solid var(--line);padding:14px 20px 20px;max-height:1800px;opacity:1;overflow:hidden;transition:max-height .38s ease,opacity .25s ease,padding .38s ease}
+.acc.closed .acc-body{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-top-color:transparent}
+.acc.closed .chev{transform:rotate(-90deg)}
+
+.urow{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:9px;background:var(--surface);overflow:hidden}
+.urow.staged{border-color:var(--brick);background:var(--brick-bg)}
+.urow .uhead{display:flex;align-items:center;gap:12px;padding:10px 12px}
+.urow .uhead .pinfo .naam{font-size:14.5px;font-weight:500}
+.urow .uedit{border-top:1px solid var(--line);padding:14px 16px;background:var(--surface)}
+.removelink{color:var(--brick);font-size:13px;font-weight:500;background:none;border:0;padding:8px 0 0;cursor:pointer}
+.removelink:hover{text-decoration:underline}
+.addbtn-row{width:100%;justify-content:center;border-style:dashed;color:var(--accent);border-color:var(--accent-line);background:var(--accent-bg)}
+.contactcheck{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-top:12px}
+.contactcheck input{width:auto}
+
+.digirow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line)}
+.digirow:last-child{border-bottom:0}
+.digirow .dtxt b{display:block;font-size:14.5px;font-weight:500}
+.digirow .dtxt span{font-size:12.5px;color:var(--ink-soft)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--ink-soft);font-size:12px;text-transform:uppercase;letter-spacing:.02em}
+tr:last-child td{border-bottom:0}
+td.dot{text-align:center}
+.dot-y{display:inline-block;width:9px;height:9px;border-radius:999px;background:var(--moss)}
+.dot-n{display:inline-block;width:9px;height:9px;border-radius:999px;background:var(--brick)}
+
+.reviewrow{display:flex;align-items:center;gap:12px;padding:13px 22px;border-bottom:1px solid var(--line)}
+.reviewrow:last-child{border-bottom:0}
+.reviewrow .rdot{width:9px;height:9px;border-radius:999px;flex:0 0 9px}
+.reviewrow .rtxt{flex:1;font-size:14px}
+.reviewrow .rtxt b{font-weight:500}
+.reviewrow .rtag{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(20,26,36,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal-overlay[hidden]{display:none}
+.modal-card{background:var(--surface);border-radius:var(--radius);max-width:480px;width:100%;padding:22px 24px;box-shadow:var(--shadow);max-height:80vh;overflow-y:auto}
+.modal-card h3{margin:0 0 14px;font-size:17px}
+.modal-card .msec{margin-bottom:14px}
+.modal-card .msec:last-of-type{margin-bottom:0}
+.modal-card .msec b{display:block;font-size:14px;margin-bottom:3px}
+.modal-card .msec p{margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.6}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+
+.helpbtn{width:22px;height:22px;padding:0;border-radius:999px;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);flex:0 0 22px}
+.conceptbadge{font-size:12px;font-weight:600;color:var(--moss);background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:999px;padding:2px 10px;margin-left:10px;vertical-align:middle}
+.tellingen{font-size:13px;color:var(--ink-soft);margin:0 0 4px}
+
+/* --- Cliënt-app (mobiel) --- */
+.phoneframe{max-width:390px;margin:0 auto 40px;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow)}
+.phonetop{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+#ca-sos-btn{background:var(--brick);color:#fff;border-color:var(--brick);border-radius:999px;font-size:11px;font-weight:700;padding:5px 12px;letter-spacing:.03em}
+.phonebody{padding:14px;min-height:460px;max-height:620px;overflow-y:auto}
+.bottomnav{display:flex;border-top:1px solid var(--line);background:var(--surface)}
+.bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;border:0;border-radius:0;background:none;font-size:10px;color:var(--ink-faint)}
+.bottomnav button.on{color:var(--accent)}
+.bottomnav button svg{width:19px;height:19px}
+
+.infocard-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.infocard-row:last-child{border-bottom:0}
+.infocard-row span:first-child{color:var(--ink-soft)}
+
+.doelcard{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
+.doelcard .dtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.doelcard .dtop b{font-size:14px}
+.rapport{background:var(--paper);border-radius:var(--radius-sm);padding:9px 10px;margin-top:8px;font-size:13px}
+.rapport .rmeta{font-size:11px;color:var(--ink-faint);margin-bottom:3px}
+.emojirow{display:flex;gap:5px;margin-top:6px}
+.emojirow button{padding:2px 7px;font-size:13px;border-radius:999px}
+.emojirow button.selected{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.emojirow button.selected .ecount{color:var(--accent)}
+.emojirow button.disabled{opacity:.4;cursor:not-allowed}
+.emojirow button.disabled:hover{border-color:var(--line-strong)}
+.emojirow .ecount{font-size:11px;color:var(--ink-faint);margin-left:2px}
+.mediathumb{width:100%;aspect-ratio:16/9;border-radius:8px;margin-top:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;transition:transform .15s ease,filter .15s ease;position:relative}
+.mediathumb:hover{transform:scale(1.015);filter:brightness(1.05)}
+.mediathumb.video,.mediathumb-lg.video{background-image:linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;background-color:#e4e4e4}
+.playbtn{width:46px;height:46px;border-radius:999px;background:rgba(20,20,20,.55);display:flex;align-items:center;justify-content:center}
+.playbtn svg{width:17px;height:17px;fill:#fff;margin-left:3px}
+.mediathumb-lg{width:100%;aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+.mcell{cursor:pointer;transition:transform .15s ease}
+.mcell:hover{transform:scale(1.04)}
+
+.sosholdwrap{position:relative;width:170px;height:170px;margin:6px auto}
+.sosring{position:absolute;inset:0;width:170px;height:170px;pointer-events:none}
+.sosholdwrap .sosbtn{position:absolute;inset:9px;margin:0;width:auto;height:auto;animation:none}
+.calcell.daydetail{cursor:pointer}
+
+.agendacard{display:flex;gap:10px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;align-items:center}
+.agendacard .adate{flex:0 0 46px;text-align:center;background:var(--accent-bg);color:var(--accent);border-radius:8px;padding:6px 0;font-weight:600;font-size:11px;line-height:1.3}
+.agendacard .atxt b{display:block;font-size:13.5px}
+.agendacard .atxt span{font-size:12px;color:var(--ink-soft)}
+
+.ikboekcard{border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
+.ikboekcard .imeta{font-size:11px;color:var(--ink-faint);margin-bottom:4px}
+
+.minitabs{display:flex;gap:6px;margin-bottom:12px}
+.minitabs button{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 13px;font-size:12.5px;color:var(--ink-soft)}
+.minitabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.inboxcard{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;background:var(--paper)}
+.inboxcard .imeta{font-size:11px;color:var(--ink-faint);margin-bottom:3px}
+.inboxcard .idoel{font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.02em}
+
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px}
+.calhead{font-size:10.5px;color:var(--ink-faint);text-align:center;font-weight:600;text-transform:uppercase;padding-bottom:2px}
+.calcell{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;color:var(--ink);cursor:pointer;background:var(--surface)}
+.calcell.empty{border-color:transparent;cursor:default}
+.calcell.selected{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:600}
+.calcell .dot{width:5px;height:5px;border-radius:999px}
+.calmonth{font-size:13px;font-weight:600;text-align:center;margin-bottom:8px;text-transform:capitalize}
+.monthnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.monthnav b{font-size:13px;font-weight:600;text-transform:capitalize}
+.monthnav button{width:30px;height:30px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center}
+.daynav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.daynav b{font-size:13.5px;font-weight:600;text-transform:capitalize}
+.daynav button{width:30px;height:30px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center}
+.timerow{display:flex;align-items:center;gap:6px}
+.timerow select{width:auto;padding:9px 8px;text-align:center}
+.timerow span{color:var(--ink-faint);font-weight:600}
+
+.chatlist-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.chatlist-row:last-child{border-bottom:0}
+.chatlist-row .ctxt{flex:1;min-width:0}
+.chatlist-row .ctxt b{font-size:13.5px;display:block}
+.chatlist-row .ctxt span{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.chatlist-row .ctime{font-size:11px;color:var(--ink-faint);flex:0 0 auto}
+.msgrow{display:flex;margin-bottom:8px}
+.msgrow.mine{justify-content:flex-end}
+.bubble{max-width:75%;padding:8px 12px;border-radius:14px;font-size:13.5px;background:var(--paper)}
+.msgrow.mine .bubble{background:var(--accent);color:#fff}
+.mediagrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px}
+.mediagrid[hidden]{display:none}
+.mediagrid .mcell{aspect-ratio:1;border-radius:6px}
+.chatinputrow{display:flex;gap:8px;margin-top:10px}
+.chatinputrow input{flex:1}
+
+.sosbtn{width:150px;height:150px;border-radius:999px;background:var(--brick);color:#fff;border:0;font-size:22px;font-weight:700;letter-spacing:.05em;display:block;margin:30px auto;cursor:pointer}
+.sosbtn:hover{filter:brightness(1.05)}
+
+@media (max-width:820px){
+ .row,.row.three{grid-template-columns:1fr}
+ .rechtgrid{grid-template-columns:1fr}
+ .topbar{flex-direction:column;align-items:flex-start}
+}
+body.standalone-app{background:var(--surface)}
+body.standalone-app header.top,
+body.standalone-app #view-clientapp>.intro,
+body.standalone-app #view-clientapp>.ctxbar{display:none!important}
+body.standalone-app main.wrap{padding:0;margin:0;max-width:none}
+body.standalone-app #view-clientapp{animation:none}
+body.standalone-app .phoneframe{max-width:none;margin:0;border:0;border-radius:0;box-shadow:none;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body.standalone-app .phonebody{flex:1;max-height:none;min-height:0}
+body.standalone-app .phonetop{padding-top:max(14px,env(safe-area-inset-top))}
+body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.appswitch{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--accent);text-decoration:none;font-weight:600;margin-top:2px}
+.appswitch:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topbar">
+    <div class="mark"><b>MyWepp</b><span>Beheerprototype</span></div>
+    <div class="rolebar">
+      <label for="rol-select">Weergave</label>
+      <select id="rol-select">
+        <option value="groep">Teamleider — groepsprofiel</option>
+        <option value="support">MyWepp Support — intern</option>
+      </select>
+    </div>
+  </div>
+  <div class="topbar" id="maintabs-bar" style="padding-top:0">
+    <div class="maintabs">
+      <button type="button" class="on" data-view="personal">Groepsprofiel</button>
+      <button type="button" data-view="clientapp">Cliënt-app</button>
+      <button type="button" data-view="admin" id="tab-admin" hidden>Admin Tools</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ===================== ADMIN TOOLS ===================== -->
+<div id="view-admin" hidden>
+  <div class="intro">
+    <h1>Standaardrollen voor groepen</h1>
+    <p>Stel organisatiebreed in welke rol iemand standaard krijgt, en welke rollen daarnaast te kiezen zijn. Werk in bulk voor meerdere groepen tegelijk, of stem één groep individueel af.</p>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab on" data-admintab="bulk">1 — Standaardrollen in bulk instellen</button>
+    <button type="button" class="tab" data-admintab="groep">2 — Groep bewerken</button>
+  </div>
+
+  <section id="admintab-bulk">
+    <div class="panel">
+      <div class="head"><h2>Voor welke groepen?</h2><span class="sub">Selecteer een of meerdere groepen binnen dit domein</span></div>
+      <div class="body">
+        <div class="groepkeuze" id="bulk-groepen"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="head"><h2>Voor welk type persoon</h2></div>
+      <div class="body">
+        <div class="typetabs" id="bulk-typetabs">
+          <button type="button" class="typetab on" data-type="medewerker">Medewerker</button>
+          <button type="button" class="typetab" data-type="naaste">Naaste</button>
+        </div>
+        <p class="note">Per recht kies je één <b>standaardrol</b> (die 80%-rol) en optioneel enkele <b>optionele rollen</b> ernaast — zo kan een groep als die van Angelina meerdere rollen aanbieden zonder dat het systeem hoeft te raden welke de hoofdrol is.</p>
+        <div id="bulk-rechten"></div>
+        <div class="actions end">
+          <button type="button" class="primary" id="bulk-toepassen">Toepassen op geselecteerde groepen</button>
+        </div>
+        <div id="bulk-bevestiging"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admintab-groep" hidden>
+    <div class="panel">
+      <div class="head"><h2>Groep bewerken</h2><span class="sub">Bekijk en overschrijf de standaardrechten voor één groep</span></div>
+      <div class="body">
+        <div class="row">
+          <div class="field"><label for="groep-select">Groep</label><select id="groep-select"></select></div>
+        </div>
+        <div class="typetabs" id="groep-typetabs">
+          <button type="button" class="typetab on" data-type="medewerker">Medewerker</button>
+          <button type="button" class="typetab" data-type="naaste">Naaste</button>
+        </div>
+        <div id="groep-rechten"></div>
+        <div class="actions">
+          <button type="button" id="groep-reset">Terug naar organisatiestandaard</button>
+          <button type="button" class="primary" id="groep-opslaan">Opslaan voor deze groep</button>
+        </div>
+        <div id="groep-bevestiging"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===================== PERSONAL APP: GROEPSPROFIEL ===================== -->
+<div id="view-personal">
+
+  <!-- ============ HUB: GROEP > PROFIEL ============ -->
+  <div id="pp-hub">
+    <div class="intro">
+      <h1>Groep › Profiel</h1>
+      <p>Ingang vanuit de MyWepp Personal app. Van hieruit open je het gebruikersformulier en het Digibord van deze groep.</p>
+    </div>
+    <div class="ctxbar">Groep <select id="pp-groep-select"></select></div>
+
+    <div class="panel">
+      <div class="hubcard">
+        <div class="hubavatar"></div>
+        <div id="hub-groepnaam" style="font-size:17px;font-weight:600">—</div>
+      </div>
+      <div class="hubcard" style="display:block">
+        <div class="hubfields">
+          <div><b>Adres</b> Tomatstraat 20-1, 1332CE Almere</div>
+          <div><b>Telefoon</b> 036 96 93 555</div>
+          <div><b>E-mail</b> groep.clownvis@zomedo.nl</div>
+        </div>
+      </div>
+      <div class="hubcard togglerow" style="border-top:1px solid var(--line)">
+        <span>Tweestapsverificatie verplicht</span>
+        <label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label>
+      </div>
+    </div>
+
+    <div class="panel hublinks">
+      <button type="button" data-open="pp-formulier">Gebruikers beheren<svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button type="button" data-open="pp-digibord">MyWepp Digibord beheren<svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button type="button" data-open="pp-statistieken">Statistieken<svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button type="button" data-open="pp-maaltijden">Maaltijden<svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+
+  <!-- ============ FORMULIER: GEBRUIKERS BEHEREN ============ -->
+  <div id="pp-formulier" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren</div>
+      <div class="crumbicons">
+        <button type="button" id="formulier-terug" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button type="button" id="formulier-help" aria-label="Help">?</button>
+      </div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px">
+      <h1 style="font-size:22px;display:inline-block">Formulier: Gebruikers beheren<span class="conceptbadge" id="concept-badge" hidden>Concept opgeslagen</span></h1>
+      <p class="tellingen" id="formulier-tellingen"></p>
+    </div>
+
+    <div class="panel" style="padding:0">
+      <div class="tallywrap">
+        <div class="tallytop"><b id="tally-count">0 wijzigingen</b><span>klaar om te versturen</span></div>
+        <div class="tallybar"><span id="tally-nieuw" style="background:var(--moss)"></span><span id="tally-gewijzigd" style="background:var(--amber)"></span><span id="tally-verwijderd" style="background:var(--brick)"></span></div>
+      </div>
+      <div class="infolink" id="info-toggle">Uitleg over dit formulier <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <button type="button" class="ghost" style="width:100%;border-radius:0;border-top:1px solid var(--line);justify-content:flex-start;padding:14px 22px" id="logboek-btn">Logboek bekijken</button>
+      <button type="button" class="ghost" style="width:100%;border-radius:0;border-top:1px solid var(--line);justify-content:flex-start;padding:14px 22px" id="naar-gearchiveerd">Gearchiveerd bekijken</button>
+    </div>
+
+    <div class="acc" id="acc-client">
+      <div class="acc-head" data-toggle="acc-client"><svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><b>Cliënten <span class="countchip" id="count-client">0</span></b><button type="button" class="helpbtn" data-help="client" aria-label="Uitleg cliënten">?</button></div>
+      <div class="acc-body">
+        <div id="rows-client"></div>
+        <button type="button" class="addbtn-row" data-add="client">+ Cliënt toevoegen</button>
+      </div>
+    </div>
+
+    <div class="acc" id="acc-medewerker">
+      <div class="acc-head" data-toggle="acc-medewerker"><svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><b>Medewerkers <span class="countchip" id="count-medewerker">0</span></b><button type="button" class="helpbtn" data-help="medewerker" aria-label="Uitleg medewerkers">?</button></div>
+      <div class="acc-body">
+        <div id="rows-medewerker"></div>
+        <button type="button" class="addbtn-row" data-add="medewerker">+ Medewerker toevoegen</button>
+      </div>
+    </div>
+
+    <div class="acc closed" id="acc-naaste">
+      <div class="acc-head" data-toggle="acc-naaste"><svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><b>Naasten <span class="countchip" id="count-naaste">0</span></b><button type="button" class="helpbtn" data-help="naaste" aria-label="Uitleg naasten">?</button></div>
+      <div class="acc-body">
+        <div id="rows-naaste"></div>
+        <button type="button" class="addbtn-row" data-add="naaste">+ Naaste toevoegen</button>
+        <div class="collapse closed" id="contactpersonen-collapse" style="margin-top:12px;box-shadow:none">
+          <div class="chead" data-toggle="contactpersonen-collapse"><b>Contactpersonen kiezen</b><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+          <div class="cbody">
+            <p class="mini" style="margin:0 0 10px">Medewerkers die als contactpersoon zijn gemarkeerd — dit zijn de aanspreekpunten die naasten te zien krijgen.</p>
+            <div id="contactpersonen-lijst"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions end" style="border:0;margin-top:6px"><button type="button" class="primary" id="verzenden-btn">Aanvraag verzenden</button></div>
+  </div>
+
+  <!-- ============ GEARCHIVEERD ============ -->
+  <div id="pp-gearchiveerd" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Gearchiveerd</div>
+      <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Personen die alleen aan deze groep gekoppeld waren en via de prullenbak zijn verwijderd. Ze zijn niet echt verwijderd — je kunt ze hier terughalen.</p></div>
+    <div class="panel" id="gearchiveerd-lijst" style="padding:0"></div>
+    <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
+  </div>
+
+  <!-- ============ AANVRAAG CONTROLEREN ============ -->
+  <div id="pp-controleren" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Aanvraag controleren</div>
+      <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Aanvraag controleren</h1><p>Controleer of onderstaande wijzigingen kloppen. Na versturen kan dit niet meer aangepast worden totdat MyWepp Support de aanvraag heeft verwerkt.</p></div>
+    <div class="panel" id="controleren-lijst" style="padding:0"></div>
+    <div class="actions"><button type="button" data-back="pp-formulier">Terug naar formulier</button><button type="button" class="primary" id="naar-versturen">Aanvraag versturen</button></div>
+  </div>
+
+  <!-- ============ AANVRAAG VERZENDEN ============ -->
+  <div id="pp-versturen" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Aanvraag verzenden</div>
+      <div class="crumbicons"><button type="button" data-back="pp-controleren" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Aanvraag verzenden</h1><p>MyWepp Support verwerkt deze aanvraag. Laat weten wie zij kunnen bereiken bij vragen.</p></div>
+    <div class="panel"><div class="body">
+      <div class="row">
+        <div class="field"><label for="av-naam">Contactpersoon</label><input id="av-naam" placeholder="Sandra Bakker"></div>
+        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"></div>
+      </div>
+      <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de aanvraag gecontroleerd en ga akkoord met versturen.</label></div>
+      <div class="actions end"><button type="button" data-back="pp-controleren">Terug</button><button type="button" class="primary" id="av-versturen" disabled>Aanvraag versturen</button></div>
+    </div></div>
+  </div>
+
+  <!-- ============ AANVRAAG VERZONDEN ============ -->
+  <div id="pp-verzonden" hidden>
+    <div class="intro" style="padding-top:20px"><h1 style="font-size:22px">Aanvraag verzonden</h1></div>
+    <div class="result-ok" style="background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:var(--radius);padding:18px 20px;color:var(--moss);font-size:14.5px;margin-bottom:18px" id="verzonden-tekst"></div>
+    <div class="actions end" style="border:0"><button type="button" class="primary" data-back="pp-hub">Terug naar groepsprofiel</button></div>
+  </div>
+
+  <!-- ============ DIGIBORD BEHEREN ============ -->
+  <div id="pp-digibord" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Digibord beheren</div>
+      <div class="crumbicons"><button type="button" data-back="pp-hub" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">MyWepp Digibord beheren</h1><p>Bepaal welke onderdelen op het Digibord van deze groep te zien zijn.</p></div>
+    <div class="panel" style="padding:0" id="digibord-lijst"></div>
+    <div class="actions end" style="border:0"><button type="button" class="primary" id="digibord-opslaan">Opslaan</button></div>
+    <div id="digibord-bevestiging"></div>
+  </div>
+
+  <!-- ============ STATISTIEKEN ============ -->
+  <div id="pp-statistieken" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Statistieken</div>
+      <div class="crumbicons"><button type="button" data-back="pp-hub" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Statistieken</h1><p>Klik op een datum in het overzicht voor de dagdetails.</p></div>
+    <div class="panel"><div class="body" style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="field" style="max-width:160px"><label>Maand</label><select id="stat-maand"></select></div>
+      <div class="field" style="max-width:120px"><label>Jaar</label><select id="stat-jaar"><option>2026</option><option>2025</option></select></div>
+    </div></div>
+    <div class="panel" style="overflow-x:auto"><table id="stat-table" style="border:0;box-shadow:none"></table></div>
+    <div class="panel"><div class="body" id="stat-kalender"></div></div>
+    <p class="mini">Klik op een dag in de kalender voor de dagdetails per cliënt.</p>
+  </div>
+
+  <!-- ============ MAALTIJDEN ============ -->
+  <div id="pp-maaltijden" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Maaltijden</div>
+      <div class="crumbicons"><button type="button" data-back="pp-hub" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Maaltijden</h1></div>
+    <div class="panel">
+      <div class="togglerow" style="padding:16px 18px 0"><span>Reserveringsformulier actief</span><label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+      <div style="padding:16px 18px 0;display:flex;gap:12px;flex-wrap:wrap">
+        <div class="field" style="max-width:200px"><label>Cliënt</label><select id="maaltijd-client"></select></div>
+      </div>
+      <p class="mini" style="padding:0 18px">Groen — maaltijd gereserveerd. Rood — geen reservering. Klik een dag om te wisselen.</p>
+      <div style="padding:8px 18px 18px" id="maaltijd-kalender"></div>
+    </div>
+  </div>
+
+  <!-- ============ VOLLEDIG PROFIEL: CLIENT ============ -->
+  <div id="pp-profiel-client" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Volledig profiel</div>
+      <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px" id="pc-titel">Cliënt bewerken</h1></div>
+    <div class="panel"><div class="body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+        <div class="hubavatar" id="pc-foto"></div>
+        <button type="button" class="small" id="pc-foto-wijzigen">Profielfoto wijzigen</button>
+      </div>
+      <div class="row">
+        <div class="field"><label>Voornaam</label><input id="pc-voornaam"></div>
+        <div class="field"><label>Achternaam</label><input id="pc-achternaam"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>E-mailadres</label><input id="pc-mail"></div>
+        <div class="field"><label>Telefoonnummer</label><input id="pc-tel" placeholder="06 12 34 56 78"></div>
+      </div>
+      <p class="note open"><b>Openstaande vraag:</b> nemen we hier de volledige huidige profielpagina van de cliënt terug — inclusief het instellen van tweestapsverificatie — of alleen dit basisdeel?</p>
+      <div class="sublistlabel" style="margin-top:20px">Wie heeft recht op deze cliënt</div>
+      <div id="pc-rechten"></div>
+      <div class="actions"><button type="button" data-back="pp-formulier">Annuleren</button><button type="button" class="primary" id="pc-opslaan">Opslaan</button></div>
+    </div></div>
+  </div>
+
+  <!-- ============ VOLLEDIG PROFIEL: MEDEWERKER / NAASTE ============ -->
+  <div id="pp-profiel-persoon" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Volledig profiel</div>
+      <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px" id="pp-titel">Medewerker bewerken</h1></div>
+    <div class="panel"><div class="body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+        <div class="hubavatar" id="pp-foto"></div>
+        <button type="button" class="small" id="pp-foto-wijzigen">Profielfoto wijzigen</button>
+      </div>
+      <div class="row">
+        <div class="field"><label>Voornaam</label><input id="pp-voornaam"></div>
+        <div class="field"><label>Achternaam</label><input id="pp-achternaam"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>E-mailadres</label><input id="pp-mail"></div>
+        <div class="field"><label>Type rol</label><select id="pp-typerol"><option value="medewerker">Medewerker</option><option value="naaste">Naaste</option></select></div>
+      </div>
+      <p class="note open" id="pp-vraag"><b>Openstaande vraag:</b> tonen we hier de volledige bestaande profielpagina van deze persoon terug, en een overzicht van op welke cliënten hij al rechten heeft?</p>
+
+      <div class="sublistlabel">Rollen en rechten</div>
+      <div class="row">
+        <div class="field"><label>Algemene rol (globaal)</label><select id="pp-globaal"></select></div>
+        <div class="field"><label>Groep</label><select id="pp-groepveld"></select></div>
+      </div>
+      <p class="mini">Recht op locaties is hier bewust niet getoond — dit heeft vrijwel niemand nodig.</p>
+
+      <div class="sublistlabel" id="pp-lbl-clienten">Cliënten</div>
+      <div id="pp-clienten"></div>
+      <div class="sublistlabel" id="pp-lbl-medewerkers">Recht op medewerkers</div>
+      <div id="pp-medewerkers"></div>
+      <div class="sublistlabel" id="pp-lbl-naasten">Recht op naasten</div>
+      <div id="pp-naasten"></div>
+
+      <div class="actions"><button type="button" data-back="pp-formulier">Annuleren</button><button type="button" class="primary" id="pp-persoon-opslaan">Opslaan</button></div>
+    </div></div>
+  </div>
+
+</div>
+
+<!-- ===================== CLIENT-APP (MOBIEL) ===================== -->
+<div id="view-clientapp" hidden>
+  <div class="intro" style="padding-bottom:10px">
+    <h1>Cliënt-app</h1>
+    <p>MyWepp Personal zoals een medewerker die voor één cliënt gebruikt, op de telefoon.</p>
+    <a class="appswitch" id="ca-open-op-telefoon" href="?app=client" target="_blank" rel="noopener">📱 Open als app op je telefoon<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+  </div>
+  <div class="ctxbar">Cliënt <select id="ca-client-select"></select></div>
+
+  <div class="phoneframe">
+    <div class="phonetop">
+      <div style="display:flex;align-items:center;gap:8px"><div id="ca-avatar"></div><b id="ca-naam" style="font-size:14px"></b></div>
+      <button type="button" id="ca-sos-btn">SOS</button>
+    </div>
+    <div class="phonebody" id="ca-body"></div>
+    <div class="bottomnav">
+      <button type="button" class="on" data-catab="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Info</button>
+      <button type="button" data-catab="doelen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></svg>Doelen</button>
+      <button type="button" data-catab="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Agenda</button>
+      <button type="button" data-catab="ikboek"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h13a3 3 0 013 3v13H7a3 3 0 01-3-3z"/><path d="M4 4v13a3 3 0 003 3"/></svg>Ik-Boek</button>
+      <button type="button" data-catab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-8.4 8.4 8.5 8.5 0 01-4-.9L3 20l1-5.6a8.4 8.4 0 1117-2.9z"/></svg>Chat</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="sos-overlay" hidden>
+    <div class="modal-card" id="sos-card"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal-card" id="modal-card"></div>
+</div>
+</main>
+
+<script>
+function el(i){return document.getElementById(i);}
+function show(id){['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
+function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
+function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');}
+var AVCOLORS=['#4A6FA5','#3D8C7D','#B0783C','#B0555A','#6E6A96','#3E7CA6','#8C6A45','#5A8A6E'];
+function avatarHash(naam){var h=0;for(var i=0;i<naam.length;i++)h=naam.charCodeAt(i)+((h<<5)-h);return Math.abs(h);}
+function avatarColor(naam){return AVCOLORS[avatarHash(naam)%AVCOLORS.length];}
+function avatarGradient(naam){var h=avatarHash(naam);var c1=AVCOLORS[h%AVCOLORS.length],c2=AVCOLORS[(h+3)%AVCOLORS.length];return 'linear-gradient(135deg,'+c1+','+c2+')';}
+function initials(v,a){return ((v[0]||'')+(a[0]||'')).toUpperCase();}
+function avatarHtmlSized(naam,px){return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,''])+'</div>';}
+function avatarHtml(naam){return avatarHtmlSized(naam,36);}
+
+/* ============== ADMIN TOOLS: data ============== */
+var GROEPEN=['De Boomgaard','De Wilgenhof','Dagbesteding Centrum'];
+var ROLLEN={medewerker:['Begeleider','Teamleider','Invaller','Stagiair','Geen'],naaste:['Naaste — basis','Naaste — uitgebreid','Geen']};
+var RECHTEN={
+ medewerker:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'},{k:'clienten',l:'Cliënten (alle cliënten in de groep)'},{k:'medewerkers',l:'Recht op andere medewerkers'}],
+ naaste:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'}]
+};
+var orgDefault={
+ medewerker:{globaal:{rol:'Begeleider',opt:[]},groep:{rol:'Begeleider',opt:['Teamleider']},clienten:{rol:'Begeleider',opt:[]},medewerkers:{rol:'Geen',opt:[]}},
+ naaste:{globaal:{rol:'Naaste — basis',opt:[]},groep:{rol:'Naaste — basis',opt:['Naaste — uitgebreid']}}
+};
+var groupOverride={};
+var bulkSel={groepen:{}, type:'medewerker', werk:{}};
+GROEPEN.forEach(function(g){bulkSel.groepen[g]=false;});
+function resetWerk(type){bulkSel.werk=JSON.parse(JSON.stringify(orgDefault[type]));}
+resetWerk('medewerker');
+
+function renderBulkGroepen(){
+ el('bulk-groepen').innerHTML=GROEPEN.map(function(g){
+  return '<label class="chip'+(bulkSel.groepen[g]?' on':'')+'"><input type="checkbox" data-g="'+g+'" '+(bulkSel.groepen[g]?'checked':'')+'>'+g+'</label>';
+ }).join('')+'<label class="chip"><input type="checkbox" id="bulk-alle">Alle groepen</label>';
+ Array.prototype.forEach.call(el('bulk-groepen').querySelectorAll('[data-g]'),function(c){
+  c.addEventListener('change',function(){bulkSel.groepen[c.getAttribute('data-g')]=c.checked;renderBulkGroepen();updateBulkKnop();});});
+ el('bulk-alle').addEventListener('change',function(){GROEPEN.forEach(function(g){bulkSel.groepen[g]=el('bulk-alle').checked;});renderBulkGroepen();updateBulkKnop();});
+}
+function rechtenRows(container,type,data,onchange){
+ container.innerHTML=RECHTEN[type].map(function(r){
+  var cur=data[r.k];
+  return '<div class="rechtrow" data-k="'+r.k+'">'+
+   '<div class="top"><b>'+r.l+'</b></div>'+
+   '<div class="rechtgrid">'+
+    '<div class="field"><label>Standaardrol</label><select data-role="'+r.k+'">'+ROLLEN[type].map(function(rol){return '<option'+(rol===cur.rol?' selected':'')+'>'+rol+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>Optionele rollen</label><div class="optlist" data-opt="'+r.k+'">'+ROLLEN[type].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';}).map(function(rol){
+      var on=cur.opt.indexOf(rol)>-1;
+      return '<label class="optchip'+(on?' on':'')+'"><input type="checkbox" value="'+rol+'" '+(on?'checked':'')+'>'+rol+'</label>';
+    }).join('')+'</div></div>'+
+   '</div>'+
+   (r.k==='groep'?'<p class="mini">Bijvoorbeeld voor groepen zoals die van Angelina: één duidelijke hoofdrol, met de rest als optie erbij.</p>':'')+
+  '</div>';
+ }).join('');
+ Array.prototype.forEach.call(container.querySelectorAll('[data-role]'),function(sel){
+  sel.addEventListener('change',function(){
+   var k=sel.getAttribute('data-role');data[k].rol=sel.value;data[k].opt=data[k].opt.filter(function(o){return o!==sel.value;});
+   rechtenRows(container,type,data,onchange);onchange&&onchange();
+  });
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('[data-opt] input'),function(cb){
+  cb.addEventListener('change',function(){
+   var k=cb.closest('[data-opt]').getAttribute('data-opt');
+   if(cb.checked){if(data[k].opt.indexOf(cb.value)<0)data[k].opt.push(cb.value);}else{data[k].opt=data[k].opt.filter(function(o){return o!==cb.value;});}
+   rechtenRows(container,type,data,onchange);onchange&&onchange();
+  });
+ });
+}
+function updateBulkKnop(){
+ var any=GROEPEN.some(function(g){return bulkSel.groepen[g];});
+ el('bulk-toepassen').disabled=!any;
+}
+el('bulk-toepassen').disabled=true;
+function initBulkTab(){
+ renderBulkGroepen();
+ rechtenRows(el('bulk-rechten'),bulkSel.type,bulkSel.werk);
+ Array.prototype.forEach.call(el('bulk-typetabs').querySelectorAll('.typetab'),function(b){
+  b.addEventListener('click',function(){
+   Array.prototype.forEach.call(el('bulk-typetabs').querySelectorAll('.typetab'),function(x){x.classList.remove('on');});
+   b.classList.add('on');bulkSel.type=b.getAttribute('data-type');resetWerk(bulkSel.type);
+   rechtenRows(el('bulk-rechten'),bulkSel.type,bulkSel.werk);el('bulk-bevestiging').innerHTML='';
+  });
+ });
+ el('bulk-toepassen').addEventListener('click',function(){
+  var gekozen=GROEPEN.filter(function(g){return bulkSel.groepen[g];});
+  gekozen.forEach(function(g){
+   groupOverride[g]=groupOverride[g]||{};
+   groupOverride[g][bulkSel.type]=JSON.parse(JSON.stringify(bulkSel.werk));
+  });
+  el('bulk-bevestiging').innerHTML='<div class="bevestiging reveal">Standaardrollen voor <b>'+bulkSel.type+'</b> zijn in één keer ingesteld voor: '+gekozen.join(', ')+'.</div>';
+  renderGroepTab();
+ });
+}
+initBulkTab();
+
+var groepSel={groep:GROEPEN[0],type:'medewerker'};
+function effectiveFor(groep,type){
+ var ov=groupOverride[groep]&&groupOverride[groep][type];
+ return {data: ov?JSON.parse(JSON.stringify(ov)):JSON.parse(JSON.stringify(orgDefault[type])), overridden: !!ov};
+}
+function renderGroepTab(){
+ var eff=effectiveFor(groepSel.groep,groepSel.type);
+ var head='<div class="mini" style="margin-bottom:12px">'+(eff.overridden
+   ?'<span class="tag override">Aangepast voor deze groep</span>'
+   :'<span class="tag inherit">Organisatiestandaard</span>')+'</div>';
+ el('groep-rechten').innerHTML=head+'<div id="groep-rechten-inner"></div>';
+ rechtenRows(el('groep-rechten-inner'),groepSel.type,eff.data,function(){
+  var isNowOverride = JSON.stringify(eff.data)!==JSON.stringify(orgDefault[groepSel.type]);
+  var tagEl=el('groep-rechten').querySelector('.tag');
+  tagEl.className='tag '+(isNowOverride?'override':'inherit');
+  tagEl.textContent=isNowOverride?'Aangepast voor deze groep (nog niet opgeslagen)':'Organisatiestandaard';
+ });
+ groepSel._working=eff.data;
+}
+el('groep-select').innerHTML=GROEPEN.map(function(g){return '<option>'+g+'</option>';}).join('');
+el('groep-select').addEventListener('change',function(){groepSel.groep=el('groep-select').value;el('groep-bevestiging').innerHTML='';renderGroepTab();});
+Array.prototype.forEach.call(el('groep-typetabs').querySelectorAll('.typetab'),function(b){
+ b.addEventListener('click',function(){
+  Array.prototype.forEach.call(el('groep-typetabs').querySelectorAll('.typetab'),function(x){x.classList.remove('on');});
+  b.classList.add('on');groepSel.type=b.getAttribute('data-type');el('groep-bevestiging').innerHTML='';renderGroepTab();
+ });
+});
+el('groep-opslaan').addEventListener('click',function(){
+ groupOverride[groepSel.groep]=groupOverride[groepSel.groep]||{};
+ groupOverride[groepSel.groep][groepSel.type]=JSON.parse(JSON.stringify(groepSel._working));
+ el('groep-bevestiging').innerHTML='<div class="bevestiging reveal">Opgeslagen voor '+groepSel.groep+'.</div>';
+ renderGroepTab();
+});
+el('groep-reset').addEventListener('click',function(){
+ if(groupOverride[groepSel.groep])delete groupOverride[groepSel.groep][groepSel.type];
+ el('groep-bevestiging').innerHTML='<div class="bevestiging reveal">Teruggezet naar de organisatiestandaard.</div>';
+ renderGroepTab();
+});
+renderGroepTab();
+
+Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
+ b.addEventListener('click',function(){
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(x){x.classList.remove('on');});
+  b.classList.add('on');
+  el('admintab-bulk').hidden=b.getAttribute('data-admintab')!=='bulk';
+  el('admintab-groep').hidden=b.getAttribute('data-admintab')!=='groep';
+ });
+});
+
+/* ============== VIEW SWITCH ============== */
+var ALLVIEWS=['view-admin','view-personal','view-clientapp'];
+function showView(v){
+ Array.prototype.forEach.call(document.querySelectorAll('.maintabs button'),function(x){x.classList.remove('on');});
+ var btn=document.querySelector('.maintabs button[data-view="'+v+'"]');if(btn)btn.classList.add('on');
+ ALLVIEWS.forEach(function(id){el(id).hidden=(id!=='view-'+v);});
+ if(v==='clientapp')renderClientApp();
+}
+Array.prototype.forEach.call(document.querySelectorAll('.maintabs button'),function(b){
+ b.addEventListener('click',function(){showView(b.getAttribute('data-view'));});
+});
+el('rol-select').addEventListener('change',function(){
+ var support=el('rol-select').value==='support';
+ el('tab-admin').hidden=!support;
+ showView(support?'admin':'personal');
+});
+
+/* ============== GEBRUIKERSBEHEER: data ============== */
+var PENCIL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+var TRASH_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>';
+var STATE_LABEL={nieuw:'nieuw',gewijzigd:'gewijzigd',verwijderd:'wordt verwijderd'};
+var STATE_COLOR={nieuw:'var(--moss)',gewijzigd:'var(--amber)',verwijderd:'var(--brick)'};
+
+var people=[
+ {id:1,type:'client',voor:'Elif',achter:'Yildiz',mail:'',groepen:['De Boomgaard']},
+ {id:2,type:'client',voor:'Bram',achter:'Smit',mail:'',groepen:['De Boomgaard']},
+ {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',groepen:['De Boomgaard'],rol:'Begeleider',contactpersoon:true,clientRechten:{1:'Begeleider',2:'Begeleider'}},
+ {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',groepen:['De Boomgaard','De Wilgenhof'],rol:'Begeleider',contactpersoon:false,clientRechten:{2:'Invaller'}},
+ {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',groepen:['De Boomgaard'],rol:'Naaste — basis',clientRechten:{1:'Naaste — basis'}}
+];
+function rolOpClient(persoon,clientId){return (persoon.clientRechten||{})[clientId]||null;}
+var nextId=6;
+var huidigeGroep=GROEPEN[0];
+el('pp-groep-select').innerHTML=GROEPEN.map(function(g){return '<option>'+g+'</option>';}).join('');
+el('pp-groep-select').addEventListener('change',function(){huidigeGroep=el('pp-groep-select').value;el('hub-groepnaam').textContent=huidigeGroep;renderAll();});
+el('hub-groepnaam').textContent=huidigeGroep;
+
+function naam(p){return p.voor+' '+p.achter;}
+function personenVanType(t){return people.filter(function(p){return p.type===t&&!p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});}
+
+function emailConflict(p){
+ return people.some(function(x){return x.id!==p.id&&x.mail&&p.mail&&x.mail.toLowerCase()===p.mail.toLowerCase();});
+}
+
+function editFormClient(p){
+ var eigen=p._eigenmail!==false;
+ var genmail=(slug(p.voor)+'.'+slug(p.achter)+'@mywepp.nl');
+ return '<div class="uedit">'+
+  '<div class="row">'+
+   '<div class="field"><label>Voornaam</label><input data-f="voor" data-id="'+p.id+'" value="'+p.voor+'"></div>'+
+   '<div class="field"><label>Achternaam</label><input data-f="achter" data-id="'+p.id+'" value="'+p.achter+'"></div>'+
+  '</div>'+
+  '<div class="togglerow"><span>Cliënt heeft eigen e-mailadres</span><label class="toggle"><input type="checkbox" data-f="eigenmail" data-id="'+p.id+'" '+(eigen?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>'+
+  (eigen
+   ? '<div class="field"><label>E-mailadres</label><input data-f="mail" data-id="'+p.id+'" value="'+(p.mail||'')+'" placeholder="naam@voorbeeld.nl"></div>'
+   : '<p class="mini">Wordt: <b>'+genmail+'</b> — MyWepp-adressen worden altijd zonder hoofdletters aangemaakt.</p>')+
+  (emailConflict(p)?'<p class="mini" style="color:var(--brick)">Dit e-mailadres is al in gebruik door iemand anders.</p>':'')+
+  '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen uit aanvraag</button><button type="button" class="small" data-fullclient="'+p.id+'">Volledig profiel bewerken →</button></div>'+
+ '</div>';
+}
+function clientRechtenRow(p,t){
+ var clients=personenVanType('client');
+ if(!clients.length)return '<p class="empty-msg">Geen cliënten in deze groep.</p>';
+ var rollen=ROLLEN[t].filter(function(r){return r!=='Geen';});
+ return clients.map(function(c){
+  var huidig=(p.clientRechten||{})[c.id]||'';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c))+'<div class="pinfo"><div class="naam">'+naam(c)+'</div></div>'+
+   '<select data-clientrol="'+c.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+ }).join('');
+}
+function wireClientRechten(container,t,onchange){
+ Array.prototype.forEach.call(container.querySelectorAll('[data-clientrol]'),function(sel){
+  sel.addEventListener('change',function(){
+   var p=findPerson(+sel.getAttribute('data-id')),clientId=+sel.getAttribute('data-clientrol');
+   p.clientRechten=p.clientRechten||{};
+   if(sel.value)p.clientRechten[clientId]=sel.value; else delete p.clientRechten[clientId];
+   if(p._state!=='nieuw')p._state='gewijzigd';
+   onchange&&onchange();
+  });
+ });
+}
+function rolOpNaaste(medewerker,naasteId){return (medewerker.naasteRechten||{})[naasteId]||null;}
+function naasteRechtenRow(p){
+ var naasten=personenVanType('naaste');
+ if(!naasten.length)return '<p class="empty-msg">Geen naasten in deze groep.</p>';
+ var rollen=ROLLEN.medewerker.filter(function(r){return r!=='Geen';});
+ return naasten.map(function(n){
+  var huidig=(p.naasteRechten||{})[n.id]||'';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n))+'<div class="pinfo"><div class="naam">'+naam(n)+'</div></div>'+
+   '<select data-naasterol="'+n.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+ }).join('');
+}
+function wireNaasteRechten(container,onchange){
+ Array.prototype.forEach.call(container.querySelectorAll('[data-naasterol]'),function(sel){
+  sel.addEventListener('change',function(){
+   var p=findPerson(+sel.getAttribute('data-id')),naasteId=+sel.getAttribute('data-naasterol');
+   p.naasteRechten=p.naasteRechten||{};
+   if(sel.value)p.naasteRechten[naasteId]=sel.value; else delete p.naasteRechten[naasteId];
+   if(p._state!=='nieuw')p._state='gewijzigd';
+   onchange&&onchange();
+  });
+ });
+}
+function medewerkerRechtenRow(naasteId){
+ var medewerkers=personenVanType('medewerker');
+ if(!medewerkers.length)return '<p class="empty-msg">Geen medewerkers in deze groep.</p>';
+ var rollen=ROLLEN.medewerker.filter(function(r){return r!=='Geen';});
+ return medewerkers.map(function(m){
+  var huidig=rolOpNaaste(m,naasteId)||'';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
+   '<select data-medewerkerrol="'+m.id+'" data-naasteid="'+naasteId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+ }).join('');
+}
+function wireMedewerkerRechten(container,onchange){
+ Array.prototype.forEach.call(container.querySelectorAll('[data-medewerkerrol]'),function(sel){
+  sel.addEventListener('change',function(){
+   var m=findPerson(+sel.getAttribute('data-medewerkerrol')),naasteId=+sel.getAttribute('data-naasteid');
+   m.naasteRechten=m.naasteRechten||{};
+   if(sel.value)m.naasteRechten[naasteId]=sel.value; else delete m.naasteRechten[naasteId];
+   if(m._state!=='nieuw')m._state='gewijzigd';
+   onchange&&onchange();
+  });
+ });
+}
+function rolOpMedewerker(medewerker,otherId){return (medewerker.medewerkerRechten||{})[otherId]||null;}
+function medewerkerPeerRow(p){
+ var peers=personenVanType('medewerker').filter(function(m){return m.id!==p.id;});
+ if(!peers.length)return '<p class="empty-msg">Geen andere medewerkers in deze groep.</p>';
+ var rollen=ROLLEN.medewerker.filter(function(r){return r!=='Geen';});
+ return peers.map(function(m){
+  var huidig=(p.medewerkerRechten||{})[m.id]||'';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
+   '<select data-medewerkerpeerrol="'+m.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+ }).join('');
+}
+function wireMedewerkerPeerRechten(container,onchange){
+ Array.prototype.forEach.call(container.querySelectorAll('[data-medewerkerpeerrol]'),function(sel){
+  sel.addEventListener('change',function(){
+   var p=findPerson(+sel.getAttribute('data-id')),otherId=+sel.getAttribute('data-medewerkerpeerrol');
+   p.medewerkerRechten=p.medewerkerRechten||{};
+   if(sel.value)p.medewerkerRechten[otherId]=sel.value; else delete p.medewerkerRechten[otherId];
+   if(p._state!=='nieuw')p._state='gewijzigd';
+   onchange&&onchange();
+  });
+ });
+}
+function editFormPersoon(p,t){
+ return '<div class="uedit">'+
+  '<div class="sublistlabel" style="margin-top:0">Persoonsgegevens</div>'+
+  '<div class="row">'+
+   '<div class="field"><label>Voornaam</label><input data-f="voor" data-id="'+p.id+'" value="'+p.voor+'"></div>'+
+   '<div class="field"><label>Achternaam</label><input data-f="achter" data-id="'+p.id+'" value="'+p.achter+'"></div>'+
+  '</div>'+
+  '<div class="field"><label>E-mailadres</label><input data-f="mail" data-id="'+p.id+'" value="'+(p.mail||'')+'" placeholder="naam@voorbeeld.nl"></div>'+
+  (emailConflict(p)?'<p class="mini" style="color:var(--brick)">Dit e-mailadres is al in gebruik door iemand anders.</p>':'')+
+  (p.mail&&p.mail.indexOf('@mywepp.nl')>-1?'<p class="mini" style="color:var(--brick)">'+(t==='medewerker'?'Een medewerker':'Een naaste')+' heeft een eigen adres — geen MyWepp-adres.</p>':'')+
+  '<div class="sublistlabel">Rollen en rechten</div>'+
+  '<div class="row">'+
+   '<div class="field"><label>Globaal</label><select data-f="rol" data-id="'+p.id+'">'+ROLLEN[t].filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'+
+   '<div class="field"><label>Groep</label><select data-f="groep" data-id="'+p.id+'">'+GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('')+'</select></div>'+
+  '</div>'+
+  (p._nieuweGroep?'<p class="mini" style="color:var(--amber)">Wordt bij versturen verplaatst naar '+p._nieuweGroep+'.</p>':'')+
+  '<div class="sublistlabel">Cliënten</div>'+
+  clientRechtenRow(p,t)+
+  (t==='medewerker'?('<div class="sublistlabel">Medewerkers</div>'+medewerkerPeerRow(p)):'')+
+  (t==='medewerker'?('<div class="sublistlabel">Naasten</div>'+naasteRechtenRow(p)):'')+
+  (t==='medewerker'?'<label class="contactcheck"><input type="checkbox" data-f="contactpersoon" data-id="'+p.id+'" '+(p.contactpersoon?'checked':'')+'>Markeren als contactpersoon</label>':'')+
+  '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen uit aanvraag</button><button type="button" class="small" data-fullpersoon="'+p.id+'">Volledig profiel bewerken →</button></div>'+
+ '</div>';
+}
+
+function rowHtml(p,t){
+ var staged=p._state==='verwijderd';
+ var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
+ var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
+ var head='<div class="uhead">'+avatarHtml(naam(p))+
+  '<div class="pinfo"><div class="naam">'+naam(p)+contactBadge+stateTag+'</div><div class="mail">'+(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
+  '<div class="rowbtns">'+
+   '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+   '<button type="button" class="iconbtn danger" data-trashrow="'+p.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
+  '</div></div>';
+ var body=p._editing?(t==='client'?editFormClient(p):editFormPersoon(p,t)):'';
+ return '<div class="urow'+(staged?' staged':'')+'" data-row="'+p.id+'">'+head+body+'</div>';
+}
+
+function renderAcc(t){
+ var lijst=personenVanType(t);
+ el('count-'+t).textContent=lijst.length;
+ var box=el('rows-'+t);
+ box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
+ Array.prototype.forEach.call(box.querySelectorAll('[data-editrow]'),function(b){
+  b.addEventListener('click',function(){
+   var p=findPerson(+b.getAttribute('data-editrow'));p._editing=!p._editing;renderAcc(t);
+  });
+ });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
+  b.addEventListener('click',function(){trashRow(+b.getAttribute('data-trashrow'),t);});
+ });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-remove]'),function(b){
+  b.addEventListener('click',function(){trashRow(+b.getAttribute('data-remove'),t);});
+ });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-fullclient]'),function(b){
+  b.addEventListener('click',function(){openProfielClient(+b.getAttribute('data-fullclient'));});
+ });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-fullpersoon]'),function(b){
+  b.addEventListener('click',function(){openProfielPersoon(+b.getAttribute('data-fullpersoon'),t);});
+ });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-f]'),function(inp){
+  var evt=(inp.tagName==='SELECT'||inp.type==='checkbox')?'change':'blur';
+  inp.addEventListener(evt,function(){
+   var p=findPerson(+inp.getAttribute('data-id')), f=inp.getAttribute('data-f');
+   if(f==='eigenmail'){p._eigenmail=inp.checked;}
+   else if(f==='groep'){p._nieuweGroep=(inp.value===huidigeGroep)?null:inp.value;}
+   else if(inp.type==='checkbox'){p[f]=inp.checked;}
+   else if(f==='voor'||f==='achter'){p[f]=cap(inp.value);}
+   else{p[f]=inp.value;}
+   if(p._state!=='nieuw')p._state='gewijzigd';
+   updateTally();renderAcc(t);renderContactpersonen();
+  });
+ });
+ wireClientRechten(box,t,function(){updateTally();renderAcc(t);});
+ wireNaasteRechten(box,function(){updateTally();renderAcc(t);});
+ wireMedewerkerPeerRechten(box,function(){updateTally();renderAcc(t);});
+}
+function findPerson(id){return people.filter(function(x){return x.id===id;})[0];}
+
+/* --- Volledig profiel: cliënt --- */
+var huidigProfielId=null;
+function personRechtenRow(clientId){
+ var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
+ if(!betrokkenen.length)return '<p class="empty-msg">Nog niemand gekoppeld.</p>';
+ return betrokkenen.map(function(b){
+  var huidig=rolOpClient(b,clientId)||'';
+  var rollen=ROLLEN[b.type].filter(function(r){return r!=='Geen';});
+  return '<div class="personrow">'+avatarHtml(naam(b))+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
+   '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+ }).join('');
+}
+function wirePersoonRechten(container,onchange){
+ Array.prototype.forEach.call(container.querySelectorAll('[data-persoonrol]'),function(sel){
+  sel.addEventListener('change',function(){
+   var persoon=findPerson(+sel.getAttribute('data-persoonrol')),clientId=+sel.getAttribute('data-clientid');
+   persoon.clientRechten=persoon.clientRechten||{};
+   if(sel.value)persoon.clientRechten[clientId]=sel.value; else delete persoon.clientRechten[clientId];
+   if(persoon._state!=='nieuw')persoon._state='gewijzigd';
+   onchange&&onchange();
+  });
+ });
+}
+function openProfielClient(id){
+ var p=findPerson(id);if(!p)return;
+ huidigProfielId=id;
+ el('pc-titel').textContent=naam(p)+' — volledig profiel';
+ el('pc-foto').style.background=avatarGradient(naam(p));
+ el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
+ el('pc-rechten').innerHTML=personRechtenRow(id);
+ wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
+ show('pp-profiel-client');
+}
+el('pc-opslaan').addEventListener('click',function(){
+ var p=findPerson(huidigProfielId);if(!p)return;
+ p.voor=cap(el('pc-voornaam').value);p.achter=cap(el('pc-achternaam').value);p.mail=el('pc-mail').value.trim();p.tel=el('pc-tel').value.trim();
+ if(p._state!=='nieuw')p._state='gewijzigd';
+ renderAcc('client');updateTally();show('pp-formulier');
+});
+el('pc-foto-wijzigen').addEventListener('click',function(){
+ openModal('<h3>Profielfoto wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+});
+
+/* --- Volledig profiel: medewerker / naaste --- */
+function openProfielPersoon(id,t){
+ var p=findPerson(id);if(!p)return;
+ huidigProfielId=id;
+ el('pp-titel').textContent=naam(p)+' — volledig profiel';
+ el('pp-foto').style.background=avatarGradient(naam(p));
+ el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';
+ el('pp-typerol').value=t;
+ el('pp-globaal').innerHTML=ROLLEN[t].filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
+ el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
+ el('pp-clienten').innerHTML=clientRechtenRow(p,t);
+ wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
+ if(t==='medewerker'){
+  el('pp-lbl-medewerkers').textContent='Recht op medewerkers';
+  el('pp-medewerkers').innerHTML=medewerkerPeerRow(p);
+  wireMedewerkerPeerRechten(el('pp-medewerkers'),function(){openProfielPersoon(id,t);});
+  el('pp-lbl-naasten').textContent='Naasten';
+  el('pp-naasten').innerHTML=naasteRechtenRow(p);
+  wireNaasteRechten(el('pp-naasten'),function(){openProfielPersoon(id,t);});
+ }else{
+  el('pp-lbl-medewerkers').textContent='Medewerkers met recht op deze naaste';
+  el('pp-medewerkers').innerHTML=medewerkerRechtenRow(p.id);
+  wireMedewerkerRechten(el('pp-medewerkers'),function(){openProfielPersoon(id,t);});
+ }
+ ['pp-lbl-medewerkers'].forEach(function(id2){el(id2).hidden=false;});
+ el('pp-lbl-naasten').hidden=(t==='naaste');
+ show('pp-profiel-persoon');
+}
+el('pp-persoon-opslaan').addEventListener('click',function(){
+ var p=findPerson(huidigProfielId);if(!p)return;
+ var t=el('pp-typerol').value;
+ p.voor=cap(el('pp-voornaam').value);p.achter=cap(el('pp-achternaam').value);p.mail=el('pp-mail').value.trim();
+ p.type=t;p.rol=el('pp-globaal').value;
+ var nieuweGroep=el('pp-groepveld').value;
+ p._nieuweGroep=(nieuweGroep===huidigeGroep)?null:nieuweGroep;
+ if(p._state!=='nieuw')p._state='gewijzigd';
+ renderAll();show('pp-formulier');
+});
+el('pp-foto-wijzigen').addEventListener('click',function(){
+ openModal('<h3>Profielfoto wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+});
+function trashRow(id,t){
+ var p=findPerson(id);if(!p)return;
+ if(p._state==='nieuw'){people=people.filter(function(x){return x.id!==id;});}
+ else{p._state='verwijderd';p._editing=false;}
+ renderAcc(t);updateTally();
+}
+function renderContactpersonen(){
+ var lijst=personenVanType('medewerker').filter(function(m){return m.contactpersoon;});
+ el('contactpersonen-lijst').innerHTML=lijst.length? lijst.map(function(m){
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div><div class="mail">'+m.mail+'</div></div></div>';
+ }).join('') : '<p class="empty-msg">Nog geen medewerkers gemarkeerd als contactpersoon.</p>';
+}
+function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();updateTally();}
+function updateTally(){
+ var nieuw=0,gewijzigd=0,verwijderd=0;
+ people.forEach(function(p){if(p._state==='nieuw')nieuw++;else if(p._state==='gewijzigd')gewijzigd++;else if(p._state==='verwijderd')verwijderd++;});
+ var totaal=nieuw+gewijzigd+verwijderd;
+ el('tally-count').textContent=totaal+' wijziging'+(totaal===1?'':'en');
+ var totalW=Math.max(totaal,1);
+ el('tally-nieuw').style.width=(nieuw/totalW*100)+'%';
+ el('tally-gewijzigd').style.width=(gewijzigd/totalW*100)+'%';
+ el('tally-verwijderd').style.width=(verwijderd/totalW*100)+'%';
+ el('verzenden-btn').disabled=totaal===0;
+ el('concept-badge').hidden=totaal===0;
+ el('formulier-tellingen').textContent='Cliënten – '+personenVanType('client').length+'  ·  Medewerkers – '+personenVanType('medewerker').length+'  ·  Naasten – '+personenVanType('naaste').length;
+}
+function heeftOnopgeslagenWijzigingen(){return people.some(function(p){return p._state;});}
+
+/* --- Modal --- */
+function openModal(html){el('modal-card').innerHTML=html;el('modal-overlay').hidden=false;}
+function closeModal(){el('modal-overlay').hidden=true;}
+el('modal-overlay').addEventListener('click',function(e){if(e.target===el('modal-overlay'))closeModal();});
+
+var INFOTEXT={
+ client:{titel:'Over cliënten',tekst:'Cliënten zijn de bewoners van deze groep. Je maakt een cliënt aan met alleen een naam en eventueel een e-mailadres — wie er toegang toe krijgt bepaal je apart, per medewerker of naaste.'},
+ medewerker:{titel:'Over medewerkers',tekst:'Medewerkers krijgen bij het aanmaken automatisch de standaardrollen van de organisatie op globaal-, groeps-, cliënten- en medewerkersniveau. Je kunt dit hier per persoon nog aanpassen.'},
+ naaste:{titel:'Over naasten',tekst:'Naasten krijgen alleen een globale rol en een groepsrol. Toegang tot een specifieke cliënt ken je apart toe, vanuit die cliënt zelf.'}
+};
+function infoSecties(keys){
+ return keys.map(function(k){return '<div class="msec"><b>'+INFOTEXT[k].titel+'</b><p>'+INFOTEXT[k].tekst+'</p></div>';}).join('');
+}
+el('info-toggle').addEventListener('click',function(){
+ openModal('<h3>Over dit formulier</h3><div class="msec"><p>Wijzigingen die je hier maakt worden pas echt doorgevoerd nadat je de aanvraag verstuurt. Tot die tijd kun je alles nog aanpassen of ongedaan maken via "Verwijderen uit aanvraag".</p></div>'
+  +infoSecties(['client','medewerker','naaste'])
+  +'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Snap ik</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+});
+el('formulier-help').addEventListener('click',function(){el('info-toggle').click();});
+document.querySelectorAll('[data-help]').forEach(function(b){
+ b.addEventListener('click',function(e){
+  e.stopPropagation();
+  openModal('<h3>'+INFOTEXT[b.getAttribute('data-help')].titel+'</h3>'+infoSecties([b.getAttribute('data-help')])+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Snap ik</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+});
+el('formulier-terug').addEventListener('click',function(){
+ if(heeftOnopgeslagenWijzigingen()){
+  openModal('<h3>Wijzigingen niet opgeslagen</h3><div class="msec"><p>Je hebt wijzigingen gemaakt die nog niet verstuurd zijn als aanvraag. Als je nu teruggaat, blijft dit concept bewaard en kun je later verdergaan.</p></div>'
+   +'<div class="modal-actions"><button type="button" id="modal-blijf">Blijf op deze pagina</button><button type="button" class="primary" id="modal-terug">Toch teruggaan</button></div>');
+  el('modal-blijf').addEventListener('click',closeModal);
+  el('modal-terug').addEventListener('click',function(){closeModal();show('pp-hub');});
+ }else{
+  show('pp-hub');
+ }
+});
+function pushNew(t){
+ var basis={id:nextId++,type:t,voor:'',achter:'',mail:'',groepen:[huidigeGroep],_state:'nieuw',_editing:true};
+ if(t==='client'){
+  basis.rechten={};basis._eigenmail=false;
+  var effM=effectiveFor(huidigeGroep,'medewerker').data;
+  if(effM.clienten.rol!=='Geen'){
+   personenVanType('medewerker').forEach(function(m){
+    m.clientRechten=m.clientRechten||{};
+    m.clientRechten[basis.id]=effM.clienten.rol;
+    if(m._state!=='nieuw')m._state='gewijzigd';
+   });
+  }
+ }else{
+  var eff=effectiveFor(huidigeGroep,t).data;
+  basis.rol=eff.globaal.rol!=='Geen'?eff.globaal.rol:ROLLEN[t][0];
+  if(t==='medewerker'){
+   basis.clientRechten={};
+   if(eff.clienten.rol!=='Geen')personenVanType('client').forEach(function(c){basis.clientRechten[c.id]=eff.clienten.rol;});
+   basis.medewerkerRechten={};
+   if(eff.medewerkers.rol!=='Geen')personenVanType('medewerker').forEach(function(m){basis.medewerkerRechten[m.id]=eff.medewerkers.rol;});
+  }
+ }
+ people.push(basis);
+ el('acc-'+t).classList.remove('closed');
+ renderAcc(t);if(t==='client')renderAcc('medewerker');updateTally();
+}
+document.querySelectorAll('[data-add]').forEach(function(b){b.addEventListener('click',function(){pushNew(b.getAttribute('data-add'));});});
+document.querySelectorAll('[data-toggle]').forEach(function(b){b.addEventListener('click',function(){el(b.getAttribute('data-toggle')).classList.toggle('closed');});});
+document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){show(b.getAttribute('data-back'));});});
+document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){
+ var target=b.getAttribute('data-open');
+ if(target==='pp-statistieken')renderStatTable();
+ if(target==='pp-maaltijden')renderMaaltijdKalender();
+ show(target);
+});});
+var LOGBOEK=[
+ {tijd:'09-09-2026 14:12',tekst:'Sofie Mulder toegevoegd als medewerker met standaardrollen'},
+ {tijd:'02-09-2026 10:03',tekst:'Bram Smit aangemaakt als cliënt, rechten toegekend aan 2 medewerkers'},
+ {tijd:'28-08-2026 16:47',tekst:'Ingrid Alkema gekoppeld als naaste aan Elif Yildiz'}
+];
+el('logboek-btn').addEventListener('click',function(){
+ openModal('<h3>Logboek</h3>'+LOGBOEK.map(function(l){return '<div class="msec"><b>'+l.tijd+'</b><p>'+l.tekst+'</p></div>';}).join('')
+  +'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+});
+
+/* --- Gearchiveerd --- */
+function renderGearchiveerd(){
+ var gearchiveerd=people.filter(function(p){return p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
+ el('gearchiveerd-lijst').innerHTML=gearchiveerd.length? gearchiveerd.map(function(p){
+  return '<div class="personrow"><div class="pinfo"><div class="naam">'+naam(p)+' <span class="mini">— '+TYPELABEL[p.type]+'</span></div><div class="mail">'+(p.mail||'—')+'</div></div>'+
+   '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button></div>';
+ }).join('') : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>';
+ Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-herstel]'),function(b){
+  b.addEventListener('click',function(){
+   var p=findPerson(+b.getAttribute('data-herstel'));
+   p.archived=false;
+   renderGearchiveerd();renderAll();
+  });
+ });
+}
+el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
+
+/* --- Aanvraag: controleren -> versturen -> verzonden --- */
+var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
+function renderControleren(){
+ var wijzigingen=people.filter(function(p){return p._state;});
+ el('controleren-lijst').innerHTML=wijzigingen.length? wijzigingen.map(function(p){
+  return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
+   '<div class="rtxt"><b>'+naam(p)+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+p.mail:'')+(p._nieuweGroep?' · verplaatst naar '+p._nieuweGroep:'')+'</div>'+
+   '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+STATE_LABEL[p._state]+'</span></div>';
+ }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om te versturen.</p>';
+}
+el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
+el('naar-versturen').addEventListener('click',function(){
+ el('av-naam').value='';el('av-tel').value='';el('av-akkoord').checked=false;el('av-versturen').disabled=true;
+ show('pp-versturen');
+});
+function checkVersturenKlaar(){
+ el('av-versturen').disabled=!(el('av-naam').value.trim()&&el('av-tel').value.trim()&&el('av-akkoord').checked);
+}
+['av-naam','av-tel'].forEach(function(i){el(i).addEventListener('input',checkVersturenKlaar);});
+el('av-akkoord').addEventListener('change',checkVersturenKlaar);
+el('av-versturen').addEventListener('click',function(){
+ var nieuw=people.filter(function(p){return p._state==='nieuw';}).length;
+ var gewijzigd=people.filter(function(p){return p._state==='gewijzigd';}).length;
+ var ontkoppeld=0,gearchiveerd=0,verplaatst=0;
+ people.filter(function(p){return p._state==='verwijderd';}).forEach(function(p){
+  if(p.groepen.length>1){p.groepen=p.groepen.filter(function(g){return g!==huidigeGroep;});ontkoppeld++;}
+  else{p.archived=true;gearchiveerd++;}
+ });
+ people.filter(function(p){return p._nieuweGroep;}).forEach(function(p){
+  var idx=p.groepen.indexOf(huidigeGroep);
+  if(idx>-1)p.groepen[idx]=p._nieuweGroep; else p.groepen.push(p._nieuweGroep);
+  verplaatst++;
+ });
+ people.forEach(function(p){delete p._state;delete p._editing;delete p._nieuweGroep;});
+ renderAll();
+ var verwijderdTekst=[];
+ if(ontkoppeld)verwijderdTekst.push(ontkoppeld+' ontkoppeld van '+huidigeGroep);
+ if(gearchiveerd)verwijderdTekst.push(gearchiveerd+' gearchiveerd');
+ if(verplaatst)verwijderdTekst.push(verplaatst+' verplaatst naar een andere groep');
+ el('verzonden-tekst').innerHTML='Je aanvraag ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') is verzonden naar MyWepp Support. We nemen binnen 2 werkdagen contact op met '+(el('av-naam').value.trim()||'de contactpersoon')+'. Tot die tijd kunnen deze wijzigingen niet meer aangepast worden.';
+ show('pp-verzonden');
+});
+
+/* --- Statistieken --- */
+var MAANDEN=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+var STAT_KOLOMMEN=['Bezoeken','Rapportages','Afmeldingen','Foto\'s geplaatst'];
+function renderStatTable(){
+ if(!el('stat-maand').options.length){
+  el('stat-maand').innerHTML=MAANDEN.map(function(m,i){return '<option'+(i===8?' selected':'')+'>'+m+'</option>';}).join('');
+  el('stat-maand').addEventListener('change',renderStatTable);
+  el('stat-jaar').addEventListener('change',renderStatTable);
+ }
+ var seed=el('stat-maand').selectedIndex+el('stat-jaar').selectedIndex*12;
+ var clienten=personenVanType('client');
+ var html='<thead><tr><th>Cliënt</th>'+STAT_KOLOMMEN.map(function(k){return '<th>'+k+'</th>';}).join('')+'</tr></thead><tbody>';
+ clienten.forEach(function(p,i){
+  html+='<tr><td>'+naam(p)+'</td>'+STAT_KOLOMMEN.map(function(_,ci){return '<td>'+((seed+i*3+ci*2+4)%11)+'</td>';}).join('')+'</tr>';
+ });
+ html+='</tbody>';
+ el('stat-table').innerHTML=clienten.length?html:'<tbody><tr><td class="empty-msg">Geen cliënten in deze groep.</td></tr></tbody>';
+ renderStatKalender();
+}
+function renderStatKalender(){
+ var year=+el('stat-jaar').value,month=el('stat-maand').selectedIndex;
+ var daysInMonth=new Date(year,month+1,0).getDate();
+ var markedDays=[];for(var d=1;d<=daysInMonth;d++)markedDays.push(d);
+ el('stat-kalender').innerHTML=monthGridHtml(year,month,markedDays,null);
+ Array.prototype.forEach.call(el('stat-kalender').querySelectorAll('[data-calday]'),function(c){
+  c.classList.add('daydetail');
+  c.addEventListener('click',function(){openStatDagdetails(+c.getAttribute('data-calday'),month,year);});
+ });
+}
+function openStatDagdetails(day,month,year){
+ var clienten=personenVanType('client');
+ var html='<h3>Dagdetails — '+day+' '+MAANDNAMEN[month]+' '+year+'</h3>';
+ html+=clienten.length? clienten.map(function(p,i){
+  return '<div class="msec"><b>'+naam(p)+'</b><p>'+STAT_KOLOMMEN.map(function(k,ci){return k+': '+((day+i*3+ci*2)%6);}).join(' · ')+'</p></div>';
+ }).join('') : '<div class="msec"><p>Geen cliënten in deze groep.</p></div>';
+ html+='<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>';
+ openModal(html);
+ el('modal-snap').addEventListener('click',closeModal);
+}
+
+/* --- Maaltijden --- */
+var MAALTIJDRESERVERINGEN={};
+function ensureMaaltijdReserveringen(clientId){
+ if(!MAALTIJDRESERVERINGEN[clientId]){
+  var set={};
+  for(var d=1;d<=30;d++)if((d+clientId)%3)set[d]=true;
+  MAALTIJDRESERVERINGEN[clientId]=set;
+ }
+ return MAALTIJDRESERVERINGEN[clientId];
+}
+function renderMaaltijdKalender(){
+ var clienten=personenVanType('client');
+ if(!clienten.length){el('maaltijd-kalender').innerHTML='<p class="empty-msg">Geen cliënten in deze groep.</p>';return;}
+ if(!el('maaltijd-client').options.length||el('maaltijd-client').dataset.groep!==huidigeGroep){
+  el('maaltijd-client').innerHTML=clienten.map(function(c){return '<option value="'+c.id+'">'+naam(c)+'</option>';}).join('');
+  el('maaltijd-client').dataset.groep=huidigeGroep;
+ }
+ if(!el('maaltijd-client').dataset.wired){el('maaltijd-client').addEventListener('change',renderMaaltijdKalender);el('maaltijd-client').dataset.wired='1';}
+ var clientId=+el('maaltijd-client').value;
+ var reserveringen=ensureMaaltijdReserveringen(clientId);
+ var year=2026,month=8;
+ var first=new Date(year,month,1), startWeekday=(first.getDay()+6)%7;
+ var daysInMonth=new Date(year,month+1,0).getDate();
+ var html='<div class="calmonth">'+MAANDNAMEN[month]+' '+year+'</div><div class="calgrid">';
+ ['Ma','Di','Wo','Do','Vr','Za','Zo'].forEach(function(dn){html+='<div class="calhead">'+dn+'</div>';});
+ for(var i=0;i<startWeekday;i++)html+='<div class="calcell empty"></div>';
+ for(var day=1;day<=daysInMonth;day++){
+  html+='<div class="calcell" data-maaltijddag="'+day+'">'+day+'<span class="dot" style="background:'+(reserveringen[day]?'var(--moss)':'var(--brick)')+'"></span></div>';
+ }
+ html+='</div>';
+ el('maaltijd-kalender').innerHTML=html;
+ Array.prototype.forEach.call(el('maaltijd-kalender').querySelectorAll('[data-maaltijddag]'),function(c){
+  var day=+c.getAttribute('data-maaltijddag');
+  c.addEventListener('click',function(){
+   if(reserveringen[day])delete reserveringen[day]; else reserveringen[day]=true;
+   c.querySelector('.dot').style.background=reserveringen[day]?'var(--moss)':'var(--brick)';
+  });
+ });
+}
+
+renderAll();
+
+/* --- Digibord beheren --- */
+var DIGIBORD=[
+ {k:'informatiebord',l:'Informatiebord',s:'Nieuws en mededelingen voor de groep',on:true},
+ {k:'aanwezigheid',l:'Aanwezigheidsbord',s:'Wie is er vandaag aanwezig',on:true},
+ {k:'dagprogramma',l:'Dagprogramma',s:'Horizontaal of verticaal weergegeven',on:true},
+ {k:'takenbord',l:'Takenbord',s:'Overzicht van huishoudelijke taken',on:false},
+ {k:'dienstenbord',l:'Dienstenbord',s:'Wie werkt er vandaag en morgen',on:true},
+ {k:'maaltijdenbord',l:'Maaltijdenbord',s:'Toont het menu van vandaag',on:true},
+ {k:'kalenderbord',l:'Kalenderbord',s:'Algemene afspraken van de groep',on:false}
+];
+function renderDigibord(){
+ el('digibord-lijst').innerHTML=DIGIBORD.map(function(d){
+  return '<div class="digirow"><div class="dtxt"><b>'+d.l+'</b><span>'+d.s+'</span></div>'+
+   '<label class="toggle"><input type="checkbox" data-dk="'+d.k+'" '+(d.on?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
+ }).join('');
+ Array.prototype.forEach.call(el('digibord-lijst').querySelectorAll('[data-dk]'),function(c){
+  c.addEventListener('change',function(){DIGIBORD.filter(function(d){return d.k===c.getAttribute('data-dk');})[0].on=c.checked;});
+ });
+}
+renderDigibord();
+el('digibord-opslaan').addEventListener('click',function(){
+ el('digibord-bevestiging').innerHTML='<div class="bevestiging reveal">Digibord-instellingen opgeslagen voor '+huidigeGroep+'.</div>';
+});
+
+/* ============== CLIENT-APP (MOBIEL) ============== */
+var caClientId=null, caTab='info';
+var EMOJIS=['👍','❤️','😊','👏'];
+var CLIENTDATA={};
+function ensureClientData(id){
+ if(CLIENTDATA[id])return CLIENTDATA[id];
+ var d={
+  doelen:[
+   {id:1,titel:'Zelfstandig aankleden',rapportages:[
+    {id:1,tekst:'Vandaag zelfstandig de trui aangedaan, ging goed!',tijd:'09-09-2026 08:14',auteur:'Marieke de Vries',media:false,reacties:{'👍':2,'❤️':1}},
+    {id:2,tekst:'Had wat hulp nodig bij de knoopjes, morgen nog eens proberen.',tijd:'08-09-2026 08:02',auteur:'Sofie Mulder',media:true,reacties:{'👍':1}}
+   ]},
+   {id:2,titel:'Op tijd naar bed',rapportages:[]}
+  ],
+  agenda:[
+   {id:1,titel:'Fysiotherapie',datumlabel:'12 SEP',tijd:'10:00',media:true},
+   {id:2,titel:'Verjaardag opa',datumlabel:'14 SEP',tijd:'15:00',media:false}
+  ],
+  ikboek:[
+   {id:1,tekst:'Mooie wandeling gemaakt in het park, genoten van de zon.',tijd:'07-09-2026',mediaType:'video',reacties:{'❤️':3,'😊':1}}
+  ]
+ };
+ var nid=100+id*10;
+ d._nextDoelId=nid+1;d._nextRapportId=nid+50;d._nextAgendaId=nid+100;d._nextIkboekId=nid+150;
+ CLIENTDATA[id]=d;
+ return d;
+}
+function renderClientApp(){
+ var clients=personenVanType('client');
+ if(!caClientId||!clients.some(function(c){return c.id===caClientId;}))caClientId=clients[0]?clients[0].id:null;
+ el('ca-client-select').innerHTML=clients.map(function(c){return '<option value="'+c.id+'"'+(c.id===caClientId?' selected':'')+'>'+naam(c)+'</option>';}).join('');
+ renderCaHeader();
+ renderCaTab(caTab);
+}
+el('ca-client-select').addEventListener('change',function(){caClientId=+el('ca-client-select').value;renderCaHeader();renderCaTab(caTab);});
+function renderCaHeader(){
+ var p=findPerson(caClientId);if(!p)return;
+ el('ca-avatar').innerHTML=avatarHtmlSized(naam(p),28);
+ el('ca-naam').textContent=naam(p);
+}
+document.querySelectorAll('.bottomnav button').forEach(function(b){
+ b.addEventListener('click',function(){
+  document.querySelectorAll('.bottomnav button').forEach(function(x){x.classList.remove('on');});
+  b.classList.add('on');caTab=b.getAttribute('data-catab');renderCaTab(caTab);
+ });
+});
+function renderCaTab(tab){
+ if(!caClientId){el('ca-body').innerHTML='<p class="empty-msg">Geen cliënten in deze groep.</p>';return;}
+ if(tab==='info')renderCaInfo();
+ else if(tab==='doelen')renderCaDoelen();
+ else if(tab==='agenda')renderCaAgenda();
+ else if(tab==='ikboek')renderCaIkboek();
+ else if(tab==='chat')renderCaChatList();
+}
+
+/* --- Info --- */
+function renderCaInfo(){
+ var p=findPerson(caClientId);
+ var html='<div style="text-align:center;margin-bottom:16px">'+avatarHtmlSized(naam(p),64).replace('style="','style="margin:0 auto 8px;')+'<b style="font-size:16px">'+naam(p)+'</b></div>';
+ html+='<div class="infocard-row"><span>Groep</span><span>'+huidigeGroep+'</span></div>';
+ html+='<div class="infocard-row"><span>E-mailadres</span><span>'+(p.mail||'—')+'</span></div>';
+ html+='<div class="sublistlabel">Betrokkenen</div>';
+ html+='<p class="mini" style="margin:0 0 8px">Wijzig hier direct wie welke rol op '+naam(p)+' heeft.</p>';
+ html+='<div id="ca-info-rechten">'+personRechtenRow(p.id)+'</div>';
+ html+='<div class="sublistlabel">Beheer</div>';
+ html+='<button type="button" class="addbtn-row" style="justify-content:space-between;background:var(--surface);border-style:solid;border-color:var(--line);color:var(--ink)" id="ca-naar-geheugen">Geheugen <svg class="chev-r" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>';
+ html+='<button type="button" class="addbtn-row" style="justify-content:space-between;background:var(--surface);border-style:solid;border-color:var(--line);color:var(--ink);margin-top:8px" id="ca-naar-instellingen">Meer instellingen <svg class="chev-r" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>';
+ el('ca-body').innerHTML=html;
+ wirePersoonRechten(el('ca-info-rechten'),function(){renderCaInfo();});
+ el('ca-naar-geheugen').addEventListener('click',renderCaGeheugen);
+ el('ca-naar-instellingen').addEventListener('click',renderCaInstellingen);
+}
+
+/* --- Geheugen --- */
+var GEHEUGEN={};
+function ensureGeheugen(id){
+ if(!GEHEUGEN[id])GEHEUGEN[id]={items:[
+  {id:1,titel:'Ochtendroutine — tanden poetsen',tijd:'08:00',dagen:'Elke dag',actief:true},
+  {id:2,titel:'Medicatie innemen',tijd:'12:30',dagen:'Elke dag',actief:true},
+  {id:3,titel:'Bellen met opa',tijd:'19:00',dagen:'Zondag',actief:false}
+ ],nextId:4};
+ return GEHEUGEN[id];
+}
+function renderCaGeheugen(){
+ var g=ensureGeheugen(caClientId);
+ var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-geheugen-terug">← Terug</button><b style="font-size:15px">Geheugen</b></div>';
+ html+='<p class="mini" style="margin:0 0 12px">Herinneringen die deze cliënt op zijn/haar telefoon of Digibord te zien krijgt.</p>';
+ html+=g.items.map(function(it){
+  return '<div class="doelcard"><div class="dtop"><b>'+it.titel+'</b><label class="toggle"><input type="checkbox" data-geh-actief="'+it.id+'" '+(it.actief?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>'+
+   '<p class="mini" style="margin:0">'+it.tijd+' · '+it.dagen+'</p>'+
+   '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="small" data-geh-verwijder="'+it.id+'">Verwijderen</button></div></div>';
+ }).join('');
+ html+='<button type="button" class="addbtn-row" id="ca-geheugen-nieuw">+ Herinnering toevoegen</button>';
+ el('ca-body').innerHTML=html;
+ el('ca-geheugen-terug').addEventListener('click',renderCaInfo);
+ el('ca-geheugen-nieuw').addEventListener('click',function(){
+  openModal('<h3>Herinnering toevoegen</h3>'+
+   '<div class="field"><label>Waar gaat het over?</label><input id="modal-geh-titel" placeholder="Bijv. Tanden poetsen"></div>'+
+   '<div class="field"><label>Tijdstip</label><input id="modal-geh-tijd" value="08:00"></div>'+
+   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-opslaan').addEventListener('click',function(){
+   var titel=el('modal-geh-titel').value.trim();if(!titel){el('modal-geh-titel').style.borderColor='var(--brick)';return;}
+   g.items.push({id:g.nextId++,titel:titel,tijd:el('modal-geh-tijd').value.trim()||'—',dagen:'Elke dag',actief:true});
+   closeModal();renderCaGeheugen();
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-geh-actief]'),function(c){
+  c.addEventListener('change',function(){g.items.filter(function(x){return x.id===+c.getAttribute('data-geh-actief');})[0].actief=c.checked;});
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-geh-verwijder]'),function(b){
+  b.addEventListener('click',function(){
+   g.items=g.items.filter(function(x){return x.id!==+b.getAttribute('data-geh-verwijder');});renderCaGeheugen();
+  });
+ });
+}
+
+/* --- Meer instellingen --- */
+var CA_INSTELLINGEN={};
+function ensureCaInstellingen(id){
+ if(!CA_INSTELLINGEN[id])CA_INSTELLINGEN[id]={
+  nieuweRapportage:true,nieuwBericht:true,agendaHerinnering:true,sosMelding:true,
+  deelLocatie:false,tweestaps:true,groteTekst:false
+ };
+ return CA_INSTELLINGEN[id];
+}
+function caToggleRow(label,key,waarden){
+ return '<div class="togglerow"><span>'+label+'</span><label class="toggle"><input type="checkbox" data-inst="'+key+'" '+(waarden[key]?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
+}
+function renderCaInstellingen(){
+ var w=ensureCaInstellingen(caClientId);
+ var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-instellingen-terug">← Terug</button><b style="font-size:15px">Meer instellingen</b></div>';
+ html+='<div class="sublistlabel" style="margin-top:0">Meldingen</div>';
+ html+=caToggleRow('Nieuwe rapportage','nieuweRapportage',w);
+ html+=caToggleRow('Nieuw bericht','nieuwBericht',w);
+ html+=caToggleRow('Agendaherinnering','agendaHerinnering',w);
+ html+=caToggleRow('SOS-melding','sosMelding',w);
+ html+='<div class="sublistlabel">Privacy</div>';
+ html+=caToggleRow('Deel locatie bij SOS','deelLocatie',w);
+ html+=caToggleRow('Tweestapsverificatie vereist','tweestaps',w);
+ html+='<div class="sublistlabel">Weergave</div>';
+ html+=caToggleRow('Grote tekst','groteTekst',w);
+ html+='<div class="togglerow"><span>Donkere modus</span><label class="toggle"><input type="checkbox" id="ca-donker-toggle" '+(document.documentElement.getAttribute('data-theme')==='dark'?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
+ html+='<div class="sublistlabel">Account</div>';
+ html+='<button type="button" class="small" style="width:100%;margin-bottom:8px" id="ca-wachtwoord">Wachtwoord wijzigen</button>';
+ html+='<button type="button" class="danger small" style="width:100%" id="ca-uitloggen">Uitloggen</button>';
+ html+='<div class="actions end" style="border:0;margin-top:16px"><button type="button" class="primary" id="ca-instellingen-opslaan">Opslaan</button></div>';
+ html+='<div id="ca-instellingen-bevestiging"></div>';
+ el('ca-body').innerHTML=html;
+ el('ca-instellingen-terug').addEventListener('click',renderCaInfo);
+ el('ca-donker-toggle').addEventListener('change',function(){document.documentElement.setAttribute('data-theme',this.checked?'dark':'light');});
+ el('ca-wachtwoord').addEventListener('click',function(){
+  openModal('<h3>Wachtwoord wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+ el('ca-uitloggen').addEventListener('click',function(){
+  openModal('<h3>Uitloggen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+ el('ca-instellingen-opslaan').addEventListener('click',function(){
+  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-inst]'),function(inp){
+   w[inp.getAttribute('data-inst')]=inp.checked;
+  });
+  el('ca-instellingen-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Instellingen opgeslagen.</div>';
+ });
+}
+
+/* --- Doelen --- */
+var caDoelenView='doelen';
+/* --- Media viewer (gedeeld) --- */
+var PLAY_SVG='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
+function mediaThumbHtml(type,gradient,caption){
+ var esc=(caption||'').replace(/"/g,'&quot;');
+ if(type==='video')return '<div class="mediathumb video" data-mediatype="video" data-caption="'+esc+'"><div class="playbtn">'+PLAY_SVG+'</div></div>';
+ return '<div class="mediathumb" data-mediatype="foto" data-gradient="'+gradient+'" data-caption="'+esc+'" style="background:'+gradient+'">Foto</div>';
+}
+function openMediaViewer(type,gradient,caption){
+ var big=type==='video'
+  ?'<div class="mediathumb-lg video" style="aspect-ratio:16/9"><div class="playbtn" style="width:60px;height:60px">'+PLAY_SVG.replace('viewBox','style="width:22px;height:22px" viewBox')+'</div></div>'
+  :'<div class="mediathumb-lg" style="background:'+gradient+'"></div>';
+ openModal('<h3>'+(type==='video'?'Video':'Foto')+'</h3>'+big+(caption?'<p class="mini" style="margin-top:10px">'+caption+'</p>':'')+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+}
+function wireMediaThumbs(container){
+ Array.prototype.forEach.call(container.querySelectorAll('[data-mediatype]'),function(elm){
+  elm.addEventListener('click',function(){
+   openMediaViewer(elm.getAttribute('data-mediatype'),elm.getAttribute('data-gradient')||'linear-gradient(135deg,#4A6FA5,#5A8A6E)',elm.getAttribute('data-caption'));
+  });
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('.mcell'),function(cell){
+  if(cell.dataset.wired)return;cell.dataset.wired='1';
+  cell.addEventListener('click',function(){openMediaViewer('foto',cell.style.background,'Gedeeld in dit gesprek');});
+ });
+}
+function emojiRowHtml(attrName,attrValuePrefix,item){
+ return '<div class="emojirow">'+EMOJIS.map(function(e){
+  var selected=item.mijnReactie===e;
+  var disabled=item.mijnReactie&&!selected;
+  return '<button type="button" class="'+(selected?'selected ':'')+(disabled?'disabled':'')+'" '+attrName+'="'+attrValuePrefix+'|'+e+'">'+e+(item.reacties[e]?'<span class="ecount">'+item.reacties[e]+'</span>':'')+'</button>';
+ }).join('')+'</div>';
+}
+function toggleReactie(item,emoji){
+ if(item.mijnReactie===emoji){
+  item.reacties[emoji]=Math.max(0,(item.reacties[emoji]||1)-1);
+  if(!item.reacties[emoji])delete item.reacties[emoji];
+  item.mijnReactie=null;
+ }else if(!item.mijnReactie){
+  item.reacties[emoji]=(item.reacties[emoji]||0)+1;
+  item.mijnReactie=emoji;
+ }
+}
+function rapportCardHtml(doel,r){
+ return '<div class="rapport"><div class="rmeta">'+r.auteur+' · '+r.tijd+'</div>'+r.tekst+
+  (r.media?mediaThumbHtml('foto','linear-gradient(135deg,#3E7CA6,#8C6A45)',doel.titel+' — '+r.tijd):'')+
+  emojiRowHtml('data-react',doel.id+'|'+r.id,r)+
+ '</div>';
+}
+function renderCaDoelen(){
+ var d=ensureClientData(caClientId);
+ var html='<div class="minitabs"><button type="button" class="'+(caDoelenView==='doelen'?'on':'')+'" data-doelenview="doelen">Per doel</button><button type="button" class="'+(caDoelenView==='inbox'?'on':'')+'" data-doelenview="inbox">Inbox</button></div>';
+ if(caDoelenView==='inbox'){
+  var alle=[];
+  d.doelen.forEach(function(doel){doel.rapportages.forEach(function(r){alle.push({doel:doel,r:r});});});
+  alle.sort(function(a,b){return b.r.id-a.r.id;});
+  html+=alle.length? alle.map(function(x){
+   return '<div class="inboxcard"><div class="idoel">'+x.doel.titel+'</div>'+rapportCardHtml(x.doel,x.r)+'</div>';
+  }).join('') : '<p class="empty-msg">Nog geen rapportages over alle doelen heen.</p>';
+ }else{
+  html+=d.doelen.map(function(doel){
+   return '<div class="doelcard"><div class="dtop"><b>'+doel.titel+'</b><button type="button" class="small" data-newrapport="'+doel.id+'">+ Rapportage</button></div>'+
+    (doel.rapportages.length? doel.rapportages.slice().reverse().map(function(r){return rapportCardHtml(doel,r);}).join('') : '<p class="empty-msg" style="padding-top:6px">Nog geen rapportages.</p>')+
+    '<div id="newrapport-'+doel.id+'"></div>'+
+   '</div>';
+  }).join('');
+  html+='<button type="button" class="addbtn-row" id="ca-nieuw-doel">+ Nieuw doel</button>';
+ }
+ el('ca-body').innerHTML=html;
+ wireMediaThumbs(el('ca-body'));
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-doelenview]'),function(b){
+  b.addEventListener('click',function(){caDoelenView=b.getAttribute('data-doelenview');renderCaDoelen();});
+ });
+ var nieuwDoelBtn=el('ca-nieuw-doel');
+ if(nieuwDoelBtn)nieuwDoelBtn.addEventListener('click',function(){
+  openModal('<h3>Nieuw doel</h3>'+
+   '<div class="field"><label>Titel</label><input id="modal-doel-titel" placeholder="Bijv. Zelfstandig aankleden"></div>'+
+   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-opslaan').addEventListener('click',function(){
+   var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
+   d.doelen.push({id:d._nextDoelId++,titel:titel,rapportages:[]});closeModal();renderCaDoelen();
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-newrapport]'),function(b){
+  b.addEventListener('click',function(){
+   var doelId=+b.getAttribute('data-newrapport');
+   el('newrapport-'+doelId).innerHTML='<div class="rapport"><textarea id="rapport-tekst-'+doelId+'" placeholder="Wat is er gebeurd?" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>'+
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:6px"><input type="checkbox" id="rapport-media-'+doelId+'" style="width:auto">Foto toevoegen</label>'+
+    '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="primary small" data-opslaanrapport="'+doelId+'">Plaatsen</button></div></div>';
+   document.querySelector('[data-opslaanrapport="'+doelId+'"]').addEventListener('click',function(){
+    var tekst=el('rapport-tekst-'+doelId).value.trim();if(!tekst)return;
+    var media=el('rapport-media-'+doelId).checked;
+    var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
+    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',auteur:'Jij',media:media,reacties:{}});
+    renderCaDoelen();
+   });
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-react]'),function(b){
+  b.addEventListener('click',function(){
+   if(b.classList.contains('disabled'))return;
+   var parts=b.getAttribute('data-react').split('|'),doelId=+parts[0],rapId=+parts[1],emoji=parts[2];
+   var doel=d.doelen.filter(function(x){return x.id===doelId;})[0],r=doel.rapportages.filter(function(x){return x.id===rapId;})[0];
+   toggleReactie(r,emoji);renderCaDoelen();
+  });
+ });
+}
+
+/* --- Kalender helper (gedeeld door Agenda en Maaltijden) --- */
+var MAANDNAMEN=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+var MAAND_AFK=['JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC'];
+function monthGridHtml(year,month,markedDays,selectedDay,hideTitle){
+ var first=new Date(year,month,1);
+ var startWeekday=(first.getDay()+6)%7;
+ var daysInMonth=new Date(year,month+1,0).getDate();
+ var html=hideTitle?'':'<div class="calmonth">'+MAANDNAMEN[month]+' '+year+'</div>';
+ html+='<div class="calgrid">';
+ ['Ma','Di','Wo','Do','Vr','Za','Zo'].forEach(function(dn){html+='<div class="calhead">'+dn+'</div>';});
+ for(var i=0;i<startWeekday;i++)html+='<div class="calcell empty"></div>';
+ for(var day=1;day<=daysInMonth;day++){
+  var marked=markedDays.indexOf(day)>-1;
+  html+='<div class="calcell'+(day===selectedDay?' selected':'')+'" data-calday="'+day+'">'+day+(marked?'<span class="dot" style="background:var(--accent)"></span>':'')+'</div>';
+ }
+ html+='</div>';
+ return html;
+}
+
+/* --- Agenda --- */
+var caAgendaView='lijst', caAgendaDag=null, caAgendaJaar=2026, caAgendaMaand=8, caAgendaLijstDag=12;
+function parseDatumlabel(label){
+ var m=/^(\d{1,2})\s+([A-Z]{3})$/.exec(label||'');
+ if(!m)return null;
+ var maandIdx=MAAND_AFK.indexOf(m[2]);
+ if(maandIdx<0)return null;
+ return {dag:+m[1],maand:maandIdx};
+}
+function wijzigMaand(delta){
+ caAgendaMaand+=delta;
+ if(caAgendaMaand<0){caAgendaMaand=11;caAgendaJaar--;}
+ else if(caAgendaMaand>11){caAgendaMaand=0;caAgendaJaar++;}
+ caAgendaDag=null;
+ renderCaAgenda();
+}
+function wijzigLijstDag(delta){
+ var daysInMonth=new Date(caAgendaJaar,caAgendaMaand+1,0).getDate();
+ caAgendaLijstDag+=delta;
+ if(caAgendaLijstDag<1){wijzigMaandVoorLijst(-1);caAgendaLijstDag=new Date(caAgendaJaar,caAgendaMaand+1,0).getDate();}
+ else if(caAgendaLijstDag>daysInMonth){wijzigMaandVoorLijst(1);caAgendaLijstDag=1;}
+ renderCaAgenda();
+}
+function wijzigMaandVoorLijst(delta){
+ caAgendaMaand+=delta;
+ if(caAgendaMaand<0){caAgendaMaand=11;caAgendaJaar--;}
+ else if(caAgendaMaand>11){caAgendaMaand=0;caAgendaJaar++;}
+}
+var HERINNERING_OPTIES=[
+ {value:'geen',label:'Geen herinnering'},
+ {value:'0',label:'Op het moment zelf'},
+ {value:'15',label:'15 minuten van tevoren'},
+ {value:'30',label:'30 minuten van tevoren'},
+ {value:'45',label:'45 minuten van tevoren'},
+ {value:'60',label:'1 uur van tevoren (max)'}
+];
+var HERHALING_OPTIES=[
+ {value:'geen',label:'Niet herhalen'},
+ {value:'wekelijks',label:'Elke week herhalen'},
+ {value:'maandelijks',label:'Maandelijks herhalen (op de 1e)'}
+];
+function herinneringLabel(v){var o=HERINNERING_OPTIES.filter(function(x){return x.value===v;})[0];return o?o.label:null;}
+function herhalingLabel(v){var o=HERHALING_OPTIES.filter(function(x){return x.value===v;})[0];return o?o.label:null;}
+function agendaCardHtml(a){
+ var extra=[];
+ if(a.herinnering&&a.herinnering!=='geen')extra.push('🔔 '+herinneringLabel(a.herinnering));
+ if(a.herhaling&&a.herhaling!=='geen')extra.push('🔁 '+herhalingLabel(a.herhaling));
+ return '<div class="agendacard"><div class="adate">'+a.datumlabel+'</div><div class="atxt"><b>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
+  (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
+}
+var PIJL_L='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>';
+var PIJL_R='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 6l6 6-6 6"/></svg>';
+function renderCaAgenda(){
+ var d=ensureClientData(caClientId);
+ var html='<div class="minitabs"><button type="button" class="'+(caAgendaView==='lijst'?'on':'')+'" data-agendaview="lijst">Lijst</button><button type="button" class="'+(caAgendaView==='kalender'?'on':'')+'" data-agendaview="kalender">Kalender</button></div>';
+ if(caAgendaView==='kalender'){
+  var markedDays=d.agenda.map(function(a){return parseDatumlabel(a.datumlabel);}).filter(function(p){return p&&p.maand===caAgendaMaand;}).map(function(p){return p.dag;});
+  html+='<div class="monthnav"><button type="button" id="ca-maand-vorige" aria-label="Vorige maand">'+PIJL_L+'</button><b>'+MAANDNAMEN[caAgendaMaand]+' '+caAgendaJaar+'</b><button type="button" id="ca-maand-volgende" aria-label="Volgende maand">'+PIJL_R+'</button></div>';
+  html+=monthGridHtml(caAgendaJaar,caAgendaMaand,markedDays,caAgendaDag,true);
+  var dagItems=caAgendaDag? d.agenda.filter(function(a){var p=parseDatumlabel(a.datumlabel);return p&&p.maand===caAgendaMaand&&p.dag===caAgendaDag;}) : d.agenda.filter(function(a){var p=parseDatumlabel(a.datumlabel);return p&&p.maand===caAgendaMaand;});
+  html+=dagItems.length? dagItems.map(agendaCardHtml).join('') : '<p class="empty-msg">Geen afspraken'+(caAgendaDag?' op deze dag.':' deze maand.')+'</p>';
+  if(caAgendaDag)html+='<button type="button" class="ghost small" id="ca-agenda-alledagen">Toon hele maand</button>';
+ }else{
+  var daysInMonth=new Date(caAgendaJaar,caAgendaMaand+1,0).getDate();
+  if(caAgendaLijstDag>daysInMonth)caAgendaLijstDag=daysInMonth;
+  html+='<div class="daynav"><button type="button" id="ca-dag-vorige" aria-label="Vorige dag">'+PIJL_L+'</button><b>'+caAgendaLijstDag+' '+MAANDNAMEN[caAgendaMaand]+' '+caAgendaJaar+'</b><button type="button" id="ca-dag-volgende" aria-label="Volgende dag">'+PIJL_R+'</button></div>';
+  var lijstItems=d.agenda.filter(function(a){var p=parseDatumlabel(a.datumlabel);return p&&p.maand===caAgendaMaand&&p.dag===caAgendaLijstDag;});
+  html+=lijstItems.length? lijstItems.map(agendaCardHtml).join('') : '<p class="empty-msg">Geen afspraken op deze dag.</p>';
+ }
+ html+='<button type="button" class="addbtn-row" id="ca-nieuwe-afspraak">+ Afspraak toevoegen</button>';
+ el('ca-body').innerHTML=html;
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-agendaview]'),function(b){
+  b.addEventListener('click',function(){caAgendaView=b.getAttribute('data-agendaview');caAgendaDag=null;renderCaAgenda();});
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-calday]'),function(c){
+  c.addEventListener('click',function(){caAgendaDag=+c.getAttribute('data-calday');renderCaAgenda();});
+ });
+ var alledagenBtn=el('ca-agenda-alledagen');
+ if(alledagenBtn)alledagenBtn.addEventListener('click',function(){caAgendaDag=null;renderCaAgenda();});
+ var maandVorigeBtn=el('ca-maand-vorige'),maandVolgendeBtn=el('ca-maand-volgende');
+ if(maandVorigeBtn)maandVorigeBtn.addEventListener('click',function(){wijzigMaand(-1);});
+ if(maandVolgendeBtn)maandVolgendeBtn.addEventListener('click',function(){wijzigMaand(1);});
+ var dagVorigeBtn=el('ca-dag-vorige'),dagVolgendeBtn=el('ca-dag-volgende');
+ if(dagVorigeBtn)dagVorigeBtn.addEventListener('click',function(){wijzigLijstDag(-1);});
+ if(dagVolgendeBtn)dagVolgendeBtn.addEventListener('click',function(){wijzigLijstDag(1);});
+ el('ca-nieuwe-afspraak').addEventListener('click',function(){
+  var uurOpties='',minOpties='';
+  for(var u=0;u<24;u++)uurOpties+='<option'+(u===14?' selected':'')+'>'+(u<10?'0'+u:u)+'</option>';
+  for(var mi=0;mi<60;mi++)minOpties+='<option'+(mi===0?' selected':'')+'>'+(mi<10?'0'+mi:mi)+'</option>';
+  var herinneringOpties=HERINNERING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
+  var herhalingOpties=HERHALING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
+  openModal('<h3>Afspraak toevoegen</h3>'+
+   '<div class="field"><label>Titel</label><input id="modal-afspr-titel" placeholder="Bijv. Fysiotherapie"></div>'+
+   '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="2026-09-20"></div>'+
+   '<div class="field"><label>Tijd</label><div class="timerow"><select id="modal-afspr-uur">'+uurOpties+'</select><span>:</span><select id="modal-afspr-min">'+minOpties+'</select></div></div></div>'+
+   '<div class="field"><label>Herinnering</label><select id="modal-afspr-herinnering">'+herinneringOpties+'</select></div>'+
+   '<div class="field"><label>Herhalen</label><select id="modal-afspr-herhaling">'+herhalingOpties+'</select></div>'+
+   '<label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:12px 0 6px"><input type="checkbox" id="modal-afspr-media" style="width:auto">Foto toevoegen</label>'+
+   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-opslaan').addEventListener('click',function(){
+   var titel=el('modal-afspr-titel').value.trim();if(!titel){el('modal-afspr-titel').style.borderColor='var(--brick)';return;}
+   var datumval=el('modal-afspr-datum').value;
+   var datumlabel='—';
+   if(datumval){var dt=new Date(datumval+'T00:00:00');datumlabel=dt.getDate()+' '+MAAND_AFK[dt.getMonth()];}
+   var tijd=el('modal-afspr-uur').value+':'+el('modal-afspr-min').value;
+   d.agenda.push({id:d._nextAgendaId++,titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
+    herinnering:el('modal-afspr-herinnering').value,herhaling:el('modal-afspr-herhaling').value});
+   closeModal();renderCaAgenda();
+  });
+ });
+}
+
+/* --- Ik-Boek --- */
+function renderCaIkboek(){
+ var d=ensureClientData(caClientId);
+ var html=d.ikboek.length? d.ikboek.slice().reverse().map(function(e){
+  return '<div class="ikboekcard"><div class="imeta">'+e.tijd+'</div>'+e.tekst+
+   (e.mediaType?mediaThumbHtml(e.mediaType,'linear-gradient(135deg,#4A6FA5,#5A8A6E)','Ik-Boek — '+e.tijd):'')+
+   emojiRowHtml('data-ikreact',e.id,e)+
+  '</div>';
+ }).join('') : '<p class="empty-msg">Nog geen paginas in het Ik-Boek.</p>';
+ html+='<button type="button" class="addbtn-row" id="ca-nieuwe-ikboek">+ Nieuwe pagina</button>';
+ el('ca-body').innerHTML=html;
+ wireMediaThumbs(el('ca-body'));
+ el('ca-nieuwe-ikboek').addEventListener('click',function(){
+  openModal('<h3>Nieuwe Ik-Boek pagina</h3>'+
+   '<div class="field"><label>Wat wil je vastleggen?</label><textarea id="modal-ikboek-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px"></textarea></div>'+
+   '<div class="field"><label>Media</label><select id="modal-ikboek-mediatype"><option value="">Geen</option><option value="foto">Foto</option><option value="video">Video</option></select></div>'+
+   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Plaatsen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-opslaan').addEventListener('click',function(){
+   var tekst=el('modal-ikboek-tekst').value.trim();if(!tekst){el('modal-ikboek-tekst').style.borderColor='var(--brick)';return;}
+   d.ikboek.push({id:d._nextIkboekId++,tekst:tekst,tijd:'vandaag',mediaType:el('modal-ikboek-mediatype').value,reacties:{}});
+   closeModal();renderCaIkboek();
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-ikreact]'),function(b){
+  b.addEventListener('click',function(){
+   if(b.classList.contains('disabled'))return;
+   var parts=b.getAttribute('data-ikreact').split('|'),id=+parts[0],emoji=parts[1];
+   var e=d.ikboek.filter(function(x){return x.id===id;})[0];
+   toggleReactie(e,emoji);renderCaIkboek();
+  });
+ });
+}
+
+/* --- Chat --- */
+var CHATSTORE={};
+function chatThreadsForClient(clientId){
+ var p=findPerson(clientId);
+ var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,clientId);});
+ var threads=[{key:'group-'+clientId,naam:'Team '+naam(p),groep:true,defaultLeden:betrokkenen}];
+ betrokkenen.filter(function(b){return b.type==='medewerker';}).forEach(function(m){threads.push({key:'1on1-'+m.id,naam:naam(m),groep:false,persoon:m});});
+ return threads;
+}
+function ensureThread(key,naamThread,groep,defaultLeden){
+ if(!CHATSTORE[key])CHATSTORE[key]={
+  naam:naamThread,
+  leden:groep?defaultLeden.map(function(x){return x.id;}):null,
+  berichten:[
+   {van:naamThread.split(' ')[0],tekst:'Hoi! Hoe gaat het vandaag?',tijd:'09:12'},
+   {van:'Jij',tekst:'Goed, alles rustig verlopen vanmorgen.',tijd:'09:15'}
+  ]
+ };
+ return CHATSTORE[key];
+}
+var caChatKey=null;
+function renderCaChatList(){
+ var threads=chatThreadsForClient(caClientId);
+ el('ca-body').innerHTML=threads.map(function(t){
+  var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden),last=th.berichten[th.berichten.length-1];
+  return '<div class="chatlist-row" data-openchat="'+t.key+'">'+avatarHtmlSized(th.naam,38)+
+   '<div class="ctxt"><b>'+th.naam+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+(last?last.van+': '+last.tekst:'')+'</span></div>'+
+   '<span class="ctime">'+(last?last.tijd:'')+'</span></div>';
+ }).join('');
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-openchat]'),function(row){
+  row.addEventListener('click',function(){caChatKey=row.getAttribute('data-openchat');renderCaChatThread();});
+ });
+}
+function renderCaChatThread(){
+ var threads=chatThreadsForClient(caClientId),t=threads.filter(function(x){return x.key===caChatKey;})[0];
+ if(!t){renderCaChatList();return;}
+ var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden);
+ var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+  '<button type="button" class="ghost small" id="ca-chat-terug">← Terug</button>'+
+  '<b style="font-size:13.5px">'+th.naam+'</b>'+
+  (t.groep?'<div style="display:flex;gap:6px"><button type="button" class="small" id="ca-chat-media">Media</button><button type="button" class="small" id="ca-chat-leden">Leden</button></div>':'<span></span>')+'</div>';
+ html+='<div id="ca-chat-berichten">'+th.berichten.map(function(m){
+  return '<div class="msgrow'+(m.van==='Jij'?' mine':'')+'"><div class="bubble">'+(m.van!=='Jij'?'<b style="font-size:11px;display:block;opacity:.7">'+m.van+'</b>':'')+m.tekst+'</div></div>';
+ }).join('')+'</div>';
+ if(t.groep)html+='<div class="mediagrid" id="ca-chat-media-grid" hidden>'+Array(6).fill(0).map(function(_,i){return '<div class="mcell" style="background:'+AVCOLORS[i%AVCOLORS.length]+'"></div>';}).join('')+'</div>';
+ html+='<div class="chatinputrow"><input id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
+ el('ca-body').innerHTML=html;
+ wireMediaThumbs(el('ca-body'));
+ el('ca-chat-terug').addEventListener('click',renderCaChatList);
+ el('ca-chat-send').addEventListener('click',function(){
+  var v=el('ca-chat-input').value.trim();if(!v)return;
+  th.berichten.push({van:'Jij',tekst:v,tijd:'nu'});el('ca-chat-input').value='';renderCaChatThread();
+ });
+ if(t.groep){
+  el('ca-chat-media').addEventListener('click',function(){el('ca-chat-media-grid').hidden=!el('ca-chat-media-grid').hidden;});
+  el('ca-chat-leden').addEventListener('click',renderCaGroepBewerken);
+ }
+}
+
+/* --- Chatgroep bewerken --- */
+function renderCaGroepBewerken(){
+ var th=CHATSTORE[caChatKey];if(!th)return;
+ var alleBetrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
+ var leden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)>-1;});
+ var nietleden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)<0;});
+ var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-groep-terug">← Terug</button><b style="font-size:15px">Chatgroep bewerken</b></div>';
+ html+='<div class="field"><label>Groepsnaam</label><input id="ca-groep-naam" value="'+th.naam+'"></div>';
+ html+='<div class="sublistlabel" style="margin-top:14px">Leden ('+leden.length+')</div>';
+ html+=leden.length? leden.map(function(l){
+  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+naam(l)+'</b><span>'+(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
+   '<button type="button" class="iconbtn danger" data-verwijderlid="'+l.id+'" aria-label="Verwijder">'+TRASH_SVG+'</button></div>';
+ }).join('') : '<p class="empty-msg">Nog geen leden.</p>';
+ html+='<div class="sublistlabel">Toevoegen</div>';
+ html+=nietleden.length? nietleden.map(function(l){
+  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+naam(l)+'</b><span>'+(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
+   '<button type="button" class="small" data-toevoegenlid="'+l.id+'">+ Toevoegen</button></div>';
+ }).join('') : '<p class="empty-msg">Iedereen zit al in de groep.</p>';
+ el('ca-body').innerHTML=html;
+ el('ca-groep-terug').addEventListener('click',renderCaChatThread);
+ el('ca-groep-naam').addEventListener('blur',function(){th.naam=this.value.trim()||th.naam;});
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-verwijderlid]'),function(b){
+  b.addEventListener('click',function(){
+   var id=+b.getAttribute('data-verwijderlid');th.leden=th.leden.filter(function(x){return x!==id;});renderCaGroepBewerken();
+  });
+ });
+ Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-toevoegenlid]'),function(b){
+  b.addEventListener('click',function(){
+   th.leden.push(+b.getAttribute('data-toevoegenlid'));renderCaGroepBewerken();
+  });
+ });
+}
+
+/* --- SOS --- */
+var SOS_HOLD_MS=1400,SOS_CIRC=452,sosHoldTimer=null;
+function sosActivate(){
+ var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;}).slice(0,3);
+ el('sos-card').innerHTML='<h3>Hulp is onderweg</h3><div class="msec"><p>De volgende personen zijn zojuist gewaarschuwd:</p></div>'+
+  betrokkenen.map(function(b){return '<div class="msec"><b>'+naam(b)+'</b><p>Gewaarschuwd, wacht op reactie…</p></div>';}).join('')+
+  '<div class="modal-actions"><button type="button" class="primary" id="sos-sluiten">Sluiten</button></div>';
+ el('sos-sluiten').addEventListener('click',function(){el('sos-overlay').hidden=true;});
+}
+function sosStartHold(){
+ var ring=el('sos-progress');if(!ring)return;
+ ring.style.transition='none';ring.style.strokeDashoffset=SOS_CIRC;
+ void ring.getBoundingClientRect();
+ ring.style.transition='stroke-dashoffset '+SOS_HOLD_MS+'ms linear';
+ ring.style.strokeDashoffset='0';
+ sosHoldTimer=setTimeout(sosActivate,SOS_HOLD_MS);
+}
+function sosCancelHold(){
+ if(sosHoldTimer){clearTimeout(sosHoldTimer);sosHoldTimer=null;}
+ var ring=el('sos-progress');if(!ring)return;
+ ring.style.transition='stroke-dashoffset .25s ease';
+ ring.style.strokeDashoffset=SOS_CIRC;
+}
+el('ca-sos-btn').addEventListener('click',function(){
+ el('sos-card').innerHTML='<h3>Houd ingedrukt om SOS te activeren</h3>'+
+  '<div class="msec"><p>Dit waarschuwt direct de aanwezige medewerkers en de contactpersonen van '+(findPerson(caClientId)?naam(findPerson(caClientId)):'deze cliënt')+'.</p></div>'+
+  '<div class="sosholdwrap"><svg class="sosring" viewBox="0 0 170 170"><circle cx="85" cy="85" r="72" fill="none" stroke="var(--line)" stroke-width="6"/><circle id="sos-progress" cx="85" cy="85" r="72" fill="none" stroke="var(--brick)" stroke-width="6" stroke-linecap="round" transform="rotate(-90 85 85)" style="stroke-dasharray:452;stroke-dashoffset:452"/></svg><button type="button" class="sosbtn" id="sos-hold-btn">SOS</button></div>'+
+  '<p class="mini" style="text-align:center">Houd de knop ingedrukt tot de ring vol is</p>'+
+  '<div class="modal-actions"><button type="button" id="sos-cancel">Annuleren</button></div>';
+ el('sos-overlay').hidden=false;
+ el('sos-cancel').addEventListener('click',function(){sosCancelHold();el('sos-overlay').hidden=true;});
+ var holdBtn=el('sos-hold-btn');
+ ['pointerdown'].forEach(function(evt){holdBtn.addEventListener(evt,sosStartHold);});
+ ['pointerup','pointerleave','pointercancel'].forEach(function(evt){holdBtn.addEventListener(evt,sosCancelHold);});
+});
+el('sos-overlay').addEventListener('click',function(e){if(e.target===el('sos-overlay')){sosCancelHold();el('sos-overlay').hidden=true;}});
+
+/* ============== STANDALONE TELEFOON-MODUS ============== */
+if(new URLSearchParams(location.search).get('app')==='client'){
+ document.body.classList.add('standalone-app');
+ showView('clientapp');
+}
+</script>
+
+</body>
+</html>
