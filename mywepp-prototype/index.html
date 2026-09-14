@@ -684,7 +684,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Achternaam</label><input id="pc-achternaam"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pc-mail"></div>
+        <div class="field"><label>E-mailadres</label><input id="pc-mail" placeholder="Leeg = automatisch gegenereerd"></div>
         <div class="field"><label>Telefoonnummer</label><input id="pc-tel" placeholder="06 12 34 56 78"></div>
       </div>
       <p class="note open"><b>Openstaande vraag:</b> nemen we hier de volledige huidige profielpagina van de cliënt terug — inclusief het instellen van tweestapsverificatie — of alleen dit basisdeel?</p>
@@ -711,7 +711,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Achternaam</label><input id="pp-achternaam"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pp-mail"></div>
+        <div class="field"><label>E-mailadres</label><input id="pp-mail" placeholder="Leeg = automatisch gegenereerd"></div>
         <div class="field"><label>Type rol</label><select id="pp-typerol"><option value="medewerker">Medewerker</option><option value="naaste">Naaste</option></select></div>
       </div>
       <p class="note open" id="pp-vraag"><b>Openstaande vraag:</b> tonen we hier de volledige bestaande profielpagina van deze persoon terug, en een overzicht van op welke cliënten hij al rechten heeft?</p>
@@ -775,6 +775,12 @@ function el(i){return document.getElementById(i);}
 var verzondenTimer=null;
 function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
+function genereerEmail(voor,achter){
+ function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+ var v=schoon(voor),a=schoon(achter),maxLocal=20;
+ if(v.length+1+a.length>maxLocal)a=a.slice(0,Math.max(1,maxLocal-1-v.length));
+ return v+'.'+a+'@mywepp.nl';
+}
 function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');}
 var AVCOLORS=['#4A6FA5','#3D8C7D','#B0783C','#B0555A','#6E6A96','#3E7CA6','#8C6A45','#5A8A6E'];
 function avatarHash(naam){var h=0;for(var i=0;i<naam.length;i++)h=naam.charCodeAt(i)+((h<<5)-h);return Math.abs(h);}
@@ -1173,13 +1179,20 @@ function openProfielClient(id){
  el('pc-titel').textContent=naam(p)+' — volledig profiel';
  el('pc-foto').style.background=avatarGradient(naam(p));
  el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
+ el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
  el('pc-rechten').innerHTML=personRechtenRow(id);
  wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
  show('pp-profiel-client');
 }
 el('pc-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
- p.voor=cap(el('pc-voornaam').value);p.achter=cap(el('pc-achternaam').value);p.mail=el('pc-mail').value.trim();p.tel=el('pc-tel').value.trim();
+ var voor=el('pc-voornaam').value.trim(),achter=el('pc-achternaam').value.trim(),ok=true;
+ el('pc-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
+ el('pc-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
+ if(!ok)return;
+ p.voor=cap(voor);p.achter=cap(achter);
+ p.mail=el('pc-mail').value.trim()||genereerEmail(p.voor,p.achter);
+ p.tel=el('pc-tel').value.trim();
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAcc('client');updateTally();show('pp-formulier');
 });
@@ -1195,6 +1208,7 @@ function openProfielPersoon(id,t){
  el('pp-titel').textContent=naam(p)+' — volledig profiel';
  el('pp-foto').style.background=avatarGradient(naam(p));
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';
+ el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  el('pp-typerol').value=t;
  el('pp-globaal').innerHTML=ROLLEN[t].filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
  el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
@@ -1219,13 +1233,19 @@ function openProfielPersoon(id,t){
 el('pp-persoon-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
  var t=el('pp-typerol').value;
- p.voor=cap(el('pp-voornaam').value);p.achter=cap(el('pp-achternaam').value);p.mail=el('pp-mail').value.trim();
+ var voor=el('pp-voornaam').value.trim(),achter=el('pp-achternaam').value.trim(),ok=true;
+ el('pp-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
+ el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
+ if(!ok)return;
+ p.voor=cap(voor);p.achter=cap(achter);
+ p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter);
  p.type=t;p.rol=el('pp-globaal').value;
  var nieuweGroep=el('pp-groepveld').value;
  p._nieuweGroep=(nieuweGroep===huidigeGroep)?null:nieuweGroep;
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();show('pp-formulier');
 });
+['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
 el('pp-foto-wijzigen').addEventListener('click',function(){
  openModal('<h3>Profielfoto wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
