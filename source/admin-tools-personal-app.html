@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyWepp">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --ink:#1D2733; --ink-soft:#66707C; --ink-faint:#98A1AB;
@@ -796,6 +797,11 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 </main>
 
 <script>
+/* ============== SUPABASE ============== */
+var SB_URL='https://yaooauluqhhldfuwnanq.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlhb29hdWx1cWhobGRmdXduYW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzNzkzMTIsImV4cCI6MjEwNDk1NTMxMn0.d2zK5rGoJWF8jgn58vDmFsKK_DpFr3YsJ8qGWlahtR8';
+var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_URL,SB_KEY):null;
+
 function el(i){return document.getElementById(i);}
 var verzondenTimer=null;
 function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
@@ -991,6 +997,42 @@ function hubBevestig(tekst){
 }
 el('hub-tweestaps').addEventListener('change',function(){hubBevestig('Wijziging opgeslagen.');});
 el('hub-opmerking').addEventListener('blur',function(){if(el('hub-opmerking').value.trim())hubBevestig('Opmerking opgeslagen.');});
+
+function personRowToDb(p){
+ return {id:p.id,type:p.type,voor:p.voor,achter:p.achter,mail:p.mail||null,tel:p.tel||null,rol:p.rol||null,
+  contactpersoon:!!p.contactpersoon,groepen:p.groepen,client_rechten:p.clientRechten||{},archived:!!p.archived};
+}
+function dbRowToPerson(r){
+ var p={id:r.id,type:r.type,voor:r.voor,achter:r.achter,mail:r.mail||'',groepen:r.groepen||[]};
+ if(r.tel)p.tel=r.tel;
+ if(r.rol)p.rol=r.rol;
+ if(r.contactpersoon)p.contactpersoon=true;
+ if(r.client_rechten&&Object.keys(r.client_rechten).length)p.clientRechten=r.client_rechten;
+ if(r.archived)p.archived=true;
+ return p;
+}
+async function loadFromSupabase(){
+ if(!sb)return;
+ try{
+  var g=await sb.from('groepen').select('naam').order('id');
+  var p=await sb.from('personen').select('*').order('id');
+  if(g.error||p.error||!p.data||!p.data.length)return;
+  if(g.data&&g.data.length){GROEPEN.splice.apply(GROEPEN,[0,GROEPEN.length].concat(g.data.map(function(x){return x.naam;})));}
+  var nieuwePeople=p.data.map(dbRowToPerson);
+  people.splice.apply(people,[0,people.length].concat(nieuwePeople));
+  nextId=Math.max.apply(null,people.map(function(x){return x.id;}).concat([0]))+1;
+  if(GROEPEN.indexOf(huidigeGroep)<0)huidigeGroep=GROEPEN[0];
+  el('groep-select').innerHTML=GROEPEN.map(function(x){return '<option>'+x+'</option>';}).join('');
+  el('pp-groep-naam').textContent=huidigeGroep;
+  el('hub-groepnaam').textContent=huidigeGroep;
+  if(typeof renderAll==='function')renderAll();
+ }catch(e){/* Supabase niet bereikbaar (bv. in preview-omgeving) — lokale demodata blijft actief */}
+}
+async function syncToSupabase(){
+ if(!sb)return;
+ try{await sb.from('personen').upsert(people.map(personRowToDb));}
+ catch(e){/* sync mislukt, wijzigingen blijven lokaal actief in dit prototype */}
+}
 
 function naam(p){return p.voor+' '+p.achter;}
 function personenVanType(t){return people.filter(function(p){return p.type===t&&!p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});}
@@ -1506,6 +1548,7 @@ el('av-versturen').addEventListener('click',function(){
   verplaatst++;
  });
  people.forEach(function(p){delete p._state;delete p._editing;delete p._nieuweGroep;});
+ syncToSupabase();
  renderAll();
  var verwijderdTekst=[];
  if(ontkoppeld)verwijderdTekst.push(ontkoppeld+' ontkoppeld van '+huidigeGroep);
@@ -2582,4 +2625,6 @@ if(new URLSearchParams(location.search).get('app')==='client'){
  document.body.classList.add('standalone-app');
  showView('clientapp');
 }
+
+loadFromSupabase();
 </script>
