@@ -482,7 +482,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <h1>Groep › Profiel</h1>
       <p>Ingang vanuit de MyWepp Personal app. Van hieruit open je het gebruikersformulier en het Digibord van deze groep.</p>
     </div>
-    <div class="ctxbar">Groep <select id="pp-groep-select"></select></div>
+    <div class="ctxbar">Groep <b id="pp-groep-naam" style="color:var(--ink)">—</b></div>
 
     <div class="panel">
       <div class="hubcard">
@@ -938,8 +938,7 @@ var people=[
 function rolOpClient(persoon,clientId){return (persoon.clientRechten||{})[clientId]||null;}
 var nextId=6;
 var huidigeGroep=GROEPEN[0];
-el('pp-groep-select').innerHTML=GROEPEN.map(function(g){return '<option>'+g+'</option>';}).join('');
-el('pp-groep-select').addEventListener('change',function(){huidigeGroep=el('pp-groep-select').value;el('hub-groepnaam').textContent=huidigeGroep;renderAll();});
+el('pp-groep-naam').textContent=huidigeGroep;
 el('hub-groepnaam').textContent=huidigeGroep;
 
 function naam(p){return p.voor+' '+p.achter;}
