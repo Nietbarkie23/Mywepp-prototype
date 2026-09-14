@@ -785,6 +785,11 @@ function avatarGradient(naam){var h=avatarHash(naam);var c1=AVCOLORS[h%AVCOLORS.
 function initials(v,a){return ((v[0]||'')+(a[0]||'')).toUpperCase();}
 function avatarHtmlSized(naam,px){return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,''])+'</div>';}
 function avatarHtml(naam){return avatarHtmlSized(naam,36);}
+function setGrootAvatar(elId,p){
+ var e=el(elId);
+ if(p.foto){e.style.backgroundImage='url('+p.foto+')';e.style.backgroundSize='cover';e.style.backgroundPosition='center';}
+ else{e.style.backgroundImage='';e.style.background=avatarGradient(naam(p));}
+}
 
 /* ============== ADMIN TOOLS: data ============== */
 var GROEPEN=['De Boomgaard','De Wilgenhof','Dagbesteding Centrum'];
@@ -1173,7 +1178,7 @@ function openProfielClient(id){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
  el('pc-titel').textContent=naam(p)+' — volledig profiel';
- el('pc-foto').style.background=avatarGradient(naam(p));
+ setGrootAvatar('pc-foto',p);
  el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
  el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
  el('pc-rechten').innerHTML=personRechtenRow(id);
@@ -1192,17 +1197,54 @@ el('pc-opslaan').addEventListener('click',function(){
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAcc('client');updateTally();show('pp-formulier');
 });
-el('pc-foto-wijzigen').addEventListener('click',function(){
- openModal('<h3>Profielfoto wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
- el('modal-snap').addEventListener('click',closeModal);
-});
+function openFotoModal(elId){
+ var p=findPerson(huidigProfielId);if(!p)return;
+ var voorbeeldStyle=p.foto?('background-image:url('+p.foto+');background-size:cover;background-position:center'):('background:'+avatarGradient(naam(p)));
+ var nieuweFoto=p.foto||null;
+ openModal('<h3>Profielfoto wijzigen</h3>'+
+  '<div class="msec" style="display:flex;flex-direction:column;align-items:center;gap:14px">'+
+  '<div class="hubavatar" id="foto-preview" style="width:88px;height:88px;flex:0 0 88px;'+voorbeeldStyle+'"></div>'+
+  '<input type="file" accept="image/*" id="foto-input" style="display:none">'+
+  '<div style="display:flex;gap:16px;align-items:center">'+
+  '<button type="button" class="small" id="foto-kiezen">Kies een foto…</button>'+
+  (p.foto?'<button type="button" class="removelink" id="foto-verwijderen">Verwijderen</button>':'')+
+  '</div>'+
+  '<p class="mini" style="text-align:center;margin:0">JPG of PNG. Wordt alleen lokaal in dit prototype bewaard.</p>'+
+  '</div>'+
+  '<div class="modal-actions"><button type="button" id="foto-annuleren">Annuleren</button><button type="button" class="primary" id="foto-opslaan">Opslaan</button></div>');
+ el('foto-kiezen').addEventListener('click',function(){el('foto-input').click();});
+ el('foto-input').addEventListener('change',function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+   nieuweFoto=ev.target.result;
+   el('foto-preview').style.backgroundImage='url('+nieuweFoto+')';
+   el('foto-preview').style.backgroundSize='cover';
+   el('foto-preview').style.backgroundPosition='center';
+  };
+  reader.readAsDataURL(file);
+ });
+ var verwijderBtn=el('foto-verwijderen');
+ if(verwijderBtn)verwijderBtn.addEventListener('click',function(){
+  nieuweFoto=null;
+  el('foto-preview').style.backgroundImage='';
+  el('foto-preview').style.background=avatarGradient(naam(p));
+ });
+ el('foto-annuleren').addEventListener('click',closeModal);
+ el('foto-opslaan').addEventListener('click',function(){
+  p.foto=nieuweFoto;
+  setGrootAvatar(elId,p);
+  closeModal();
+ });
+}
+el('pc-foto-wijzigen').addEventListener('click',function(){openFotoModal('pc-foto');});
 
 /* --- Volledig profiel: medewerker / naaste --- */
 function openProfielPersoon(id,t){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
  el('pp-titel').textContent=naam(p)+' — volledig profiel';
- el('pp-foto').style.background=avatarGradient(naam(p));
+ setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  el('pp-typerol').value=t;
@@ -1243,10 +1285,7 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  renderAll();show('pp-formulier');
 });
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
-el('pp-foto-wijzigen').addEventListener('click',function(){
- openModal('<h3>Profielfoto wijzigen</h3><div class="msec"><p>Niet uitgewerkt in dit prototype.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
- el('modal-snap').addEventListener('click',closeModal);
-});
+el('pp-foto-wijzigen').addEventListener('click',function(){openFotoModal('pp-foto');});
 function trashRow(id,t){
  var p=findPerson(id);if(!p)return;
  if(p._state==='nieuw'){people=people.filter(function(x){return x.id!==id;});}
@@ -1388,8 +1427,8 @@ function renderControleren(){
 }
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
 el('naar-versturen').addEventListener('click',function(){
- var contactpersonen=personenVanType('medewerker');
- el('av-naam').innerHTML='<option value="">Kies een contactpersoon…</option>'+contactpersonen.map(function(p){return '<option value="'+p.id+'">'+naam(p)+'</option>';}).join('');
+ var contactpersonen=personenVanType('medewerker').concat(personenVanType('naaste'));
+ el('av-naam').innerHTML='<option value="">Kies een contactpersoon…</option>'+contactpersonen.map(function(p){return '<option value="'+p.id+'">'+naam(p)+' — '+(p.type==='naaste'?'Naaste':'Medewerker')+'</option>';}).join('');
  el('av-naam').value='';el('av-tel').value='';el('av-akkoord').checked=false;el('av-versturen').disabled=true;
  el('av-naam').style.borderColor='';el('av-tel').style.borderColor='';
  el('av-tel-fout').hidden=true;
