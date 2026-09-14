@@ -1833,14 +1833,38 @@ function renderCaGeheugen(){
  el('ca-body').innerHTML=html;
  el('ca-geheugen-terug').addEventListener('click',renderCaInfo);
  el('ca-geheugen-nieuw').addEventListener('click',function(){
+  var WEEKDAGEN=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
   openModal('<h3>Herinnering toevoegen</h3>'+
    '<div class="field"><label>Waar gaat het over?</label><input id="modal-geh-titel" placeholder="Bijv. Tanden poetsen"></div>'+
    '<div class="field"><label>Tijdstip</label><input id="modal-geh-tijd" value="08:00"></div>'+
+   '<div class="field"><label>Hoe vaak?</label><select id="modal-geh-herhaling">'+
+    '<option value="elke-dag">Elke dag</option>'+
+    '<option value="werkdagen">Op werkdagen (ma–vr)</option>'+
+    '<option value="wekelijks">Wekelijks, op een vaste dag</option>'+
+    '<option value="eenmalig">Eenmalig</option>'+
+   '</select></div>'+
+   '<div class="field" id="modal-geh-dag-veld" hidden><label>Welke dag?</label><select id="modal-geh-dag">'+WEEKDAGEN.map(function(d){return '<option>'+d+'</option>';}).join('')+'</select></div>'+
+   '<div class="field" id="modal-geh-datum-veld" hidden><label>Op welke datum?</label><input id="modal-geh-datum" type="date"></div>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-geh-herhaling').addEventListener('change',function(){
+   var v=el('modal-geh-herhaling').value;
+   el('modal-geh-dag-veld').hidden=(v!=='wekelijks');
+   el('modal-geh-datum-veld').hidden=(v!=='eenmalig');
+  });
   el('modal-opslaan').addEventListener('click',function(){
    var titel=el('modal-geh-titel').value.trim();if(!titel){el('modal-geh-titel').style.borderColor='var(--brick)';return;}
-   g.items.push({id:g.nextId++,titel:titel,tijd:el('modal-geh-tijd').value.trim()||'—',dagen:'Elke dag',actief:true});
+   var herhaling=el('modal-geh-herhaling').value,dagen;
+   if(herhaling==='elke-dag')dagen='Elke dag';
+   else if(herhaling==='werkdagen')dagen='Op werkdagen';
+   else if(herhaling==='wekelijks')dagen=el('modal-geh-dag').value;
+   else{
+    var datum=el('modal-geh-datum').value;
+    if(!datum){el('modal-geh-datum').style.borderColor='var(--brick)';return;}
+    var d=new Date(datum+'T00:00:00');
+    dagen='Eenmalig · '+d.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+   }
+   g.items.push({id:g.nextId++,titel:titel,tijd:el('modal-geh-tijd').value.trim()||'—',dagen:dagen,actief:true});
    closeModal();renderCaGeheugen();
   });
  });
