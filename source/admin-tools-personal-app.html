@@ -519,7 +519,13 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
       <div class="hubcard togglerow" style="border-top:1px solid var(--line)">
         <span>Tweestapsverificatie verplicht</span>
-        <label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label>
+        <label class="toggle"><input type="checkbox" id="hub-tweestaps" checked><span class="track"></span><span class="knob"></span></label>
+      </div>
+      <div class="hubcard" style="display:block;border-top:1px solid var(--line)">
+        <b style="display:block;margin-bottom:6px;font-size:13.5px">Opmerking</b>
+        <p class="mini" style="margin:0 0 8px">Dit overleggen met het beheerteam voordat je het formulier update.</p>
+        <textarea id="hub-opmerking" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>
+        <p class="mini" id="hub-bevestiging" style="color:var(--moss);min-height:16px;margin:6px 0 0"></p>
       </div>
     </div>
 
@@ -665,6 +671,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel" style="overflow-x:auto"><table id="stat-table" style="border:0;box-shadow:none"></table></div>
     <div class="panel"><div class="body" id="stat-kalender"></div></div>
     <p class="mini">Klik op een dag in de kalender voor de dagdetails per cliënt.</p>
+    <div class="sublistlabel" style="margin-top:20px">MyWepp Digibord gebruik</div>
+    <div class="panel" style="overflow-x:auto"><table id="stat-digibord-table" style="border:0;box-shadow:none"></table></div>
   </div>
 
   <!-- ============ MAALTIJDEN ============ -->
@@ -977,6 +985,12 @@ var nextId=6;
 var huidigeGroep=GROEPEN[0];
 el('pp-groep-naam').textContent=huidigeGroep;
 el('hub-groepnaam').textContent=huidigeGroep;
+function hubBevestig(tekst){
+ el('hub-bevestiging').textContent=tekst;
+ setTimeout(function(){var b=el('hub-bevestiging');if(b)b.textContent='';},2000);
+}
+el('hub-tweestaps').addEventListener('change',function(){hubBevestig('Wijziging opgeslagen.');});
+el('hub-opmerking').addEventListener('blur',function(){if(el('hub-opmerking').value.trim())hubBevestig('Opmerking opgeslagen.');});
 
 function naam(p){return p.voor+' '+p.achter;}
 function personenVanType(t){return people.filter(function(p){return p.type===t&&!p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});}
@@ -1522,6 +1536,22 @@ function renderStatTable(){
  html+='</tbody>';
  el('stat-table').innerHTML=clienten.length?html:'<tbody><tr><td class="empty-msg">Geen cliënten in deze groep.</td></tr></tbody>';
  renderStatKalender();
+ renderStatDigibord();
+}
+function renderStatDigibord(){
+ var vandaag=new Date(2026,8,14);
+ var rows=DIGIBORD.filter(function(d){return d.on;}).map(function(d){
+  var daysAgo=avatarHash(d.k+huidigeGroep)%12;
+  var datum=new Date(vandaag);datum.setDate(datum.getDate()-daysAgo);
+  return {label:d.l,daysAgo:daysAgo,datumStr:datum.getDate()+' '+MAAND_AFK[datum.getMonth()],langGeleden:daysAgo>7};
+ });
+ var html='<thead><tr><th>Onderdeel</th><th>Laatste bezoek</th><th>Status</th></tr></thead><tbody>';
+ html+=rows.length?rows.map(function(r){
+  return '<tr><td>'+r.label+'</td><td>'+(r.daysAgo===0?'Vandaag':r.datumStr+' ('+r.daysAgo+' dagen geleden)')+'</td><td>'+
+   (r.langGeleden?'<span class="badge">Langer dan 7 dagen geleden</span>':'<span class="badge" style="background:var(--moss-bg);color:var(--moss);border-color:var(--moss-line)">Actief</span>')+'</td></tr>';
+ }).join(''):'<tr><td class="empty-msg" colspan="3">Geen onderdelen actief op het Digibord.</td></tr>';
+ html+='</tbody>';
+ el('stat-digibord-table').innerHTML=html;
 }
 function renderStatKalender(){
  var year=+el('stat-jaar').value,month=el('stat-maand').selectedIndex;
