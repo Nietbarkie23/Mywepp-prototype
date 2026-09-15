@@ -832,13 +832,19 @@ function el(i){return document.getElementById(i);}
 var verzondenTimer=null;
 function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
-function genereerEmail(voor,achter){
+function genereerEmail(voor,achter,domein){
  function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
  var v=schoon(voor),a=schoon(achter),maxLocal=20;
  if(v.length+1+a.length>maxLocal)a=a.slice(0,Math.max(1,maxLocal-1-v.length));
- return v+'.'+a+'@mywepp.nl';
+ return v+'.'+a+'@'+(domein||'mywepp.nl');
 }
 function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');}
+function groepDomein(groep){return slug(groep)+'.nl';}
+function isGegenereerdAdres(mail){
+ if(!mail)return false;
+ var domein=mail.split('@')[1]||'';
+ return domein==='mywepp.nl'||GROEPEN.some(function(g){return domein===groepDomein(g);});
+}
 var AVCOLORS=['#4A6FA5','#3D8C7D','#B0783C','#B0555A','#6E6A96','#3E7CA6','#8C6A45','#5A8A6E'];
 function avatarHash(naam){var h=0;for(var i=0;i<naam.length;i++)h=naam.charCodeAt(i)+((h<<5)-h);return Math.abs(h);}
 function avatarColor(naam){return AVCOLORS[avatarHash(naam)%AVCOLORS.length];}
@@ -1250,7 +1256,7 @@ function editFormPersoon(p,t){
   '</div>'+
   '<div class="field"><label>E-mailadres</label><input data-f="mail" data-id="'+p.id+'" value="'+(p.mail||'')+'" placeholder="naam@voorbeeld.nl"></div>'+
   (emailConflict(p)?'<p class="mini" style="color:var(--brick)">Dit e-mailadres is al in gebruik door iemand anders.</p>':'')+
-  (p.mail&&p.mail.indexOf('@mywepp.nl')>-1?'<p class="mini" style="color:var(--brick)">'+(t==='medewerker'?'Een medewerker':'Een naaste')+' heeft een eigen adres — geen MyWepp-adres.</p>':'')+
+  (isGegenereerdAdres(p.mail)?'<p class="mini" style="color:var(--brick)">'+(t==='medewerker'?'Een medewerker':'Een naaste')+' heeft een eigen adres — geen MyWepp-adres.</p>':'')+
   '<div class="sublistlabel">Rollen en rechten</div>'+
   '<div class="row">'+
    '<div class="field"><label>Globaal</label><select data-f="rol" data-id="'+p.id+'">'+ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'+
@@ -1420,7 +1426,7 @@ function openProfielPersoon(id,t){
  setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
- mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
+ mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
  el('pp-globaal-display').textContent=p.rol;
  el('pp-groep-display').textContent=huidigeGroep;
@@ -1449,7 +1455,7 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
  if(!ok)return;
  p.voor=cap(voor);p.achter=cap(achter);
- p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter);
+ p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
  p.tel=el('pp-tel').value.trim();
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();show('pp-formulier');
@@ -1457,11 +1463,12 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
 var mailAuto={pc:true,pp:true};
 ['pc','pp'].forEach(function(prefix){
+ var domein=prefix==='pp'?function(){return groepDomein(huidigeGroep);}:function(){return 'mywepp.nl';};
  el(prefix+'-voornaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
  });
  el(prefix+'-achternaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
  });
  el(prefix+'-mail').addEventListener('input',function(){mailAuto[prefix]=(this.value.trim()==='');});
 });
