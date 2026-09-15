@@ -155,12 +155,22 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .tag.inherit{background:var(--paper);color:var(--ink-faint);border:1px solid var(--line)}
 .tag.override{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
 .rechtgrid{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
-.rollist{display:flex;flex-wrap:wrap;gap:7px}
-.rolchip{display:inline-flex;align-items:center;border:1px solid var(--line-strong);border-radius:999px;padding:6px 13px;font-size:13.5px;cursor:pointer;color:var(--ink-soft);background:var(--surface)}
-.rolchip.on{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent);font-weight:600}
-.optlist{display:flex;flex-wrap:wrap;gap:7px}
-.optchip{display:inline-flex;align-items:center;border:1px solid var(--line-strong);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer;color:var(--ink-soft);background:var(--surface)}
-.optchip.on{background:var(--surface);border-color:var(--ink-soft);color:var(--ink)}
+.roldrop,.optdrop{position:relative}
+.roldrop-btn,.optdrop-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+ border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);
+ padding:9px 12px;font-size:13.5px;text-align:left;cursor:pointer}
+.roldrop-btn svg,.optdrop-btn svg{width:16px;height:16px;flex:0 0 16px;color:var(--ink-faint);transition:transform .15s}
+.roldrop.open .roldrop-btn svg,.optdrop.open .optdrop-btn svg{transform:rotate(180deg)}
+.roldrop-menu,.optdrop-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;
+ background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--radius-sm);
+ box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:240px;overflow-y:auto;padding:4px}
+.roldrop-item{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 10px;
+ font-size:13.5px;color:var(--ink-soft);cursor:pointer;border-radius:6px}
+.roldrop-item:hover{background:var(--paper)}
+.roldrop-item.on{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.optdrop-item{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13.5px;color:var(--ink-soft);cursor:pointer;border-radius:6px}
+.optdrop-item:hover{background:var(--paper)}
+.optdrop-item input{width:auto;margin:0}
 .mini{font-size:12.5px;color:var(--ink-faint);margin-top:4px}
 
 .actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
@@ -882,35 +892,76 @@ function renderBulkGroepen(){
   c.addEventListener('change',function(){bulkSel.groepen[c.getAttribute('data-g')]=c.checked;renderBulkGroepen();updateBulkKnop();});});
  el('bulk-alle').addEventListener('change',function(){GROEPEN.forEach(function(g){bulkSel.groepen[g]=el('bulk-alle').checked;});renderBulkGroepen();updateBulkKnop();});
 }
+var CHEVRON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
+var rolMenuOpen={};
+function rolMenuKey(container,k,kind){return (container.id||'c')+'|'+k+'|'+kind;}
+function closeOtherRolMenus(keepKey){Object.keys(rolMenuOpen).forEach(function(k){if(k!==keepKey)rolMenuOpen[k]=false;});}
+document.addEventListener('click',function(e){
+ if(e.target.closest('.roldrop')||e.target.closest('.optdrop'))return;
+ var open=document.querySelectorAll('.roldrop-menu:not([hidden]), .optdrop-menu:not([hidden])');
+ if(!open.length)return;
+ Array.prototype.forEach.call(open,function(m){m.hidden=true;m.parentElement.classList.remove('open');});
+ rolMenuOpen={};
+});
 function rechtenRows(container,type,data,onchange){
  container.innerHTML=RECHTEN[type].map(function(r){
   var cur=data[r.k];
+  var roleKey=rolMenuKey(container,r.k,'role'),optKey=rolMenuKey(container,r.k,'opt');
+  var roleOpen=!!rolMenuOpen[roleKey],optOpen=!!rolMenuOpen[optKey];
+  var optRoles=ROLLEN[type][r.k].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';});
+  var gekozenOpt=cur.opt.filter(function(o){return optRoles.indexOf(o)>-1;});
   return '<div class="rechtrow" data-k="'+r.k+'">'+
    '<div class="top"><b>'+r.l+'</b></div>'+
    '<div class="rechtgrid">'+
-    '<div class="field"><label>Standaardrol</label><div class="rollist" data-role="'+r.k+'">'+ROLLEN[type][r.k].map(function(rol){
-      return '<button type="button" class="rolchip'+(rol===cur.rol?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
-    }).join('')+'</div></div>'+
-    '<div class="field"><label>Optionele rollen</label><div class="optlist" data-opt="'+r.k+'">'+ROLLEN[type][r.k].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';}).map(function(rol){
-      var on=cur.opt.indexOf(rol)>-1;
-      return '<button type="button" class="optchip'+(on?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
-    }).join('')+'</div></div>'+
+    '<div class="field"><label>Standaardrol</label>'+
+     '<div class="roldrop'+(roleOpen?' open':'')+'" data-role="'+r.k+'">'+
+      '<button type="button" class="roldrop-btn">'+cur.rol+CHEVRON_SVG+'</button>'+
+      '<div class="roldrop-menu"'+(roleOpen?'':' hidden')+'>'+ROLLEN[type][r.k].map(function(rol){
+       return '<button type="button" class="roldrop-item'+(rol===cur.rol?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
+      }).join('')+'</div>'+
+     '</div>'+
+    '</div>'+
+    '<div class="field"><label>Optionele rollen</label>'+
+     '<div class="optdrop'+(optOpen?' open':'')+'" data-opt="'+r.k+'">'+
+      '<button type="button" class="optdrop-btn">'+(gekozenOpt.length?gekozenOpt.join(', '):'Geen gekozen')+CHEVRON_SVG+'</button>'+
+      '<div class="optdrop-menu"'+(optOpen?'':' hidden')+'>'+(optRoles.length?optRoles.map(function(rol){
+       var on=cur.opt.indexOf(rol)>-1;
+       return '<label class="optdrop-item"><input type="checkbox" value="'+rol+'" '+(on?'checked':'')+'>'+rol+'</label>';
+      }).join(''):'<p class="mini" style="margin:6px 10px">Geen andere rollen beschikbaar.</p>')+'</div>'+
+     '</div>'+
+    '</div>'+
    '</div>'+
    (r.k==='groep'?'<p class="mini">Bijvoorbeeld voor groepen zoals die van Angelina: één duidelijke hoofdrol, met de rest als optie erbij.</p>':'')+
   '</div>';
  }).join('');
- Array.prototype.forEach.call(container.querySelectorAll('[data-role] [data-rol]'),function(btn){
-  btn.addEventListener('click',function(){
-   var k=btn.closest('[data-role]').getAttribute('data-role'),rol=btn.getAttribute('data-rol');
+ Array.prototype.forEach.call(container.querySelectorAll('.roldrop-btn'),function(btn){
+  btn.addEventListener('click',function(e){
+   e.stopPropagation();
+   var k=btn.closest('[data-role]').getAttribute('data-role'),key=rolMenuKey(container,k,'role'),willOpen=!rolMenuOpen[key];
+   closeOtherRolMenus(willOpen?key:null);rolMenuOpen[key]=willOpen;
+   rechtenRows(container,type,data,onchange);
+  });
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('.roldrop-item'),function(item){
+  item.addEventListener('click',function(){
+   var k=item.closest('[data-role]').getAttribute('data-role'),rol=item.getAttribute('data-rol');
    data[k].rol=rol;data[k].opt=data[k].opt.filter(function(o){return o!==rol;});
+   rolMenuOpen[rolMenuKey(container,k,'role')]=false;
    rechtenRows(container,type,data,onchange);onchange&&onchange();
   });
  });
- Array.prototype.forEach.call(container.querySelectorAll('[data-opt] [data-rol]'),function(btn){
-  btn.addEventListener('click',function(){
-   var k=btn.closest('[data-opt]').getAttribute('data-opt'),rol=btn.getAttribute('data-rol');
-   if(data[k].opt.indexOf(rol)>-1)data[k].opt=data[k].opt.filter(function(o){return o!==rol;});
-   else data[k].opt.push(rol);
+ Array.prototype.forEach.call(container.querySelectorAll('.optdrop-btn'),function(btn){
+  btn.addEventListener('click',function(e){
+   e.stopPropagation();
+   var k=btn.closest('[data-opt]').getAttribute('data-opt'),key=rolMenuKey(container,k,'opt'),willOpen=!rolMenuOpen[key];
+   closeOtherRolMenus(willOpen?key:null);rolMenuOpen[key]=willOpen;
+   rechtenRows(container,type,data,onchange);
+  });
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('.optdrop-item input'),function(cb){
+  cb.addEventListener('change',function(){
+   var k=cb.closest('[data-opt]').getAttribute('data-opt');
+   if(cb.checked){if(data[k].opt.indexOf(cb.value)<0)data[k].opt.push(cb.value);}else{data[k].opt=data[k].opt.filter(function(o){return o!==cb.value;});}
    rechtenRows(container,type,data,onchange);onchange&&onchange();
   });
  });
