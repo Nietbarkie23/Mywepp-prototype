@@ -129,6 +129,7 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .row.three{grid-template-columns:1fr 1fr 1fr}
 .field.chip-select select{width:auto}
+.lockedfield{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink-soft);padding:9px 12px;font-size:13.5px}
 
 .note{border-left:3px solid var(--line-strong);padding:4px 0 4px 12px;margin:4px 0 14px;font-size:13.5px;color:var(--ink-soft)}
 .note.open{border-left-color:var(--amber);background:var(--amber-bg);padding:10px 12px 10px 12px;border-radius:0 var(--radius) var(--radius) 0;color:var(--amber)}
@@ -150,12 +151,22 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .tag.inherit{background:var(--paper);color:var(--ink-faint);border:1px solid var(--line)}
 .tag.override{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
 .rechtgrid{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
-.rollist{display:flex;flex-wrap:wrap;gap:7px}
-.rolchip{display:inline-flex;align-items:center;border:1px solid var(--line-strong);border-radius:999px;padding:6px 13px;font-size:13.5px;cursor:pointer;color:var(--ink-soft);background:var(--surface)}
-.rolchip.on{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent);font-weight:600}
-.optlist{display:flex;flex-wrap:wrap;gap:7px}
-.optchip{display:inline-flex;align-items:center;border:1px solid var(--line-strong);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer;color:var(--ink-soft);background:var(--surface)}
-.optchip.on{background:var(--surface);border-color:var(--ink-soft);color:var(--ink)}
+.roldrop,.optdrop{position:relative}
+.roldrop-btn,.optdrop-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+ border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);
+ padding:9px 12px;font-size:13.5px;text-align:left;cursor:pointer}
+.roldrop-btn svg,.optdrop-btn svg{width:16px;height:16px;flex:0 0 16px;color:var(--ink-faint);transition:transform .15s}
+.roldrop.open .roldrop-btn svg,.optdrop.open .optdrop-btn svg{transform:rotate(180deg)}
+.roldrop-menu,.optdrop-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;
+ background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--radius-sm);
+ box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:240px;overflow-y:auto;padding:4px}
+.roldrop-item{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 10px;
+ font-size:13.5px;color:var(--ink-soft);cursor:pointer;border-radius:6px}
+.roldrop-item:hover{background:var(--paper)}
+.roldrop-item.on{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.optdrop-item{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13.5px;color:var(--ink-soft);cursor:pointer;border-radius:6px}
+.optdrop-item:hover{background:var(--paper)}
+.optdrop-item input{width:auto;margin:0}
 .mini{font-size:12.5px;color:var(--ink-faint);margin-top:4px}
 
 .actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
@@ -747,13 +758,14 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Telefoonnummer</label><input id="pp-tel" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Type rol</label><select id="pp-typerol"><option value="medewerker">Medewerker</option><option value="naaste">Naaste</option></select></div>
+        <div class="field"><label>Type rol</label><div class="lockedfield" id="pp-typerol-display"></div></div>
       </div>
       <div class="sublistlabel">Rollen en rechten</div>
       <div class="row">
-        <div class="field"><label>Algemene rol (globaal)</label><select id="pp-globaal"></select></div>
-        <div class="field"><label>Groep</label><select id="pp-groepveld"></select></div>
+        <div class="field"><label>Algemene rol (globaal)</label><div class="lockedfield" id="pp-globaal-display"></div></div>
+        <div class="field"><label>Groep</label><div class="lockedfield" id="pp-groep-display"></div></div>
       </div>
+      <p class="mini">Type rol, algemene rol en groep worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
       <p class="mini">Recht op locaties is hier bewust niet getoond — dit heeft vrijwel niemand nodig.</p>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Cliënten</div>
@@ -813,13 +825,19 @@ function el(i){return document.getElementById(i);}
 var verzondenTimer=null;
 function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
-function genereerEmail(voor,achter){
+function genereerEmail(voor,achter,domein){
  function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
  var v=schoon(voor),a=schoon(achter),maxLocal=20;
  if(v.length+1+a.length>maxLocal)a=a.slice(0,Math.max(1,maxLocal-1-v.length));
- return v+'.'+a+'@mywepp.nl';
+ return v+'.'+a+'@'+(domein||'mywepp.nl');
 }
 function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');}
+function groepDomein(groep){return slug(groep)+'.nl';}
+function isGegenereerdAdres(mail){
+ if(!mail)return false;
+ var domein=mail.split('@')[1]||'';
+ return domein==='mywepp.nl'||GROEPEN.some(function(g){return domein===groepDomein(g);});
+}
 var AVCOLORS=['#4A6FA5','#3D8C7D','#B0783C','#B0555A','#6E6A96','#3E7CA6','#8C6A45','#5A8A6E'];
 function avatarHash(naam){var h=0;for(var i=0;i<naam.length;i++)h=naam.charCodeAt(i)+((h<<5)-h);return Math.abs(h);}
 function avatarColor(naam){return AVCOLORS[avatarHash(naam)%AVCOLORS.length];}
@@ -842,7 +860,7 @@ var GROEPEN=['De Boomgaard','De Wilgenhof','Dagbesteding Centrum'];
    per categorie zodat elke schaal (globaal/groep/cliënten/gebruikers) zijn eigen realistische sets heeft. */
 var ROLLEN={
  medewerker:{
-  globaal:['Admin','Admin met recht op infobord en tools','Financiële Admin','Medewerker met statistiekrecht','Medewerker','Vrijwilliger','Bord inlog','Geen'],
+  globaal:['Medewerker met statistiekrecht','Medewerker','Vrijwilliger','Bord inlog','Geen'],
   groep:['Groep admin','Medewerker','Nieuws redacteur','Bord inlog','Geen'],
   clienten:['Medewerker met prikbord en dossier','Medewerker met prikbord','Medewerker','Bord inlog','Geen'],
   medewerkers:['Roosteraar met bekijk recht en profiel','Roosteraar met bekijkrecht','Roosteraar','Geen']
@@ -875,35 +893,76 @@ function renderBulkGroepen(){
   c.addEventListener('change',function(){bulkSel.groepen[c.getAttribute('data-g')]=c.checked;renderBulkGroepen();updateBulkKnop();});});
  el('bulk-alle').addEventListener('change',function(){GROEPEN.forEach(function(g){bulkSel.groepen[g]=el('bulk-alle').checked;});renderBulkGroepen();updateBulkKnop();});
 }
+var CHEVRON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
+var rolMenuOpen={};
+function rolMenuKey(container,k,kind){return (container.id||'c')+'|'+k+'|'+kind;}
+function closeOtherRolMenus(keepKey){Object.keys(rolMenuOpen).forEach(function(k){if(k!==keepKey)rolMenuOpen[k]=false;});}
+document.addEventListener('click',function(e){
+ if(e.target.closest('.roldrop')||e.target.closest('.optdrop'))return;
+ var open=document.querySelectorAll('.roldrop-menu:not([hidden]), .optdrop-menu:not([hidden])');
+ if(!open.length)return;
+ Array.prototype.forEach.call(open,function(m){m.hidden=true;m.parentElement.classList.remove('open');});
+ rolMenuOpen={};
+});
 function rechtenRows(container,type,data,onchange){
  container.innerHTML=RECHTEN[type].map(function(r){
   var cur=data[r.k];
+  var roleKey=rolMenuKey(container,r.k,'role'),optKey=rolMenuKey(container,r.k,'opt');
+  var roleOpen=!!rolMenuOpen[roleKey],optOpen=!!rolMenuOpen[optKey];
+  var optRoles=ROLLEN[type][r.k].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';});
+  var gekozenOpt=cur.opt.filter(function(o){return optRoles.indexOf(o)>-1;});
   return '<div class="rechtrow" data-k="'+r.k+'">'+
    '<div class="top"><b>'+r.l+'</b></div>'+
    '<div class="rechtgrid">'+
-    '<div class="field"><label>Standaardrol</label><div class="rollist" data-role="'+r.k+'">'+ROLLEN[type][r.k].map(function(rol){
-      return '<button type="button" class="rolchip'+(rol===cur.rol?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
-    }).join('')+'</div></div>'+
-    '<div class="field"><label>Optionele rollen</label><div class="optlist" data-opt="'+r.k+'">'+ROLLEN[type][r.k].filter(function(rol){return rol!==cur.rol&&rol!=='Geen';}).map(function(rol){
-      var on=cur.opt.indexOf(rol)>-1;
-      return '<button type="button" class="optchip'+(on?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
-    }).join('')+'</div></div>'+
+    '<div class="field"><label>Standaardrol</label>'+
+     '<div class="roldrop'+(roleOpen?' open':'')+'" data-role="'+r.k+'">'+
+      '<button type="button" class="roldrop-btn">'+cur.rol+CHEVRON_SVG+'</button>'+
+      '<div class="roldrop-menu"'+(roleOpen?'':' hidden')+'>'+ROLLEN[type][r.k].map(function(rol){
+       return '<button type="button" class="roldrop-item'+(rol===cur.rol?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
+      }).join('')+'</div>'+
+     '</div>'+
+    '</div>'+
+    '<div class="field"><label>Optionele rollen</label>'+
+     '<div class="optdrop'+(optOpen?' open':'')+'" data-opt="'+r.k+'">'+
+      '<button type="button" class="optdrop-btn">'+(gekozenOpt.length?gekozenOpt.join(', '):'Geen gekozen')+CHEVRON_SVG+'</button>'+
+      '<div class="optdrop-menu"'+(optOpen?'':' hidden')+'>'+(optRoles.length?optRoles.map(function(rol){
+       var on=cur.opt.indexOf(rol)>-1;
+       return '<label class="optdrop-item"><input type="checkbox" value="'+rol+'" '+(on?'checked':'')+'>'+rol+'</label>';
+      }).join(''):'<p class="mini" style="margin:6px 10px">Geen andere rollen beschikbaar.</p>')+'</div>'+
+     '</div>'+
+    '</div>'+
    '</div>'+
    (r.k==='groep'?'<p class="mini">Bijvoorbeeld voor groepen zoals die van Angelina: één duidelijke hoofdrol, met de rest als optie erbij.</p>':'')+
   '</div>';
  }).join('');
- Array.prototype.forEach.call(container.querySelectorAll('[data-role] [data-rol]'),function(btn){
-  btn.addEventListener('click',function(){
-   var k=btn.closest('[data-role]').getAttribute('data-role'),rol=btn.getAttribute('data-rol');
+ Array.prototype.forEach.call(container.querySelectorAll('.roldrop-btn'),function(btn){
+  btn.addEventListener('click',function(e){
+   e.stopPropagation();
+   var k=btn.closest('[data-role]').getAttribute('data-role'),key=rolMenuKey(container,k,'role'),willOpen=!rolMenuOpen[key];
+   closeOtherRolMenus(willOpen?key:null);rolMenuOpen[key]=willOpen;
+   rechtenRows(container,type,data,onchange);
+  });
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('.roldrop-item'),function(item){
+  item.addEventListener('click',function(){
+   var k=item.closest('[data-role]').getAttribute('data-role'),rol=item.getAttribute('data-rol');
    data[k].rol=rol;data[k].opt=data[k].opt.filter(function(o){return o!==rol;});
+   rolMenuOpen[rolMenuKey(container,k,'role')]=false;
    rechtenRows(container,type,data,onchange);onchange&&onchange();
   });
  });
- Array.prototype.forEach.call(container.querySelectorAll('[data-opt] [data-rol]'),function(btn){
-  btn.addEventListener('click',function(){
-   var k=btn.closest('[data-opt]').getAttribute('data-opt'),rol=btn.getAttribute('data-rol');
-   if(data[k].opt.indexOf(rol)>-1)data[k].opt=data[k].opt.filter(function(o){return o!==rol;});
-   else data[k].opt.push(rol);
+ Array.prototype.forEach.call(container.querySelectorAll('.optdrop-btn'),function(btn){
+  btn.addEventListener('click',function(e){
+   e.stopPropagation();
+   var k=btn.closest('[data-opt]').getAttribute('data-opt'),key=rolMenuKey(container,k,'opt'),willOpen=!rolMenuOpen[key];
+   closeOtherRolMenus(willOpen?key:null);rolMenuOpen[key]=willOpen;
+   rechtenRows(container,type,data,onchange);
+  });
+ });
+ Array.prototype.forEach.call(container.querySelectorAll('.optdrop-item input'),function(cb){
+  cb.addEventListener('change',function(){
+   var k=cb.closest('[data-opt]').getAttribute('data-opt');
+   if(cb.checked){if(data[k].opt.indexOf(cb.value)<0)data[k].opt.push(cb.value);}else{data[k].opt=data[k].opt.filter(function(o){return o!==cb.value;});}
    rechtenRows(container,type,data,onchange);onchange&&onchange();
   });
  });
@@ -1010,7 +1069,7 @@ var STATE_COLOR={nieuw:'var(--moss)',gewijzigd:'var(--amber)',verwijderd:'var(--
 var people=[
  {id:1,type:'client',voor:'Elif',achter:'Yildiz',mail:'',groepen:['De Boomgaard']},
  {id:2,type:'client',voor:'Bram',achter:'Smit',mail:'',groepen:['De Boomgaard']},
- {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Admin met recht op infobord en tools',contactpersoon:true,clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
+ {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Medewerker',contactpersoon:true,clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
  {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',tel:'06 23 45 67 89',groepen:['De Boomgaard','De Wilgenhof'],rol:'Medewerker',contactpersoon:false,clientRechten:{2:'Medewerker'}},
  {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',tel:'06 34 56 78 90',groepen:['De Boomgaard'],rol:'Mantelzorger',clientRechten:{1:'Mantelzorger met prikbord'}}
 ];
@@ -1190,7 +1249,7 @@ function editFormPersoon(p,t){
   '</div>'+
   '<div class="field"><label>E-mailadres</label><input data-f="mail" data-id="'+p.id+'" value="'+(p.mail||'')+'" placeholder="naam@voorbeeld.nl"></div>'+
   (emailConflict(p)?'<p class="mini" style="color:var(--brick)">Dit e-mailadres is al in gebruik door iemand anders.</p>':'')+
-  (p.mail&&p.mail.indexOf('@mywepp.nl')>-1?'<p class="mini" style="color:var(--brick)">'+(t==='medewerker'?'Een medewerker':'Een naaste')+' heeft een eigen adres — geen MyWepp-adres.</p>':'')+
+  (isGegenereerdAdres(p.mail)?'<p class="mini" style="color:var(--brick)">'+(t==='medewerker'?'Een medewerker':'Een naaste')+' heeft een eigen adres — geen MyWepp-adres.</p>':'')+
   '<div class="sublistlabel">Rollen en rechten</div>'+
   '<div class="row">'+
    '<div class="field"><label>Globaal</label><select data-f="rol" data-id="'+p.id+'">'+ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'+
@@ -1360,10 +1419,10 @@ function openProfielPersoon(id,t){
  setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
- mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
- el('pp-typerol').value=t;
- el('pp-globaal').innerHTML=ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
- el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
+ mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
+ el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
+ el('pp-globaal-display').textContent=p.rol;
+ el('pp-groep-display').textContent=huidigeGroep;
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
  if(t==='medewerker'){
@@ -1384,28 +1443,25 @@ function openProfielPersoon(id,t){
 }
 el('pp-persoon-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
- var t=el('pp-typerol').value;
  var voor=el('pp-voornaam').value.trim(),achter=el('pp-achternaam').value.trim(),ok=true;
  el('pp-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
  el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
  if(!ok)return;
  p.voor=cap(voor);p.achter=cap(achter);
- p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter);
+ p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
  p.tel=el('pp-tel').value.trim();
- p.type=t;p.rol=el('pp-globaal').value;
- var nieuweGroep=el('pp-groepveld').value;
- p._nieuweGroep=(nieuweGroep===huidigeGroep)?null:nieuweGroep;
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();show('pp-formulier');
 });
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
 var mailAuto={pc:true,pp:true};
 ['pc','pp'].forEach(function(prefix){
+ var domein=prefix==='pp'?function(){return groepDomein(huidigeGroep);}:function(){return 'mywepp.nl';};
  el(prefix+'-voornaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
  });
  el(prefix+'-achternaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
  });
  el(prefix+'-mail').addEventListener('input',function(){mailAuto[prefix]=(this.value.trim()==='');});
 });
