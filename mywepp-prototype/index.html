@@ -275,6 +275,13 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .addbtn-row{width:100%;justify-content:center;border-style:dashed;color:var(--accent);border-color:var(--accent-line);background:var(--accent-bg)}
 .contactcheck{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-top:12px}
 .contactcheck input{width:auto}
+.acc-actions{display:flex;align-items:center;gap:10px;margin-top:4px}
+.acc-actions .addbtn-row{width:auto;flex:1}
+.toonmeer-btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--radius-sm);padding:10px 16px;font-size:13.5px;color:var(--ink-soft);cursor:pointer;white-space:nowrap}
+@media (max-width:560px){.acc-actions{flex-wrap:wrap}.acc-actions .addbtn-row{width:100%}.toonmeer-btn{width:100%}}
+.statuschip{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:6px}
+.statuschip.ziek{background:var(--brick-bg);color:var(--brick)}
+.readonly-field{opacity:.7;pointer-events:none}
 
 .digirow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line)}
 .digirow:last-child{border-bottom:0}
@@ -577,6 +584,15 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <p class="tellingen" id="formulier-tellingen"></p>
     </div>
 
+    <div class="panel" id="contact-banner" style="padding:14px 20px">
+      <div style="font-weight:600;font-size:13.5px;margin-bottom:6px">Contactpersonen van deze groep</div>
+      <div id="contact-banner-lijst"></div>
+    </div>
+    <div class="panel" id="readonly-banner" hidden style="padding:14px 20px;background:var(--brick-bg);border-color:var(--brick-line)">
+      <b style="color:var(--brick)">Alleen-lezen</b>
+      <p class="mini" style="margin:4px 0 0">Je bent geen contactpersoon van deze groep — je kunt de gegevens hier bekijken, maar niet wijzigen.</p>
+    </div>
+
     <div class="panel" style="padding:0">
       <div class="tallywrap">
         <div class="tallytop"><b id="tally-count">0 wijzigingen</b><span>klaar om door te voeren</span></div>
@@ -587,19 +603,25 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="ghost" style="width:100%;border-radius:0;border-top:1px solid var(--line);justify-content:flex-start;padding:14px 22px" id="naar-gearchiveerd">Gearchiveerd bekijken</button>
     </div>
 
-    <div class="acc" id="acc-client">
+    <div class="acc closed" id="acc-client">
       <div class="acc-head" data-toggle="acc-client"><svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><b>Cliënten <span class="countchip" id="count-client">0</span></b><button type="button" class="helpbtn" data-help="client" aria-label="Uitleg cliënten">?</button></div>
       <div class="acc-body">
         <div id="rows-client"></div>
-        <button type="button" class="addbtn-row" data-add="client">+ Cliënt toevoegen</button>
+        <div class="acc-actions">
+          <button type="button" class="addbtn-row" data-add="client">+ Cliënt toevoegen</button>
+          <button type="button" class="toonmeer-btn" data-toonmeer="client" hidden></button>
+        </div>
       </div>
     </div>
 
-    <div class="acc" id="acc-medewerker">
+    <div class="acc closed" id="acc-medewerker">
       <div class="acc-head" data-toggle="acc-medewerker"><svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><b>Medewerkers <span class="countchip" id="count-medewerker">0</span></b><button type="button" class="helpbtn" data-help="medewerker" aria-label="Uitleg medewerkers">?</button></div>
       <div class="acc-body">
         <div id="rows-medewerker"></div>
-        <button type="button" class="addbtn-row" data-add="medewerker">+ Medewerker toevoegen</button>
+        <div class="acc-actions">
+          <button type="button" class="addbtn-row" data-add="medewerker">+ Medewerker toevoegen</button>
+          <button type="button" class="toonmeer-btn" data-toonmeer="medewerker" hidden></button>
+        </div>
       </div>
     </div>
 
@@ -607,7 +629,10 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="acc-head" data-toggle="acc-naaste"><svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><b>Naasten <span class="countchip" id="count-naaste">0</span></b><button type="button" class="helpbtn" data-help="naaste" aria-label="Uitleg naasten">?</button></div>
       <div class="acc-body">
         <div id="rows-naaste"></div>
-        <button type="button" class="addbtn-row" data-add="naaste">+ Naaste toevoegen</button>
+        <div class="acc-actions">
+          <button type="button" class="addbtn-row" data-add="naaste">+ Naaste toevoegen</button>
+          <button type="button" class="toonmeer-btn" data-toonmeer="naaste" hidden></button>
+        </div>
         <div class="collapse closed" id="contactpersonen-collapse" style="margin-top:12px;box-shadow:none">
           <div class="chead" data-toggle="contactpersonen-collapse"><b>Contactpersonen kiezen</b><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
           <div class="cbody">
@@ -629,6 +654,17 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Personen die alleen aan deze groep gekoppeld waren en via de prullenbak zijn verwijderd. Ze zijn niet echt verwijderd — je kunt ze hier terughalen.</p></div>
     <div class="panel" id="gearchiveerd-lijst" style="padding:0"></div>
+    <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
+  </div>
+
+  <!-- ============ VOLLEDIGE LIJST (Toon meer) ============ -->
+  <div id="pp-volledige-lijst" hidden>
+    <div class="crumbbar">
+      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › <span id="volledige-lijst-titel">Alle</span></div>
+      <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
+    </div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px" id="volledige-lijst-h1">Alle</h1></div>
+    <div class="panel"><div class="body" id="volledige-lijst-rows"></div></div>
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
 
@@ -738,6 +774,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>E-mailadres</label><input id="pc-mail" placeholder="Leeg = automatisch gegenereerd"></div>
         <div class="field"><label>Telefoonnummer</label><input id="pc-tel" placeholder="06 12 34 56 78"></div>
       </div>
+      <div class="sublistlabel" style="margin-top:20px">Wettelijke vertegenwoordiger</div>
+      <div class="field"><select id="pc-vertegenwoordiger"></select></div>
+      <p class="mini" id="pc-vertegenwoordiger-hint"></p>
       <div class="sublistlabel" style="margin-top:20px">Wie heeft recht op deze cliënt</div>
       <div id="pc-rechten"></div>
       <div class="actions"><button type="button" data-back="pp-formulier">Annuleren</button><button type="button" class="primary" id="pc-opslaan">Opslaan</button></div>
@@ -761,7 +800,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Achternaam</label><input id="pp-achternaam"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pp-mail" placeholder="Leeg = automatisch gegenereerd"></div>
+        <div class="field"><label>E-mailadres</label><input id="pp-mail" placeholder="naam@voorbeeld.nl"></div>
         <div class="field"><label>Telefoonnummer</label><input id="pp-tel" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
@@ -774,6 +813,13 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
       <p class="mini">Type rol, algemene rol en groep worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
       <p class="mini">Recht op locaties is hier bewust niet getoond — dit heeft vrijwel niemand nodig.</p>
+
+      <div class="sublistlabel" id="pp-lbl-contact" hidden>Contactpersoon</div>
+      <div id="pp-contact-blok" hidden>
+        <label class="contactcheck"><input type="checkbox" id="pp-contactpersoon">Markeren als contactpersoon voor deze groep</label>
+        <label class="contactcheck" id="pp-ziek-row" hidden><input type="checkbox" id="pp-ziek">Ziek — toegang en meldingen gaan naar de andere contactpersoon</label>
+        <p class="mini" id="pp-contact-hint"></p>
+      </div>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Cliënten</div>
       <div id="pp-clienten"></div>
@@ -830,7 +876,7 @@ var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_UR
 
 function el(i){return document.getElementById(i);}
 var verzondenTimer=null;
-function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
+function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd','pp-volledige-lijst'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
 function genereerEmail(voor,achter,domein){
  function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
@@ -1074,13 +1120,47 @@ var STATE_LABEL={nieuw:'nieuw',gewijzigd:'gewijzigd',verwijderd:'wordt verwijder
 var STATE_COLOR={nieuw:'var(--moss)',gewijzigd:'var(--amber)',verwijderd:'var(--brick)'};
 
 var people=[
- {id:1,type:'client',voor:'Elif',achter:'Yildiz',mail:'',groepen:['De Boomgaard']},
- {id:2,type:'client',voor:'Bram',achter:'Smit',mail:'',groepen:['De Boomgaard']},
- {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Medewerker',contactpersoon:true,clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
- {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',tel:'06 23 45 67 89',groepen:['De Boomgaard','De Wilgenhof'],rol:'Medewerker',contactpersoon:false,clientRechten:{2:'Medewerker'}},
+ {id:1,type:'client',voor:'Elif',achter:'Yildiz',mail:'',groepen:['De Boomgaard'],wettelijkeVertegenwoordiger:null},
+ {id:2,type:'client',voor:'Bram',achter:'Smit',mail:'',groepen:['De Boomgaard'],wettelijkeVertegenwoordiger:null},
+ {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Medewerker',contactpersoon:true,contactVolgorde:1,status:'actief',clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
+ {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',tel:'06 23 45 67 89',groepen:['De Boomgaard','De Wilgenhof'],rol:'Medewerker',contactpersoon:false,status:'actief',clientRechten:{2:'Medewerker'}},
  {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',tel:'06 34 56 78 90',groepen:['De Boomgaard'],rol:'Mantelzorger',clientRechten:{1:'Mantelzorger met prikbord'}}
 ];
 function rolOpClient(persoon,clientId){return (persoon.clientRechten||{})[clientId]||null;}
+/* --- Mijn profiel (eigen account medewerker) --- */
+var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Groep admin',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
+/* --- Contactpersonen: max 2 per groep, ziekte-failover, rechtenmodel --- */
+function contactpersonenVanGroep(){
+ return personenVanType('medewerker').filter(function(m){return m.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
+}
+function effectieveContactpersoon(){
+ var lijst=contactpersonenVanGroep();
+ var eerste=lijst.filter(function(m){return m.contactVolgorde===1;})[0]||null;
+ var tweede=lijst.filter(function(m){return m.contactVolgorde===2;})[0]||null;
+ if(eerste&&eerste.status==='ziek'&&tweede)return tweede;
+ return eerste||tweede||null;
+}
+function huidigeGebruiker(){return people.filter(function(p){return p.mail===MIJN_PROFIEL.mail;})[0]||null;}
+function isContactpersoonVanGroep(p){return !!(p&&p.contactVolgorde&&p.groepen&&p.groepen.indexOf(huidigeGroep)>-1);}
+function magBewerkenGebruikers(){return isContactpersoonVanGroep(huidigeGebruiker());}
+function magContactWijzigen(){var eff=effectieveContactpersoon(),ik=huidigeGebruiker();return !!(eff&&ik&&eff.id===ik.id);}
+function pasContactpersoonToe(p,checked){
+ if(checked){
+  var anderen=contactpersonenVanGroep().filter(function(x){return x.id!==p.id;});
+  if(anderen.length>=2){alert('Er zijn al twee contactpersonen, je kunt niet meer toevoegen.');return false;}
+  p.contactpersoon=true;
+  p.contactVolgorde=anderen.some(function(x){return x.contactVolgorde===1;})?2:1;
+ }else{
+  var was=p.contactVolgorde;
+  p.contactpersoon=false;delete p.contactVolgorde;delete p.status;
+  if(was===1){
+   var tweede=contactpersonenVanGroep().filter(function(x){return x.contactVolgorde===2;})[0];
+   if(tweede)tweede.contactVolgorde=1;
+  }
+ }
+ if(p._state!=='nieuw')p._state='gewijzigd';
+ return true;
+}
 var nextId=6;
 var huidigeGroep=GROEPEN[0];
 el('pp-groep-naam').textContent=huidigeGroep;
@@ -1267,7 +1347,9 @@ function editFormPersoon(p,t){
   clientRechtenRow(p,t)+
   (t==='medewerker'?('<div class="sublistlabel">Medewerkers</div>'+medewerkerPeerRow(p)):'')+
   (t==='medewerker'?('<div class="sublistlabel">Naasten</div>'+naasteRechtenRow(p)):'')+
-  (t==='medewerker'?'<label class="contactcheck"><input type="checkbox" data-f="contactpersoon" data-id="'+p.id+'" '+(p.contactpersoon?'checked':'')+'>Markeren als contactpersoon</label>':'')+
+  (t==='medewerker'?('<label class="contactcheck"><input type="checkbox" data-f="contactpersoon" data-id="'+p.id+'" '+(p.contactpersoon?'checked':'')+(magContactWijzigen()?'':' disabled')+'>Markeren als contactpersoon'+(p.contactVolgorde?' <span class="mini">(contactpersoon '+p.contactVolgorde+')</span>':'')+'</label>'+
+   (!magContactWijzigen()?'<p class="mini">Alleen de huidige eerste contactpersoon kan dit wijzigen.</p>':'')+
+   (p.contactVolgorde?('<label class="contactcheck"><input type="checkbox" data-f="ziek" data-id="'+p.id+'" '+(p.status==='ziek'?'checked':'')+(magContactWijzigen()?'':' disabled')+'>Ziek — toegang en meldingen gaan naar de andere contactpersoon</label>'):'')):'')+
   '<div class="actions" style="border:0;margin-top:10px;padding-top:0"><button type="button" class="removelink" data-remove="'+p.id+'" style="padding:0">Verwijderen</button><button type="button" class="small" data-fullpersoon="'+p.id+'">Volledig profiel bewerken →</button></div>'+
  '</div>';
 }
@@ -1276,21 +1358,55 @@ function rowHtml(p,t){
  var staged=p._state==='verwijderd';
  var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
  var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
+ var mag=magBewerkenGebruikers();
  var head='<div class="uhead">'+avatarHtml(naam(p),p.foto)+
   '<div class="pinfo"><div class="naam">'+naam(p)+contactBadge+stateTag+'</div><div class="mail">'+(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
-  '<div class="rowbtns">'+
+  (mag?('<div class="rowbtns">'+
    '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn danger" data-trashrow="'+p.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
-  '</div></div>';
+  '</div>'):'')+'</div>';
  var body=p._editing?(t==='client'?editFormClient(p):editFormPersoon(p,t)):'';
  return '<div class="urow'+(staged?' staged':'')+'" data-row="'+p.id+'">'+head+body+'</div>';
 }
 
-function renderAcc(t){
+var lijstLimiet={client:10,medewerker:3,naaste:3};
+var LIJSTTITEL={client:'Cliënten',medewerker:'Medewerkers',naaste:'Naasten'};
+function openVolledigeLijst(t){
+ var titel=LIJSTTITEL[t];
+ el('volledige-lijst-titel').textContent=titel;
+ el('volledige-lijst-h1').textContent='Alle '+titel.toLowerCase();
  var lijst=personenVanType(t);
- el('count-'+t).textContent=lijst.length;
+ var box=el('volledige-lijst-rows');
+ box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
+ Array.prototype.forEach.call(box.querySelectorAll('[data-editrow]'),function(b){
+  b.addEventListener('click',function(){
+   var id=+b.getAttribute('data-editrow');
+   if(t==='client')openProfielClient(id); else openProfielPersoon(id,t);
+  });
+ });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
+  b.addEventListener('click',function(){trashRow(+b.getAttribute('data-trashrow'),t);openVolledigeLijst(t);});
+ });
+ show('pp-volledige-lijst');
+}
+function renderAcc(t){
+ var volledig=personenVanType(t);
+ el('count-'+t).textContent=volledig.length;
+ var limiet=lijstLimiet[t];
+ var lijst=volledig.slice(0,limiet);
  var box=el('rows-'+t);
  box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
+ var toonmeerBtn=el('acc-'+t).querySelector('[data-toonmeer]');
+ if(toonmeerBtn){
+  var verborgen=volledig.length-limiet;
+  if(verborgen>0){
+   toonmeerBtn.hidden=false;
+   toonmeerBtn.textContent='Toon meer (+'+verborgen+')';
+   toonmeerBtn.onclick=function(){openVolledigeLijst(t);};
+  }else{
+   toonmeerBtn.hidden=true;
+  }
+ }
  Array.prototype.forEach.call(box.querySelectorAll('[data-editrow]'),function(b){
   b.addEventListener('click',function(){
    var id=+b.getAttribute('data-editrow');
@@ -1315,11 +1431,15 @@ function renderAcc(t){
    var p=findPerson(+inp.getAttribute('data-id')), f=inp.getAttribute('data-f');
    if(f==='eigenmail'){p._eigenmail=inp.checked;}
    else if(f==='groep'){p._nieuweGroep=(inp.value===huidigeGroep)?null:inp.value;}
+   else if(f==='contactpersoon'){
+    if(!pasContactpersoonToe(p,inp.checked)){inp.checked=false;renderAcc(t);return;}
+   }
+   else if(f==='ziek'){p.status=inp.checked?'ziek':'actief';}
    else if(inp.type==='checkbox'){p[f]=inp.checked;}
    else if(f==='voor'||f==='achter'){p[f]=cap(inp.value);}
    else{p[f]=inp.value;}
    if(p._state!=='nieuw')p._state='gewijzigd';
-   updateTally();renderAcc(t);renderContactpersonen();
+   updateTally();renderAcc(t);renderContactpersonen();renderContactBanner();
   });
  });
  wireClientRechten(box,t,function(){updateTally();renderAcc(t);});
@@ -1330,16 +1450,20 @@ function findPerson(id){return people.filter(function(x){return x.id===id;})[0];
 
 /* --- Volledig profiel: cliënt --- */
 var huidigProfielId=null;
+function persoonRechtRij(b,clientId){
+ var huidig=rolOpClient(b,clientId)||'';
+ var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
+ return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
+  '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+  rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
+}
 function personRechtenRow(clientId){
- var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
- if(!betrokkenen.length)return '<p class="empty-msg">Nog niemand gekoppeld.</p>';
- return betrokkenen.map(function(b){
-  var huidig=rolOpClient(b,clientId)||'';
-  var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
-  return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
-   '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
-   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
- }).join('');
+ var medewerkers=personenVanType('medewerker'),naasten=personenVanType('naaste');
+ if(!medewerkers.length&&!naasten.length)return '<p class="empty-msg">Nog niemand gekoppeld.</p>';
+ return '<div class="sublistlabel">Medewerkers</div>'+
+  (medewerkers.length?medewerkers.map(function(b){return persoonRechtRij(b,clientId);}).join(''):'<p class="empty-msg">Geen medewerkers in deze groep.</p>')+
+  '<div class="sublistlabel">Naasten</div>'+
+  (naasten.length?naasten.map(function(b){return persoonRechtRij(b,clientId);}).join(''):'<p class="empty-msg">Geen naasten in deze groep.</p>');
 }
 function wirePersoonRechten(container,onchange){
  Array.prototype.forEach.call(container.querySelectorAll('[data-persoonrol]'),function(sel){
@@ -1352,6 +1476,16 @@ function wirePersoonRechten(container,onchange){
   });
  });
 }
+function vertegenwoordigerOpties(client){
+ var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
+ return '<option value="">Geen</option>'+betrokkenen.map(function(b){return '<option value="'+b.id+'"'+(client.wettelijkeVertegenwoordiger===b.id?' selected':'')+'>'+naam(b)+'</option>';}).join('');
+}
+function zetVeldenReadonly(container,readonly){
+ Array.prototype.forEach.call(container.querySelectorAll('input,select,button.small,button.removelink'),function(e){
+  if(e.id==='pc-opslaan'||e.id==='pp-persoon-opslaan'||e.getAttribute('data-back'))return;
+  e.disabled=readonly;
+ });
+}
 function openProfielClient(id){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
@@ -1360,11 +1494,19 @@ function openProfielClient(id){
  el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
  el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
  mailAuto.pc=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
+ el('pc-vertegenwoordiger').innerHTML=vertegenwoordigerOpties(p);
  el('pc-rechten').innerHTML=personRechtenRow(id);
  wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
+ var mag=magBewerkenGebruikers();
+ zetVeldenReadonly(el('pp-profiel-client'),!mag);
+ var magVertOk=magContactWijzigen();
+ el('pc-vertegenwoordiger').disabled=!magVertOk;
+ el('pc-vertegenwoordiger-hint').textContent=magVertOk?'':'Alleen de huidige contactpersoon kan de wettelijke vertegenwoordiger wijzigen.';
+ el('pc-opslaan').hidden=!mag;
  show('pp-profiel-client');
 }
 el('pc-opslaan').addEventListener('click',function(){
+ if(!magBewerkenGebruikers())return;
  var p=findPerson(huidigProfielId);if(!p)return;
  var voor=el('pc-voornaam').value.trim(),achter=el('pc-achternaam').value.trim(),ok=true;
  el('pc-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
@@ -1373,6 +1515,7 @@ el('pc-opslaan').addEventListener('click',function(){
  p.voor=cap(voor);p.achter=cap(achter);
  p.mail=el('pc-mail').value.trim()||genereerEmail(p.voor,p.achter);
  p.tel=el('pc-tel').value.trim();
+ if(magContactWijzigen())p.wettelijkeVertegenwoordiger=el('pc-vertegenwoordiger').value?+el('pc-vertegenwoordiger').value:null;
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAcc('client');updateTally();show('pp-formulier');
 });
@@ -1419,6 +1562,29 @@ function openFotoModal(elId,persoon){
 el('pc-foto-wijzigen').addEventListener('click',function(){openFotoModal('pc-foto');});
 
 /* --- Volledig profiel: medewerker / naaste --- */
+function zetContactBlok(p,t){
+ var toon=t==='medewerker';
+ el('pp-lbl-contact').hidden=!toon;
+ el('pp-contact-blok').hidden=!toon;
+ if(!toon)return;
+ var magWijzigen=magContactWijzigen();
+ el('pp-contactpersoon').checked=!!p.contactpersoon;
+ el('pp-contactpersoon').disabled=!magWijzigen;
+ el('pp-ziek-row').hidden=!p.contactVolgorde;
+ el('pp-ziek').checked=p.status==='ziek';
+ el('pp-ziek').disabled=!magWijzigen;
+ el('pp-contact-hint').textContent=magWijzigen?(p.contactVolgorde?('Dit is contactpersoon '+p.contactVolgorde+' van deze groep.'):''):'Alleen de huidige contactpersoon kan dit wijzigen.';
+ el('pp-contactpersoon').onchange=function(){
+  var ok=pasContactpersoonToe(p,this.checked);
+  if(!ok)this.checked=false;
+  zetContactBlok(p,t);renderContactpersonen();renderContactBanner();
+ };
+ el('pp-ziek').onchange=function(){
+  p.status=this.checked?'ziek':'actief';
+  if(p._state!=='nieuw')p._state='gewijzigd';
+  renderContactBanner();
+ };
+}
 function openProfielPersoon(id,t){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
@@ -1426,7 +1592,6 @@ function openProfielPersoon(id,t){
  setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
- mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
  el('pp-globaal-display').textContent=p.rol;
  el('pp-groep-display').textContent=huidigeGroep;
@@ -1446,46 +1611,65 @@ function openProfielPersoon(id,t){
  }
  ['pp-lbl-medewerkers'].forEach(function(id2){el(id2).hidden=false;});
  el('pp-lbl-naasten').hidden=(t==='naaste');
+ var mag=magBewerkenGebruikers();
+ zetVeldenReadonly(el('pp-profiel-persoon'),!mag);
+ zetContactBlok(p,t);
+ el('pp-persoon-opslaan').hidden=!mag;
  show('pp-profiel-persoon');
 }
 el('pp-persoon-opslaan').addEventListener('click',function(){
+ if(!magBewerkenGebruikers())return;
  var p=findPerson(huidigProfielId);if(!p)return;
  var voor=el('pp-voornaam').value.trim(),achter=el('pp-achternaam').value.trim(),ok=true;
  el('pp-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
  el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
  if(!ok)return;
  p.voor=cap(voor);p.achter=cap(achter);
- p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
+ p.mail=el('pp-mail').value.trim();
  p.tel=el('pp-tel').value.trim();
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();show('pp-formulier');
 });
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
-var mailAuto={pc:true,pp:true};
-['pc','pp'].forEach(function(prefix){
- var domein=prefix==='pp'?function(){return groepDomein(huidigeGroep);}:function(){return 'mywepp.nl';};
+var mailAuto={pc:true};
+['pc'].forEach(function(prefix){
  el(prefix+'-voornaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
  });
  el(prefix+'-achternaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
  });
  el(prefix+'-mail').addEventListener('input',function(){mailAuto[prefix]=(this.value.trim()==='');});
 });
 el('pp-foto-wijzigen').addEventListener('click',function(){openFotoModal('pp-foto');});
 function trashRow(id,t){
+ if(!magBewerkenGebruikers())return;
  var p=findPerson(id);if(!p)return;
  if(p._state==='nieuw'){people=people.filter(function(x){return x.id!==id;});}
  else{p._state='verwijderd';p._editing=false;}
  renderAcc(t);updateTally();
 }
 function renderContactpersonen(){
- var lijst=personenVanType('medewerker').filter(function(m){return m.contactpersoon;});
+ var lijst=contactpersonenVanGroep();
  el('contactpersonen-lijst').innerHTML=lijst.length? lijst.map(function(m){
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+'</div><div class="mail">'+m.mail+'</div></div></div>';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+' <span class="mini">(contactpersoon '+m.contactVolgorde+')</span></div><div class="mail">'+m.mail+'</div></div></div>';
  }).join('') : '<p class="empty-msg">Nog geen medewerkers gemarkeerd als contactpersoon.</p>';
 }
-function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();updateTally();}
+function renderContactBanner(){
+ var lijst=contactpersonenVanGroep(),eff=effectieveContactpersoon();
+ el('contact-banner-lijst').innerHTML=lijst.length? lijst.map(function(m){
+  var isEff=eff&&eff.id===m.id;
+  return '<span style="display:inline-flex;align-items:center;margin:0 14px 4px 0">'+naam(m)+
+   (m.status==='ziek'?'<span class="statuschip ziek">Ziek</span>':'')+
+   (isEff?'<span class="statuschip" style="background:var(--moss-bg);color:var(--moss)">Actief aanspreekpunt</span>':'')+
+   '</span>';
+ }).join('') : '<p class="empty-msg" style="padding:0">Nog geen contactpersonen aangewezen voor deze groep.</p>';
+ var mag=magBewerkenGebruikers();
+ el('readonly-banner').hidden=mag;
+ Array.prototype.forEach.call(document.querySelectorAll('#pp-formulier [data-add]'),function(b){b.hidden=!mag;});
+ el('verzenden-btn').hidden=!mag;
+}
+function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();updateTally();}
 function updateTally(){
  var nieuw=0,gewijzigd=0,verwijderd=0;
  people.forEach(function(p){if(p._state==='nieuw')nieuw++;else if(p._state==='gewijzigd')gewijzigd++;else if(p._state==='verwijderd')verwijderd++;});
@@ -1539,6 +1723,7 @@ el('formulier-terug').addEventListener('click',function(){
  }
 });
 function pushNew(t){
+ if(!magBewerkenGebruikers())return;
  var basis={id:nextId++,type:t,voor:'',achter:'',mail:'',groepen:[huidigeGroep],_state:'nieuw',_editing:false};
  if(t==='client'){
   basis.rechten={};basis._eigenmail=false;
@@ -2007,8 +2192,6 @@ function renderCaInstellingen(){
  });
 }
 
-/* --- Mijn profiel (eigen account medewerker) --- */
-var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Groep admin',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
 function mockQrSvg(){
  var n=12,cells='';
  for(var y=0;y<n;y++){
