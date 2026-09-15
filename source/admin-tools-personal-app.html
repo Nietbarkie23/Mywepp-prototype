@@ -187,6 +187,7 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
  .personrow{flex-wrap:wrap}
  .personrow .pinfo{min-width:140px}
  .personrow select{width:100%!important;min-width:0!important;margin-top:2px}
+ .rolebar{flex-wrap:wrap}
 }
 .avatar{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex:0 0 36px}
 .pinfo{flex:1;min-width:0}
@@ -443,6 +444,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <div class="topbar">
     <div class="mark"><b>MyWepp</b><span>Beheerprototype</span></div>
     <div class="rolebar">
+      <label for="account-select">Ingelogd als</label>
+      <select id="account-select"></select>
       <label for="rol-select">Weergave</label>
       <select id="rol-select">
         <option value="groep">Teamleider — groepsprofiel</option>
@@ -1122,6 +1125,7 @@ var people=[
 function rolOpClient(persoon,clientId){return (persoon.clientRechten||{})[clientId]||null;}
 /* --- Mijn profiel (eigen account medewerker) --- */
 var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Groep admin',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
+var huidigeGebruikerId=3;
 /* --- Contactpersonen: max 2 per groep, ziekte-failover, rechtenmodel --- */
 function contactpersonenVanGroep(){
  return personenVanType('medewerker').filter(function(m){return m.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
@@ -1133,7 +1137,7 @@ function effectieveContactpersoon(){
  if(eerste&&eerste.status==='ziek'&&tweede)return tweede;
  return eerste||tweede||null;
 }
-function huidigeGebruiker(){return people.filter(function(p){return p.mail===MIJN_PROFIEL.mail;})[0]||null;}
+function huidigeGebruiker(){return findPerson(huidigeGebruikerId);}
 function isContactpersoonVanGroep(p){return !!(p&&p.contactVolgorde&&p.groepen&&p.groepen.indexOf(huidigeGroep)>-1);}
 function magBewerkenGebruikers(){return isContactpersoonVanGroep(huidigeGebruiker());}
 function magContactWijzigen(){var eff=effectieveContactpersoon(),ik=huidigeGebruiker();return !!(eff&&ik&&eff.id===ik.id);}
@@ -1640,7 +1644,7 @@ function trashRow(id,t){
  var p=findPerson(id);if(!p)return;
  if(p._state==='nieuw'){people=people.filter(function(x){return x.id!==id;});}
  else{p._state='verwijderd';p._editing=false;}
- renderAcc(t);updateTally();
+ renderAcc(t);updateTally();renderAccountSelect();
 }
 function renderContactpersonen(){
  var lijst=contactpersonenVanGroep();
@@ -1662,7 +1666,22 @@ function renderContactBanner(){
  Array.prototype.forEach.call(document.querySelectorAll('#pp-formulier [data-add]'),function(b){b.hidden=!mag;});
  el('verzenden-btn').hidden=!mag;
 }
-function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();updateTally();}
+function renderAccountSelect(){
+ var opties=people.filter(function(p){return (p.type==='medewerker'||p.type==='naaste')&&p._state!=='verwijderd';});
+ el('account-select').innerHTML=opties.map(function(p){
+  var label=naam(p)+' — '+(p.type==='medewerker'?'Medewerker':'Naaste')+(p.contactVolgorde?', contactpersoon '+p.contactVolgorde:'')+(p.groepen.indexOf(huidigeGroep)<0?' (andere groep)':'');
+  return '<option value="'+p.id+'"'+(p.id===huidigeGebruikerId?' selected':'')+'>'+label+'</option>';
+ }).join('');
+}
+el('account-select').addEventListener('change',function(){
+ var gekozen=findPerson(+el('account-select').value);
+ if(!gekozen)return;
+ huidigeGebruikerId=gekozen.id;
+ MIJN_PROFIEL.voor=gekozen.voor;MIJN_PROFIEL.achter=gekozen.achter;
+ MIJN_PROFIEL.mail=gekozen.mail||'';MIJN_PROFIEL.mobiel=gekozen.tel||'';
+ renderAll();
+});
+function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();}
 function updateTally(){
  var nieuw=0,gewijzigd=0,verwijderd=0;
  people.forEach(function(p){if(p._state==='nieuw')nieuw++;else if(p._state==='gewijzigd')gewijzigd++;else if(p._state==='verwijderd')verwijderd++;});
@@ -1740,7 +1759,7 @@ function pushNew(t){
  }
  people.push(basis);
  el('acc-'+t).classList.remove('closed');
- renderAcc(t);if(t==='client')renderAcc('medewerker');updateTally();
+ renderAcc(t);if(t==='client')renderAcc('medewerker');updateTally();renderAccountSelect();
  if(t==='client')openProfielClient(basis.id); else openProfielPersoon(basis.id,t);
 }
 document.querySelectorAll('[data-add]').forEach(function(b){b.addEventListener('click',function(){pushNew(b.getAttribute('data-add'));});});
