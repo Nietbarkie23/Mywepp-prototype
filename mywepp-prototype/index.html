@@ -687,7 +687,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Wijzigingen bevestigen</h1><p>De wijzigingen worden direct doorgevoerd. Kies wie we kunnen bereiken als er later vragen zijn.</p></div>
     <div class="panel"><div class="body">
       <div class="row">
-        <div class="field"><label for="av-naam">Contactpersoon</label><select id="av-naam"></select></div>
+        <div class="field"><label>Contactpersoon</label><div class="lockedfield" id="av-naam-display"></div></div>
         <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
       </div>
       <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>
@@ -1797,17 +1797,12 @@ function renderControleren(){
 }
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
 el('naar-versturen').addEventListener('click',function(){
- var contactpersonen=personenVanType('medewerker').concat(personenVanType('naaste'));
- el('av-naam').innerHTML='<option value="">Kies een contactpersoon…</option>'+contactpersonen.map(function(p){return '<option value="'+p.id+'">'+naam(p)+' — '+(p.type==='naaste'?'Naaste':'Medewerker')+'</option>';}).join('');
- el('av-naam').value='';el('av-tel').value='';el('av-akkoord').checked=false;el('av-versturen').disabled=true;
- el('av-naam').style.borderColor='';el('av-tel').style.borderColor='';
+ var ik=huidigeGebruiker();
+ el('av-naam-display').textContent=ik?(naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker')):'';
+ el('av-tel').value=ik?(ik.tel||''):'';el('av-akkoord').checked=false;el('av-versturen').disabled=true;
+ el('av-tel').style.borderColor='';
  el('av-tel-fout').hidden=true;
  show('pp-versturen');
-});
-el('av-naam').addEventListener('change',function(){
- var p=findPerson(+el('av-naam').value);
- el('av-tel').value=p?(p.tel||''):'';
- checkVersturenKlaar();
 });
 function telGeldig(v){
  v=v.trim();
@@ -1815,12 +1810,10 @@ function telGeldig(v){
  return v.replace(/\D/g,'').length>=9;
 }
 function checkVersturenKlaar(){
- var naamOk=!!el('av-naam').value;
  var telOk=telGeldig(el('av-tel').value);
- el('av-naam').style.borderColor=naamOk?'':'var(--brick)';
  el('av-tel').style.borderColor=telOk?'':'var(--brick)';
  el('av-tel-fout').hidden=telOk;
- el('av-versturen').disabled=!(naamOk&&telOk&&el('av-akkoord').checked);
+ el('av-versturen').disabled=!(telOk&&el('av-akkoord').checked);
 }
 el('av-tel').addEventListener('input',checkVersturenKlaar);
 el('av-tel').addEventListener('blur',checkVersturenKlaar);
@@ -1849,7 +1842,7 @@ el('av-versturen').addEventListener('click',async function(){
  if(ontkoppeld)verwijderdTekst.push(ontkoppeld+' ontkoppeld van '+huidigeGroep);
  if(gearchiveerd)verwijderdTekst.push(gearchiveerd+' gearchiveerd');
  if(verplaatst)verwijderdTekst.push(verplaatst+' verplaatst naar een andere groep');
- var contactpersoon=findPerson(+el('av-naam').value);
+ var contactpersoon=huidigeGebruiker();
  var contactzin=contactpersoon?' Bij vragen nemen we contact op met '+naam(contactpersoon)+'.':'';
  var waarschuwing=opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">Let op: het opslaan in de database is niet gelukt. De wijzigingen zijn hier wel lokaal doorgevoerd — probeer het later opnieuw zodat ze ook echt bewaard blijven.</div>';
  el('verzonden-tekst').innerHTML='Je wijzigingen ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin+waarschuwing;
