@@ -770,9 +770,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="sublistlabel">Rollen en rechten</div>
       <div class="row">
         <div class="field"><label>Algemene rol (globaal)</label><div class="lockedfield" id="pp-globaal-display"></div></div>
-        <div class="field"><label>Groep</label><select id="pp-groepveld"></select></div>
+        <div class="field"><label>Groep</label><div class="lockedfield" id="pp-groep-display"></div></div>
       </div>
-      <p class="mini">Type rol en algemene rol worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
+      <p class="mini">Type rol, algemene rol en groep worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
       <p class="mini">Recht op locaties is hier bewust niet getoond — dit heeft vrijwel niemand nodig.</p>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Cliënten</div>
@@ -1423,7 +1423,7 @@ function openProfielPersoon(id,t){
  mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
  el('pp-globaal-display').textContent=p.rol;
- el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
+ el('pp-groep-display').textContent=huidigeGroep;
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
  if(t==='medewerker'){
@@ -1451,8 +1451,6 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  p.voor=cap(voor);p.achter=cap(achter);
  p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter);
  p.tel=el('pp-tel').value.trim();
- var nieuweGroep=el('pp-groepveld').value;
- p._nieuweGroep=(nieuweGroep===huidigeGroep)?null:nieuweGroep;
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();show('pp-formulier');
 });
