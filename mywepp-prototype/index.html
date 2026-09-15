@@ -761,7 +761,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Achternaam</label><input id="pp-achternaam"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pp-mail" placeholder="Leeg = automatisch gegenereerd"></div>
+        <div class="field"><label>E-mailadres</label><input id="pp-mail" placeholder="naam@voorbeeld.nl"></div>
         <div class="field"><label>Telefoonnummer</label><input id="pp-tel" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
@@ -1426,7 +1426,6 @@ function openProfielPersoon(id,t){
  setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
- mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
  el('pp-globaal-display').textContent=p.rol;
  el('pp-groep-display').textContent=huidigeGroep;
@@ -1455,20 +1454,19 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
  if(!ok)return;
  p.voor=cap(voor);p.achter=cap(achter);
- p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter,groepDomein(huidigeGroep));
+ p.mail=el('pp-mail').value.trim();
  p.tel=el('pp-tel').value.trim();
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();show('pp-formulier');
 });
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
-var mailAuto={pc:true,pp:true};
-['pc','pp'].forEach(function(prefix){
- var domein=prefix==='pp'?function(){return groepDomein(huidigeGroep);}:function(){return 'mywepp.nl';};
+var mailAuto={pc:true};
+['pc'].forEach(function(prefix){
  el(prefix+'-voornaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
  });
  el(prefix+'-achternaam').addEventListener('input',function(){
-  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value,domein());
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
  });
  el(prefix+'-mail').addEventListener('input',function(){mailAuto[prefix]=(this.value.trim()==='');});
 });
