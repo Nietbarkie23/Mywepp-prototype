@@ -656,17 +656,6 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
 
-  <!-- ============ VOLLEDIGE LIJST (Toon meer) ============ -->
-  <div id="pp-volledige-lijst" hidden>
-    <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › <span id="volledige-lijst-titel">Alle</span></div>
-      <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
-    </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px" id="volledige-lijst-h1">Alle</h1></div>
-    <div class="panel"><div class="body" id="volledige-lijst-rows"></div></div>
-    <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
-  </div>
-
   <!-- ============ WIJZIGINGEN CONTROLEREN ============ -->
   <div id="pp-controleren" hidden>
     <div class="crumbbar">
@@ -820,7 +809,10 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="mini" id="pp-contact-hint"></p>
       </div>
 
-      <div class="sublistlabel" id="pp-lbl-clienten">Cliënten</div>
+      <div class="sublistlabel">Recht op groep</div>
+      <div class="lockedfield" id="pp-groep-recht-display"></div>
+
+      <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
       <div id="pp-clienten"></div>
       <div class="sublistlabel" id="pp-lbl-medewerkers">Recht op medewerkers</div>
       <div id="pp-medewerkers"></div>
@@ -875,7 +867,7 @@ var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_UR
 
 function el(i){return document.getElementById(i);}
 var verzondenTimer=null;
-function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd','pp-volledige-lijst'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
+function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
 function genereerEmail(voor,achter,domein){
  function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
@@ -1133,6 +1125,9 @@ var huidigeGebruikerId=3;
 function contactpersonenVanGroep(){
  return personenVanType('medewerker').filter(function(m){return m.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
 }
+/* Ziekmelden (status='ziek') is nog een twijfelgeval bij de klant — mogelijk
+   verandert dit later nog (bv. een aparte "vervang mij tijdelijk"-actie i.p.v.
+   automatische failover), dus deze logica bewust laten staan i.p.v. verwijderen. */
 function effectieveContactpersoon(){
  var lijst=contactpersonenVanGroep();
  var eerste=lijst.filter(function(m){return m.contactVolgorde===1;})[0]||null;
@@ -1371,31 +1366,13 @@ function rowHtml(p,t){
  return '<div class="urow'+(staged?' staged':'')+'" data-row="'+p.id+'">'+head+body+'</div>';
 }
 
-var lijstLimiet={client:10,medewerker:3,naaste:3};
-var LIJSTTITEL={client:'Cliënten',medewerker:'Medewerkers',naaste:'Naasten'};
-function openVolledigeLijst(t){
- var titel=LIJSTTITEL[t];
- el('volledige-lijst-titel').textContent=titel;
- el('volledige-lijst-h1').textContent='Alle '+titel.toLowerCase();
- var lijst=personenVanType(t);
- var box=el('volledige-lijst-rows');
- box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
- Array.prototype.forEach.call(box.querySelectorAll('[data-editrow]'),function(b){
-  b.addEventListener('click',function(){
-   var id=+b.getAttribute('data-editrow');
-   if(t==='client')openProfielClient(id); else openProfielPersoon(id,t);
-  });
- });
- Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
-  b.addEventListener('click',function(){trashRow(+b.getAttribute('data-trashrow'),t);openVolledigeLijst(t);});
- });
- show('pp-volledige-lijst');
-}
+var lijstLimiet={client:5,medewerker:3,naaste:3};
+var lijstUitgeklapt={client:false,medewerker:false,naaste:false};
 function renderAcc(t){
  var volledig=personenVanType(t);
  el('count-'+t).textContent=volledig.length;
- var limiet=lijstLimiet[t];
- var lijst=volledig.slice(0,limiet);
+ var limiet=lijstLimiet[t],uitgeklapt=lijstUitgeklapt[t]||volledig.length<=limiet;
+ var lijst=uitgeklapt?volledig:volledig.slice(0,limiet);
  var box=el('rows-'+t);
  box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">Nog niemand in deze groep.</p>';
  var toonmeerBtn=el('acc-'+t).querySelector('[data-toonmeer]');
@@ -1403,8 +1380,8 @@ function renderAcc(t){
   var verborgen=volledig.length-limiet;
   if(verborgen>0){
    toonmeerBtn.hidden=false;
-   toonmeerBtn.textContent='Toon meer (+'+verborgen+')';
-   toonmeerBtn.onclick=function(){openVolledigeLijst(t);};
+   toonmeerBtn.textContent=uitgeklapt?'Toon minder':'Toon meer (+'+verborgen+')';
+   toonmeerBtn.onclick=function(){lijstUitgeklapt[t]=!lijstUitgeklapt[t];renderAcc(t);};
   }else{
    toonmeerBtn.hidden=true;
   }
@@ -1587,6 +1564,7 @@ function openProfielPersoon(id,t){
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
  el('pp-globaal-display').textContent=p.rol;
  el('pp-groep-display').textContent=huidigeGroep;
+ el('pp-groep-recht-display').textContent=p.rol+' — '+huidigeGroep;
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
  if(t==='medewerker'){
