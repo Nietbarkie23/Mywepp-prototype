@@ -823,8 +823,11 @@ function avatarHash(naam){var h=0;for(var i=0;i<naam.length;i++)h=naam.charCodeA
 function avatarColor(naam){return AVCOLORS[avatarHash(naam)%AVCOLORS.length];}
 function avatarGradient(naam){var h=avatarHash(naam);var c1=AVCOLORS[h%AVCOLORS.length],c2=AVCOLORS[(h+3)%AVCOLORS.length];return 'linear-gradient(135deg,'+c1+','+c2+')';}
 function initials(v,a){return ((v[0]||'')+(a[0]||'')).toUpperCase();}
-function avatarHtmlSized(naam,px){return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,''])+'</div>';}
-function avatarHtml(naam){return avatarHtmlSized(naam,36);}
+function avatarHtmlSized(naam,px,foto){
+ if(foto)return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;flex:0 0 '+px+'px;background-image:url('+foto+');background-size:cover;background-position:center"></div>';
+ return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,''])+'</div>';
+}
+function avatarHtml(naam,foto){return avatarHtmlSized(naam,36,foto);}
 function setGrootAvatar(elId,p){
  var e=el(elId);
  if(p.foto){e.style.backgroundImage='url('+p.foto+')';e.style.backgroundSize='cover';e.style.backgroundPosition='center';}
@@ -1088,7 +1091,7 @@ function clientRechtenRow(p,t){
  var rollen=ROLLEN[t].clienten.filter(function(r){return r!=='Geen';});
  return clients.map(function(c){
   var huidig=(p.clientRechten||{})[c.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c))+'<div class="pinfo"><div class="naam">'+naam(c)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c),c.foto)+'<div class="pinfo"><div class="naam">'+naam(c)+'</div></div>'+
    '<select data-clientrol="'+c.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1111,7 +1114,7 @@ function naasteRechtenRow(p){
  var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return naasten.map(function(n){
   var huidig=(p.naasteRechten||{})[n.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n))+'<div class="pinfo"><div class="naam">'+naam(n)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n),n.foto)+'<div class="pinfo"><div class="naam">'+naam(n)+'</div></div>'+
    '<select data-naasterol="'+n.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1133,7 +1136,7 @@ function medewerkerRechtenRow(naasteId){
  var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return medewerkers.map(function(m){
   var huidig=rolOpNaaste(m,naasteId)||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
    '<select data-medewerkerrol="'+m.id+'" data-naasteid="'+naasteId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1156,7 +1159,7 @@ function medewerkerPeerRow(p){
  var rollen=ROLLEN.medewerker.medewerkers.filter(function(r){return r!=='Geen';});
  return peers.map(function(m){
   var huidig=(p.medewerkerRechten||{})[m.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
    '<select data-medewerkerpeerrol="'+m.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1201,7 +1204,7 @@ function rowHtml(p,t){
  var staged=p._state==='verwijderd';
  var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
  var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
- var head='<div class="uhead">'+avatarHtml(naam(p))+
+ var head='<div class="uhead">'+avatarHtml(naam(p),p.foto)+
   '<div class="pinfo"><div class="naam">'+naam(p)+contactBadge+stateTag+'</div><div class="mail">'+(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
   '<div class="rowbtns">'+
    '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
@@ -1261,7 +1264,7 @@ function personRechtenRow(clientId){
  return betrokkenen.map(function(b){
   var huidig=rolOpClient(b,clientId)||'';
   var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
-  return '<div class="personrow">'+avatarHtml(naam(b))+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
+  return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
    '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1284,6 +1287,7 @@ function openProfielClient(id){
  setGrootAvatar('pc-foto',p);
  el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
  el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
+ mailAuto.pc=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
  el('pc-rechten').innerHTML=personRechtenRow(id);
  wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
  show('pp-profiel-client');
@@ -1350,6 +1354,7 @@ function openProfielPersoon(id,t){
  setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
+ mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
  el('pp-typerol').value=t;
  el('pp-globaal').innerHTML=ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
  el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
@@ -1388,6 +1393,16 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  renderAll();show('pp-formulier');
 });
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
+var mailAuto={pc:true,pp:true};
+['pc','pp'].forEach(function(prefix){
+ el(prefix+'-voornaam').addEventListener('input',function(){
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
+ });
+ el(prefix+'-achternaam').addEventListener('input',function(){
+  if(mailAuto[prefix])el(prefix+'-mail').value=genereerEmail(el(prefix+'-voornaam').value,el(prefix+'-achternaam').value);
+ });
+ el(prefix+'-mail').addEventListener('input',function(){mailAuto[prefix]=(this.value.trim()==='');});
+});
 el('pp-foto-wijzigen').addEventListener('click',function(){openFotoModal('pp-foto');});
 function trashRow(id,t){
  var p=findPerson(id);if(!p)return;
@@ -1398,7 +1413,7 @@ function trashRow(id,t){
 function renderContactpersonen(){
  var lijst=personenVanType('medewerker').filter(function(m){return m.contactpersoon;});
  el('contactpersonen-lijst').innerHTML=lijst.length? lijst.map(function(m){
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m))+'<div class="pinfo"><div class="naam">'+naam(m)+'</div><div class="mail">'+m.mail+'</div></div></div>';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+'</div><div class="mail">'+m.mail+'</div></div></div>';
  }).join('') : '<p class="empty-msg">Nog geen medewerkers gemarkeerd als contactpersoon.</p>';
 }
 function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();updateTally();}
