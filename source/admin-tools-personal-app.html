@@ -129,6 +129,7 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .row.three{grid-template-columns:1fr 1fr 1fr}
 .field.chip-select select{width:auto}
+.lockedfield{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink-soft);padding:9px 12px;font-size:13.5px}
 
 .note{border-left:3px solid var(--line-strong);padding:4px 0 4px 12px;margin:4px 0 14px;font-size:13.5px;color:var(--ink-soft)}
 .note.open{border-left-color:var(--amber);background:var(--amber-bg);padding:10px 12px 10px 12px;border-radius:0 var(--radius) var(--radius) 0;color:var(--amber)}
@@ -757,13 +758,14 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Telefoonnummer</label><input id="pp-tel" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Type rol</label><select id="pp-typerol"><option value="medewerker">Medewerker</option><option value="naaste">Naaste</option></select></div>
+        <div class="field"><label>Type rol</label><div class="lockedfield" id="pp-typerol-display"></div></div>
       </div>
       <div class="sublistlabel">Rollen en rechten</div>
       <div class="row">
-        <div class="field"><label>Algemene rol (globaal)</label><select id="pp-globaal"></select></div>
+        <div class="field"><label>Algemene rol (globaal)</label><div class="lockedfield" id="pp-globaal-display"></div></div>
         <div class="field"><label>Groep</label><select id="pp-groepveld"></select></div>
       </div>
+      <p class="mini">Type rol en algemene rol worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
       <p class="mini">Recht op locaties is hier bewust niet getoond — dit heeft vrijwel niemand nodig.</p>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Cliënten</div>
@@ -852,7 +854,7 @@ var GROEPEN=['De Boomgaard','De Wilgenhof','Dagbesteding Centrum'];
    per categorie zodat elke schaal (globaal/groep/cliënten/gebruikers) zijn eigen realistische sets heeft. */
 var ROLLEN={
  medewerker:{
-  globaal:['Admin met recht op infobord en tools','Financiële Admin','Medewerker met statistiekrecht','Medewerker','Vrijwilliger','Bord inlog','Geen'],
+  globaal:['Medewerker met statistiekrecht','Medewerker','Vrijwilliger','Bord inlog','Geen'],
   groep:['Groep admin','Medewerker','Nieuws redacteur','Bord inlog','Geen'],
   clienten:['Medewerker met prikbord en dossier','Medewerker met prikbord','Medewerker','Bord inlog','Geen'],
   medewerkers:['Roosteraar met bekijk recht en profiel','Roosteraar met bekijkrecht','Roosteraar','Geen']
@@ -1061,7 +1063,7 @@ var STATE_COLOR={nieuw:'var(--moss)',gewijzigd:'var(--amber)',verwijderd:'var(--
 var people=[
  {id:1,type:'client',voor:'Elif',achter:'Yildiz',mail:'',groepen:['De Boomgaard']},
  {id:2,type:'client',voor:'Bram',achter:'Smit',mail:'',groepen:['De Boomgaard']},
- {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Admin met recht op infobord en tools',contactpersoon:true,clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
+ {id:3,type:'medewerker',voor:'Marieke',achter:'de Vries',mail:'m.devries@zorggroepnoord.nl',tel:'06 12 34 56 78',groepen:['De Boomgaard'],rol:'Medewerker',contactpersoon:true,clientRechten:{1:'Medewerker met prikbord',2:'Medewerker met prikbord'}},
  {id:4,type:'medewerker',voor:'Sofie',achter:'Mulder',mail:'s.mulder@zorggroepnoord.nl',tel:'06 23 45 67 89',groepen:['De Boomgaard','De Wilgenhof'],rol:'Medewerker',contactpersoon:false,clientRechten:{2:'Medewerker'}},
  {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',tel:'06 34 56 78 90',groepen:['De Boomgaard'],rol:'Mantelzorger',clientRechten:{1:'Mantelzorger met prikbord'}}
 ];
@@ -1412,8 +1414,8 @@ function openProfielPersoon(id,t){
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  mailAuto.pp=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
- el('pp-typerol').value=t;
- el('pp-globaal').innerHTML=ROLLEN[t].globaal.filter(function(r){return r!=='Geen';}).map(function(r){return '<option'+(r===p.rol?' selected':'')+'>'+r+'</option>';}).join('');
+ el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
+ el('pp-globaal-display').textContent=p.rol;
  el('pp-groepveld').innerHTML=GROEPEN.map(function(g){return '<option'+(g===(p._nieuweGroep||huidigeGroep)?' selected':'')+'>'+g+'</option>';}).join('');
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
@@ -1435,7 +1437,6 @@ function openProfielPersoon(id,t){
 }
 el('pp-persoon-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
- var t=el('pp-typerol').value;
  var voor=el('pp-voornaam').value.trim(),achter=el('pp-achternaam').value.trim(),ok=true;
  el('pp-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
  el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
@@ -1443,7 +1444,6 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  p.voor=cap(voor);p.achter=cap(achter);
  p.mail=el('pp-mail').value.trim()||genereerEmail(p.voor,p.achter);
  p.tel=el('pp-tel').value.trim();
- p.type=t;p.rol=el('pp-globaal').value;
  var nieuweGroep=el('pp-groepveld').value;
  p._nieuweGroep=(nieuweGroep===huidigeGroep)?null:nieuweGroep;
  if(p._state!=='nieuw')p._state='gewijzigd';
