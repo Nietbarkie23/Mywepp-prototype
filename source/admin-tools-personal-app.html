@@ -70,6 +70,8 @@ button:active{transform:scale(.96)}
 h1,h2,h3{text-wrap:balance;font-weight:600;letter-spacing:-0.01em}
 .crumbbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
 .crumbs{font-size:12.5px;color:var(--accent)}
+.crumbs .clink{cursor:pointer}
+.crumbs .clink:hover{text-decoration:underline}
 .crumbs b{color:var(--accent);font-weight:600}
 .crumbicons{display:flex;gap:6px}
 .crumbicons button{width:30px;height:30px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface)}
@@ -571,7 +573,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ FORMULIER: GEBRUIKERS BEHEREN ============ -->
   <div id="pp-formulier" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › Gebruikers beheren</div>
       <div class="crumbicons">
         <button type="button" id="formulier-terug" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
         <button type="button" id="formulier-help" aria-label="Help">?</button>
@@ -643,7 +645,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ GEARCHIVEERD ============ -->
   <div id="pp-gearchiveerd" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Gearchiveerd</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Gearchiveerd</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Personen die alleen aan deze groep gekoppeld waren en via de prullenbak zijn verwijderd. Ze zijn niet echt verwijderd — je kunt ze hier terughalen.</p></div>
@@ -654,7 +656,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ WIJZIGINGEN CONTROLEREN ============ -->
   <div id="pp-controleren" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Wijzigingen controleren</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Wijzigingen controleren</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Wijzigingen controleren</h1><p>Controleer of onderstaande wijzigingen kloppen. Na doorvoeren zijn ze direct actief en kun je ze hier niet meer aanpassen.</p></div>
@@ -665,7 +667,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ WIJZIGINGEN BEVESTIGEN ============ -->
   <div id="pp-versturen" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Bevestigen</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Bevestigen</div>
       <div class="crumbicons"><button type="button" data-back="pp-controleren" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Wijzigingen bevestigen</h1><p>De wijzigingen worden direct doorgevoerd. Kies wie we kunnen bereiken als er later vragen zijn.</p></div>
@@ -690,7 +692,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ DIGIBORD BEHEREN ============ -->
   <div id="pp-digibord" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Digibord beheren</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › Digibord beheren</div>
       <div class="crumbicons"><button type="button" data-back="pp-hub" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">MyWepp Digibord beheren</h1><p>Bepaal welke onderdelen op het Digibord van deze groep te zien zijn.</p></div>
@@ -705,7 +707,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ STATISTIEKEN ============ -->
   <div id="pp-statistieken" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Statistieken</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › Statistieken</div>
       <div class="crumbicons"><button type="button" data-back="pp-hub" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Statistieken</h1><p>Klik op een datum in het overzicht voor de dagdetails.</p></div>
@@ -723,7 +725,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ MAALTIJDEN ============ -->
   <div id="pp-maaltijden" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Maaltijden</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › Maaltijden</div>
       <div class="crumbicons"><button type="button" data-back="pp-hub" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Maaltijden</h1></div>
@@ -740,7 +742,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ VOLLEDIG PROFIEL: CLIENT ============ -->
   <div id="pp-profiel-client" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Volledig profiel</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Volledig profiel</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px" id="pc-titel">Cliënt bewerken</h1></div>
@@ -773,7 +775,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <!-- ============ VOLLEDIG PROFIEL: MEDEWERKER / NAASTE ============ -->
   <div id="pp-profiel-persoon" hidden>
     <div class="crumbbar">
-      <div class="crumbs"><b>Groep</b> › <b>Profiel</b> › Gebruikers beheren › Volledig profiel</div>
+      <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Volledig profiel</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px" id="pp-titel">Medewerker bewerken</h1></div>
