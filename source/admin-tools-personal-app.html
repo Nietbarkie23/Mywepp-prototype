@@ -18,6 +18,7 @@
   --accent:#2660B0; --accent-bg:#E8F0FA; --accent-line:#BFD6EF;
   --focus:#1B3A63; --radius:10px; --radius-sm:8px;
   --shadow:0 1px 2px rgba(23,35,54,.04), 0 3px 10px -6px rgba(23,35,54,.12);
+  --adminbar-bg:#20242B; --abtn-bg:#D9DBD6; --abtn-bg-hover:#CDD0C9; --abtn-border:#9AA0A6; --abtn-text:#1D2733;
 }
 :root[data-theme="dark"]{
   --ink:#E9EDF2; --ink-soft:#A7B0BC; --ink-faint:#77818C;
@@ -29,6 +30,7 @@
   --accent:#7FA8D6; --accent-bg:#1B2A3C; --accent-line:#2E4257;
   --focus:#7FA8D6;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 22px -10px rgba(0,0,0,.5);
+  --adminbar-bg:#05070A; --abtn-bg:#3A3F47; --abtn-bg-hover:#454B54; --abtn-border:#565C66; --abtn-text:#E9EDF2;
 }
 *{box-sizing:border-box}
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
@@ -118,6 +120,14 @@ button.danger{color:var(--brick);border-color:var(--brick-line)}
 button.danger:hover{border-color:var(--brick)}
 button.small{padding:5px 10px;font-size:12.5px;border-radius:8px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.adminbar-wrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;background:var(--adminbar-bg);padding:10px;border-radius:var(--radius);margin-bottom:18px}
+.adminbar-group{display:flex;flex-wrap:wrap;gap:6px}
+.abtn{font-family:inherit;background:var(--abtn-bg);border:1px solid var(--abtn-border);color:var(--abtn-text);border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;text-transform:uppercase;text-align:center;line-height:1.25;cursor:pointer;min-width:82px;white-space:normal}
+.abtn:hover{background:var(--abtn-bg-hover);border-color:var(--ink-soft)}
+.abtn.danger{border-color:var(--brick);color:var(--brick)}
+.abtn.danger:hover{background:var(--brick-bg)}
+@media (max-width:640px){.adminbar-wrap{gap:10px}}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:14px;box-shadow:var(--shadow)}
 .panel .head{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
@@ -462,7 +472,6 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="on" data-view="personal">Groepsprofiel</button>
       <button type="button" data-view="clientapp">MyWepp Personal</button>
       <button type="button" data-view="admin" id="tab-admin" hidden>Admin Tools</button>
-      <button type="button" data-view="systeembeheer" id="tab-systeembeheer" hidden>Systeembeheer</button>
     </div>
   </div>
 </header>
@@ -471,6 +480,37 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
 <!-- ===================== ADMIN TOOLS ===================== -->
 <div id="view-admin" hidden>
+  <div class="adminbar-wrap">
+    <div class="adminbar-group">
+      <button type="button" class="abtn" data-adm="instituutMaken">Instituut<br>maken</button>
+      <button type="button" class="abtn" data-adm="locatieMaken">Locatie<br>maken</button>
+      <button type="button" class="abtn" data-adm="groepMaken">Groep<br>maken</button>
+      <button type="button" class="abtn" data-adm="clientMaken">Cliënt<br>maken</button>
+      <button type="button" class="abtn" data-adm="persoonMaken">(Non)prof.<br>maken</button>
+    </div>
+    <div class="adminbar-group">
+      <button type="button" class="abtn" data-adm="instituutBewerken">Instituut<br>bewerken</button>
+      <button type="button" class="abtn" data-adm="groepBewerken">Groep<br>bewerken</button>
+      <button type="button" class="abtn" data-adm="clientBewerken">Cliënt<br>bewerken</button>
+      <button type="button" class="abtn" data-adm="persoonBewerken">(Non)prof.<br>bewerken</button>
+    </div>
+    <div class="adminbar-group">
+      <button type="button" class="abtn danger" data-adm="instituutVerwijderen">Instituut<br>verwijderen</button>
+      <button type="button" class="abtn danger" data-adm="locatieVerwijderen">Locatie<br>verwijderen</button>
+      <button type="button" class="abtn danger" data-adm="groepVerwijderen">Groep<br>verwijderen</button>
+      <button type="button" class="abtn danger" data-adm="clientVerwijderen">Cliënt<br>verwijderen</button>
+      <button type="button" class="abtn danger" data-adm="persoonVerwijderen">(Non)prof.<br>verwijderen</button>
+    </div>
+    <div class="adminbar-group">
+      <button type="button" class="abtn" data-adm="rechtensets">Rechtensets</button>
+      <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
+      <button type="button" class="abtn" data-adm="groepeer">Groepeer</button>
+      <button type="button" class="abtn" data-adm="groepHerstellen">Groep<br>herstellen</button>
+      <button type="button" class="abtn" data-adm="clientHerstellen">Cliënt<br>herstellen</button>
+      <button type="button" class="abtn" data-adm="persoonHerstellen">(Non)prof.<br>herstellen</button>
+    </div>
+  </div>
+
   <div class="intro">
     <h1>Standaardrollen voor groepen</h1>
     <p>Stel organisatiebreed in welke rol iemand standaard krijgt, en welke rollen daarnaast te kiezen zijn. Werk in bulk voor meerdere groepen tegelijk, of stem één groep individueel af.</p>
@@ -479,6 +519,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   <div class="tabs">
     <button type="button" class="tab on" data-admintab="bulk">1 — Standaardrollen in bulk instellen</button>
     <button type="button" class="tab" data-admintab="groep">2 — Groep bewerken</button>
+    <button type="button" class="tab" data-admintab="groepen">3 — Groepen beheren</button>
   </div>
 
   <section id="admintab-bulk">
@@ -526,26 +567,21 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
     </div>
   </section>
-</div>
 
-<!-- ===================== SYSTEEMBEHEER (boven groepsniveau) ===================== -->
-<div id="view-systeembeheer" hidden>
-  <div class="intro">
-    <h1>Systeembeheer</h1>
-    <p>Dit staat los van een individuele groep: hier beheer je welke groepen er binnen deze organisatie bestaan, en kun je meekijken met elke groep afzonderlijk.</p>
-  </div>
-
-  <div class="panel">
-    <div class="head"><h2>Groepen</h2><span class="sub" id="sb-groepen-sub"></span></div>
-    <div class="body">
-      <div id="sb-groepen-lijst"></div>
-      <div class="row" style="margin-top:16px">
-        <div class="field"><label for="sb-nieuwe-groep">Nieuwe groep</label><input id="sb-nieuwe-groep" placeholder="Naam van de groep"></div>
+  <section id="admintab-groepen" hidden>
+    <div class="panel">
+      <div class="head"><h2>Groepen</h2><span class="sub" id="sb-groepen-sub"></span></div>
+      <div class="body">
+        <p class="note">Dit staat los van een individuele groep: hier beheer je welke groepen er binnen deze organisatie bestaan, en kun je meekijken met elke groep afzonderlijk.</p>
+        <div id="sb-groepen-lijst"></div>
+        <div class="row" style="margin-top:16px">
+          <div class="field"><label for="sb-nieuwe-groep">Nieuwe groep</label><input id="sb-nieuwe-groep" placeholder="Naam van de groep"></div>
+        </div>
+        <div class="actions end"><button type="button" class="primary" id="sb-groep-toevoegen">Groep toevoegen</button></div>
+        <div id="sb-groep-bevestiging"></div>
       </div>
-      <div class="actions end"><button type="button" class="primary" id="sb-groep-toevoegen">Groep toevoegen</button></div>
-      <div id="sb-groep-bevestiging"></div>
     </div>
-  </div>
+  </section>
 </div>
 
 <!-- ===================== PERSONAL APP: GROEPSPROFIEL ===================== -->
@@ -921,6 +957,13 @@ function setGrootAvatar(elId,p){
 
 /* ============== ADMIN TOOLS: data ============== */
 var GROEPEN=['De Boomgaard','De Wilgenhof','Dagbesteding Centrum'];
+/* Instituut > Locatie > Groep: lichte, aanvullende hiërarchie boven de bestaande groepenlijst.
+   Bewust los van de bestaande huidigeGroep/GROEPEN-filtering gehouden (die blijft ongewijzigd
+   op groepsnaam werken) zodat niets van de bestaande functionaliteit hierdoor kan breken. */
+var INSTITUTEN=['Zorggroep Noord'];
+var LOCATIES=['Hoofdlocatie'];
+var locatieInstituut={'Hoofdlocatie':'Zorggroep Noord'};
+var groepLocatie={'De Boomgaard':'Hoofdlocatie','De Wilgenhof':'Hoofdlocatie','Dagbesteding Centrum':'Hoofdlocatie'};
 /* Rechtenset-namen overgenomen uit het echte MyWepp rechtensets-scherm (Admin Tools > Rechtensets),
    per categorie zodat elke schaal (globaal/groep/cliënten/gebruikers) zijn eigen realistische sets heeft. */
 var ROLLEN={
@@ -1099,17 +1142,18 @@ el('groep-reset').addEventListener('click',function(){
 });
 renderGroepTab();
 
+function kiesAdmintab(naamVal){
+ Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(x){x.classList.remove('on');});
+ var btn=document.querySelector('.tabs .tab[data-admintab="'+naamVal+'"]');if(btn)btn.classList.add('on');
+ Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
+ if(naamVal==='groepen')renderSysteembeheer();
+}
 Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
- b.addEventListener('click',function(){
-  Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(x){x.classList.remove('on');});
-  b.classList.add('on');
-  el('admintab-bulk').hidden=b.getAttribute('data-admintab')!=='bulk';
-  el('admintab-groep').hidden=b.getAttribute('data-admintab')!=='groep';
- });
+ b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
 });
 
 /* ============== VIEW SWITCH ============== */
-var ALLVIEWS=['view-admin','view-personal','view-clientapp','view-systeembeheer'];
+var ALLVIEWS=['view-admin','view-personal','view-clientapp'];
 function showView(v){
  Array.prototype.forEach.call(document.querySelectorAll('.maintabs button'),function(x){x.classList.remove('on');});
  var btn=document.querySelector('.maintabs button[data-view="'+v+'"]');if(btn)btn.classList.add('on');
@@ -1119,9 +1163,13 @@ function showView(v){
 Array.prototype.forEach.call(document.querySelectorAll('.maintabs button'),function(b){
  b.addEventListener('click',function(){showView(b.getAttribute('data-view'));});
 });
+function updateAdminTabZichtbaarheid(){
+ var support=el('rol-select').value==='support';
+ el('tab-admin').hidden=!(support||isSysteembeheerder);
+}
 el('rol-select').addEventListener('change',function(){
  var support=el('rol-select').value==='support';
- el('tab-admin').hidden=!support;
+ updateAdminTabZichtbaarheid();
  showView(support?'admin':'personal');
 });
 
@@ -1671,16 +1719,16 @@ function renderAccountSelect(){
 }
 function verlaatSysteembeheer(){
  isSysteembeheerder=false;
- el('tab-systeembeheer').hidden=true;
- if(!el('view-systeembeheer').hidden)showView('personal');
+ updateAdminTabZichtbaarheid();
+ if(el('rol-select').value!=='support'&&!el('view-admin').hidden)showView('personal');
 }
 el('account-select').addEventListener('change',function(){
  var waarde=el('account-select').value;
  if(waarde==='systeembeheer'){
   isSysteembeheerder=true;
-  el('tab-systeembeheer').hidden=false;
-  renderSysteembeheer();
-  showView('systeembeheer');
+  updateAdminTabZichtbaarheid();
+  showView('admin');
+  kiesAdmintab('groepen');
   return;
  }
  var gekozen=findPerson(+waarde);
@@ -1711,13 +1759,295 @@ function verversGroepReferenties(){
  el('hub-groepnaam').textContent=huidigeGroep;
  renderBulkGroepen();
 }
+var gearchiveerdeGroepen=[];
+function voegGroepToe(naamVal){
+ naamVal=(naamVal||'').trim();
+ if(!naamVal)return false;
+ if(GROEPEN.indexOf(naamVal)>-1){alert('Er bestaat al een groep met deze naam.');return false;}
+ GROEPEN.push(naamVal);
+ groepLocatie[naamVal]=LOCATIES[0]||null;
+ bulkSel.groepen[naamVal]=false;
+ verversGroepReferenties();
+ renderSysteembeheer();
+ syncGroepenToSupabase();
+ sbBevestig('Groep "'+naamVal+'" toegevoegd.');
+ return true;
+}
+function hernoemGroep(g){
+ openModal('<h3>Groep hernoemen</h3><div class="field"><label>Naam</label><input id="modal-groep-naam" value="'+g.replace(/"/g,'&quot;')+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var nieuw=el('modal-groep-naam').value.trim();
+  if(!nieuw)return;
+  if(nieuw!==g&&GROEPEN.indexOf(nieuw)>-1){alert('Er bestaat al een groep met deze naam.');return;}
+  GROEPEN[GROEPEN.indexOf(g)]=nieuw;
+  people.forEach(function(p){
+   var idx=p.groepen.indexOf(g);
+   if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
+  });
+  if(groupOverride[g]){groupOverride[nieuw]=groupOverride[g];delete groupOverride[g];}
+  if(groepLocatie[g]!==undefined){groepLocatie[nieuw]=groepLocatie[g];delete groepLocatie[g];}
+  bulkSel.groepen[nieuw]=bulkSel.groepen[g]||false;delete bulkSel.groepen[g];
+  if(huidigeGroep===g)huidigeGroep=nieuw;
+  if(groepSel.groep===g)groepSel.groep=nieuw;
+  verversGroepReferenties();
+  closeModal();
+  renderSysteembeheer();
+  renderAll();
+  syncGroepenToSupabase();
+  sbBevestig('Groep hernoemd naar "'+nieuw+'".');
+ });
+}
+function verwijderGroep(g){
+ var c=sbCounts(g);
+ if(c.m+c.n+c.c>0){
+  alert('Deze groep heeft nog '+(c.m+c.n+c.c)+' gekoppelde perso(o)n(en) en kan niet verwijderd worden. Ontkoppel of verplaats hen eerst.');
+  return;
+ }
+ if(GROEPEN.length<=1){alert('Er moet minimaal één groep overblijven.');return;}
+ openModal('<h3>Groep verwijderen</h3><div class="msec"><p>Weet je zeker dat je de groep "'+g+'" wilt verwijderen? Je kunt haar daarna terugzetten via "Groep herstellen".</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){
+  GROEPEN.splice(GROEPEN.indexOf(g),1);
+  gearchiveerdeGroepen.push(g);
+  delete groupOverride[g];
+  delete bulkSel.groepen[g];
+  if(huidigeGroep===g)huidigeGroep=GROEPEN[0];
+  if(groepSel.groep===g)groepSel.groep=GROEPEN[0];
+  verversGroepReferenties();
+  closeModal();
+  renderSysteembeheer();
+  renderAll();
+  syncGroepenToSupabase();
+  sbBevestig('Groep "'+g+'" verwijderd.');
+ });
+}
+function herstelGroep(g){
+ var idx=gearchiveerdeGroepen.indexOf(g);
+ if(idx<0)return;
+ gearchiveerdeGroepen.splice(idx,1);
+ var vrijeNaam=g;
+ if(GROEPEN.indexOf(vrijeNaam)>-1)vrijeNaam=g+' (hersteld)';
+ GROEPEN.push(vrijeNaam);
+ groepLocatie[vrijeNaam]=LOCATIES[0]||null;
+ bulkSel.groepen[vrijeNaam]=false;
+ verversGroepReferenties();
+ renderSysteembeheer();
+ syncGroepenToSupabase();
+}
+
+/* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
+function kiesUitLijstModal(titel,opties,labelFn,onKies){
+ if(!opties.length){
+  openModal('<h3>'+titel+'</h3><div class="msec"><p>Er is niets om uit te kiezen.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+  return;
+ }
+ openModal('<h3>'+titel+'</h3><div class="field"><select id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+labelFn(o)+'</option>';}).join('')+'</select></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var idx=+el('modal-kies-lijst').value;
+  closeModal();
+  onKies(opties[idx]);
+ });
+}
+function voegInstituutToe(naamVal){
+ naamVal=(naamVal||'').trim();
+ if(!naamVal)return false;
+ if(INSTITUTEN.indexOf(naamVal)>-1){alert('Er bestaat al een instituut met deze naam.');return false;}
+ INSTITUTEN.push(naamVal);
+ return true;
+}
+function hernoemInstituut(oud){
+ openModal('<h3>Instituut hernoemen</h3><div class="field"><label>Naam</label><input id="modal-naam-veld" value="'+oud.replace(/"/g,'&quot;')+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var nieuw=el('modal-naam-veld').value.trim();
+  if(!nieuw)return;
+  if(nieuw!==oud&&INSTITUTEN.indexOf(nieuw)>-1){alert('Er bestaat al een instituut met deze naam.');return;}
+  INSTITUTEN[INSTITUTEN.indexOf(oud)]=nieuw;
+  Object.keys(locatieInstituut).forEach(function(l){if(locatieInstituut[l]===oud)locatieInstituut[l]=nieuw;});
+  closeModal();
+ });
+}
+function verwijderInstituut(naamVal){
+ var gekoppeld=Object.keys(locatieInstituut).filter(function(l){return locatieInstituut[l]===naamVal;});
+ if(gekoppeld.length){alert('Dit instituut heeft nog '+gekoppeld.length+' gekoppelde locatie(s) en kan niet verwijderd worden.');return;}
+ if(INSTITUTEN.length<=1){alert('Er moet minimaal één instituut overblijven.');return;}
+ openModal('<h3>Instituut verwijderen</h3><div class="msec"><p>Weet je zeker dat je "'+naamVal+'" wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){
+  INSTITUTEN.splice(INSTITUTEN.indexOf(naamVal),1);
+  closeModal();
+ });
+}
+function voegLocatieToe(naamVal,instituut){
+ naamVal=(naamVal||'').trim();
+ if(!naamVal)return false;
+ if(LOCATIES.indexOf(naamVal)>-1){alert('Er bestaat al een locatie met deze naam.');return false;}
+ LOCATIES.push(naamVal);
+ locatieInstituut[naamVal]=instituut||INSTITUTEN[0];
+ return true;
+}
+function verwijderLocatie(naamVal){
+ var gekoppeld=Object.keys(groepLocatie).filter(function(g){return groepLocatie[g]===naamVal;});
+ if(gekoppeld.length){alert('Deze locatie heeft nog '+gekoppeld.length+' gekoppelde groep(en) en kan niet verwijderd worden.');return;}
+ if(LOCATIES.length<=1){alert('Er moet minimaal één locatie overblijven.');return;}
+ openModal('<h3>Locatie verwijderen</h3><div class="msec"><p>Weet je zeker dat je "'+naamVal+'" wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){
+  LOCATIES.splice(LOCATIES.indexOf(naamVal),1);
+  delete locatieInstituut[naamVal];
+  closeModal();
+ });
+}
+function instituutMakenFlow(){
+ openModal('<h3>Instituut maken</h3><div class="field"><label>Naam</label><input id="modal-naam-veld" placeholder="Naam van het instituut"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  if(voegInstituutToe(el('modal-naam-veld').value))closeModal();
+ });
+}
+function locatieMakenFlow(){
+ openModal('<h3>Locatie maken</h3><div class="field"><label>Naam</label><input id="modal-naam-veld" placeholder="Naam van de locatie"></div><div class="field"><label>Instituut</label><select id="modal-instituut-select">'+INSTITUTEN.map(function(i){return '<option>'+i+'</option>';}).join('')+'</select></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  if(voegLocatieToe(el('modal-naam-veld').value,el('modal-instituut-select').value))closeModal();
+ });
+}
+function groepMakenFlow(){
+ showView('admin');
+ kiesAdmintab('groepen');
+ setTimeout(function(){el('sb-nieuwe-groep').focus();},50);
+}
+function kiesGroepDan(titel,onGroep){kiesUitLijstModal(titel,GROEPEN,function(g){return g;},onGroep);}
+function clientMakenFlow(){
+ kiesGroepDan('In welke groep wil je een cliënt aanmaken?',function(g){
+  huidigeGroep=g;verversGroepReferenties();
+  pushNew('client');
+  showView('personal');
+ });
+}
+function persoonTypeKeuze(onType){
+ kiesUitLijstModal('Welk type wil je aanmaken?',['medewerker','naaste'],function(t){return t==='medewerker'?'Professional (medewerker)':'Non-professional (naaste)';},onType);
+}
+function persoonMakenFlow(){
+ persoonTypeKeuze(function(t){
+  kiesGroepDan('In welke groep?',function(g){
+   huidigeGroep=g;verversGroepReferenties();
+   pushNew(t);
+   showView('personal');
+  });
+ });
+}
+function clientBewerkenFlow(){
+ kiesGroepDan('In welke groep staat de cliënt?',function(g){
+  huidigeGroep=g;verversGroepReferenties();renderAll();
+  kiesUitLijstModal('Welke cliënt bewerken?',personenVanType('client'),naam,function(p){
+   openProfielClient(p.id);showView('personal');
+  });
+ });
+}
+function persoonBewerkenFlow(){
+ persoonTypeKeuze(function(t){
+  kiesGroepDan('In welke groep?',function(g){
+   huidigeGroep=g;verversGroepReferenties();renderAll();
+   kiesUitLijstModal('Wie wil je bewerken?',personenVanType(t),naam,function(p){
+    openProfielPersoon(p.id,t);showView('personal');
+   });
+  });
+ });
+}
+function verwijderPersoonBevestiging(p){
+ openModal('<h3>Klaargezet om te verwijderen</h3><div class="msec"><p>'+naam(p)+' is gemarkeerd om verwijderd te worden. Dit wordt definitief zodra de wijzigingen worden doorgevoerd (Wijzigingen controleren → Bevestigen).</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+}
+function clientVerwijderenFlow(){
+ kiesGroepDan('In welke groep staat de cliënt?',function(g){
+  huidigeGroep=g;verversGroepReferenties();renderAll();
+  kiesUitLijstModal('Welke cliënt verwijderen?',personenVanType('client'),naam,function(p){
+   trashRow(p.id,'client');
+   verwijderPersoonBevestiging(p);
+  });
+ });
+}
+function persoonVerwijderenFlow(){
+ persoonTypeKeuze(function(t){
+  kiesGroepDan('In welke groep?',function(g){
+   huidigeGroep=g;verversGroepReferenties();renderAll();
+   kiesUitLijstModal('Wie wil je verwijderen?',personenVanType(t),naam,function(p){
+    trashRow(p.id,t);
+    verwijderPersoonBevestiging(p);
+   });
+  });
+ });
+}
+function groepHerstellenFlow(){
+ kiesUitLijstModal('Welke groep herstellen?',gearchiveerdeGroepen,function(g){return g;},herstelGroep);
+}
+function persoonHerstelFlow(){
+ kiesGroepDan('In welke groep wil je iemand herstellen?',function(g){
+  huidigeGroep=g;verversGroepReferenties();
+  renderGearchiveerd();
+  showView('personal');
+  show('pp-gearchiveerd');
+ });
+}
+function contactpersonenFlow(){
+ var secties=GROEPEN.map(function(g){
+  var lijst=people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p.groepen.indexOf(g)>-1&&p.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
+  return '<div class="sublistlabel" style="margin-top:14px">'+g+'</div>'+(lijst.length?lijst.map(function(m){
+   return '<div class="personrow" style="box-shadow:none"><div class="pinfo"><div class="naam">'+naam(m)+' <span class="mini">(contactpersoon '+m.contactVolgorde+(m.status==='ziek'?', ziek':'')+')</span></div><div class="mail">'+m.mail+'</div></div>'+
+    '<button type="button" class="small" data-cp-open="'+m.id+'" data-cp-groep="'+g+'">Openen</button></div>';
+  }).join(''):'<p class="empty-msg" style="padding:0">Geen contactpersonen.</p>');
+ }).join('');
+ openModal('<h3>Contactpersonen per groep</h3>'+secties+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+ Array.prototype.forEach.call(document.querySelectorAll('[data-cp-open]'),function(b){
+  b.addEventListener('click',function(){
+   huidigeGroep=b.getAttribute('data-cp-groep');verversGroepReferenties();
+   closeModal();
+   openProfielPersoon(+b.getAttribute('data-cp-open'),'medewerker');
+   showView('personal');
+  });
+ });
+}
+var ADMIN_TOOLBAR_ACTIES={
+ instituutMaken:instituutMakenFlow,
+ locatieMaken:locatieMakenFlow,
+ groepMaken:groepMakenFlow,
+ clientMaken:clientMakenFlow,
+ persoonMaken:persoonMakenFlow,
+ instituutBewerken:function(){kiesUitLijstModal('Welk instituut bewerken?',INSTITUTEN,function(i){return i;},hernoemInstituut);},
+ groepBewerken:function(){kiesUitLijstModal('Welke groep bewerken?',GROEPEN,function(g){return g;},hernoemGroep);},
+ clientBewerken:clientBewerkenFlow,
+ persoonBewerken:persoonBewerkenFlow,
+ instituutVerwijderen:function(){kiesUitLijstModal('Welk instituut verwijderen?',INSTITUTEN,function(i){return i;},verwijderInstituut);},
+ locatieVerwijderen:function(){kiesUitLijstModal('Welke locatie verwijderen?',LOCATIES,function(l){return l;},verwijderLocatie);},
+ groepVerwijderen:function(){kiesUitLijstModal('Welke groep verwijderen?',GROEPEN,function(g){return g;},verwijderGroep);},
+ clientVerwijderen:clientVerwijderenFlow,
+ persoonVerwijderen:persoonVerwijderenFlow,
+ rechtensets:function(){showView('admin');kiesAdmintab('bulk');},
+ contactpersonen:contactpersonenFlow,
+ groepeer:function(){showView('admin');kiesAdmintab('bulk');},
+ groepHerstellen:groepHerstellenFlow,
+ clientHerstellen:persoonHerstelFlow,
+ persoonHerstellen:persoonHerstelFlow
+};
+Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(b){
+ b.addEventListener('click',function(){
+  var actie=ADMIN_TOOLBAR_ACTIES[b.getAttribute('data-adm')];
+  if(actie)actie();
+ });
+});
+
 function renderSysteembeheer(){
  el('sb-groepen-sub').textContent=GROEPEN.length+' groep'+(GROEPEN.length===1?'':'en')+' in deze organisatie';
  el('sb-groepen-lijst').innerHTML=GROEPEN.map(function(g,i){
   var c=sbCounts(g);
   return '<div class="personrow">'+
    '<div class="pinfo"><div class="naam">'+g+(g===huidigeGroep?' <span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Wordt nu bekeken</span>':'')+'</div>'+
-   '<div class="mail">'+c.m+' medewerker'+(c.m===1?'':'s')+' · '+c.n+' naaste'+(c.n===1?'':'n')+' · '+c.c+' cliënt'+(c.c===1?'':'en')+'</div></div>'+
+   '<div class="mail">'+c.m+' medewerker'+(c.m===1?'':'s')+' · '+c.n+' naaste'+(c.n===1?'':'n')+' · '+c.c+' cliënt'+(c.c===1?'':'en')+(groepLocatie[g]?' · locatie: '+groepLocatie[g]:'')+'</div></div>'+
    '<button type="button" class="small" data-sb-bekijk="'+i+'">Bekijk</button>'+
    '<button type="button" class="iconbtn" data-sb-hernoem="'+i+'" aria-label="Hernoemen">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn" data-sb-verwijder="'+i+'" aria-label="Verwijderen" style="background:var(--brick)">'+TRASH_SVG+'</button>'+
@@ -1732,70 +2062,14 @@ function renderSysteembeheer(){
   });
  });
  Array.prototype.forEach.call(el('sb-groepen-lijst').querySelectorAll('[data-sb-hernoem]'),function(b){
-  b.addEventListener('click',function(){
-   var g=GROEPEN[+b.getAttribute('data-sb-hernoem')];
-   openModal('<h3>Groep hernoemen</h3><div class="field"><label>Naam</label><input id="modal-groep-naam" value="'+g.replace(/"/g,'&quot;')+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
-   el('modal-annuleer').addEventListener('click',closeModal);
-   el('modal-opslaan').addEventListener('click',function(){
-    var nieuw=el('modal-groep-naam').value.trim();
-    if(!nieuw)return;
-    if(nieuw!==g&&GROEPEN.indexOf(nieuw)>-1){alert('Er bestaat al een groep met deze naam.');return;}
-    GROEPEN[GROEPEN.indexOf(g)]=nieuw;
-    people.forEach(function(p){
-     var idx=p.groepen.indexOf(g);
-     if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
-    });
-    if(groupOverride[g]){groupOverride[nieuw]=groupOverride[g];delete groupOverride[g];}
-    bulkSel.groepen[nieuw]=bulkSel.groepen[g]||false;delete bulkSel.groepen[g];
-    if(huidigeGroep===g)huidigeGroep=nieuw;
-    if(groepSel.groep===g)groepSel.groep=nieuw;
-    verversGroepReferenties();
-    closeModal();
-    renderSysteembeheer();
-    renderAll();
-    syncGroepenToSupabase();
-    sbBevestig('Groep hernoemd naar "'+nieuw+'".');
-   });
-  });
+  b.addEventListener('click',function(){hernoemGroep(GROEPEN[+b.getAttribute('data-sb-hernoem')]);});
  });
  Array.prototype.forEach.call(el('sb-groepen-lijst').querySelectorAll('[data-sb-verwijder]'),function(b){
-  b.addEventListener('click',function(){
-   var g=GROEPEN[+b.getAttribute('data-sb-verwijder')];
-   var c=sbCounts(g);
-   if(c.m+c.n+c.c>0){
-    alert('Deze groep heeft nog '+(c.m+c.n+c.c)+' gekoppelde perso(o)n(en) en kan niet verwijderd worden. Ontkoppel of verplaats hen eerst.');
-    return;
-   }
-   if(GROEPEN.length<=1){alert('Er moet minimaal één groep overblijven.');return;}
-   openModal('<h3>Groep verwijderen</h3><div class="msec"><p>Weet je zeker dat je de groep "'+g+'" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
-   el('modal-annuleer').addEventListener('click',closeModal);
-   el('modal-bevestig').addEventListener('click',function(){
-    GROEPEN.splice(GROEPEN.indexOf(g),1);
-    delete groupOverride[g];
-    delete bulkSel.groepen[g];
-    if(huidigeGroep===g)huidigeGroep=GROEPEN[0];
-    if(groepSel.groep===g)groepSel.groep=GROEPEN[0];
-    verversGroepReferenties();
-    closeModal();
-    renderSysteembeheer();
-    renderAll();
-    syncGroepenToSupabase();
-    sbBevestig('Groep "'+g+'" verwijderd.');
-   });
-  });
+  b.addEventListener('click',function(){verwijderGroep(GROEPEN[+b.getAttribute('data-sb-verwijder')]);});
  });
 }
 el('sb-groep-toevoegen').addEventListener('click',function(){
- var naamVal=el('sb-nieuwe-groep').value.trim();
- if(!naamVal)return;
- if(GROEPEN.indexOf(naamVal)>-1){alert('Er bestaat al een groep met deze naam.');return;}
- GROEPEN.push(naamVal);
- bulkSel.groepen[naamVal]=false;
- el('sb-nieuwe-groep').value='';
- verversGroepReferenties();
- renderSysteembeheer();
- syncGroepenToSupabase();
- sbBevestig('Groep "'+naamVal+'" toegevoegd.');
+ if(voegGroepToe(el('sb-nieuwe-groep').value))el('sb-nieuwe-groep').value='';
 });
 async function syncGroepenToSupabase(){
  if(!sb)return false;
