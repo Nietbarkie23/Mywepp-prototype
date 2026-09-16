@@ -277,6 +277,7 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 @media (max-width:560px){.acc-actions{flex-wrap:wrap}.acc-actions .addbtn-row{width:100%}.toonmeer-btn{width:100%}}
 .statuschip{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:6px}
 .grouptag{display:inline-flex;align-items:center;padding:4px 11px;border-radius:999px;background:var(--paper);border:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
+.grouptag.huidig{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent);font-weight:600}
 .statuschip.ziek{background:var(--brick-bg);color:var(--brick)}
 .readonly-field{opacity:.7;pointer-events:none}
 
@@ -757,7 +758,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Telefoonnummer</label><input id="pc-tel" placeholder="06 12 34 56 78"></div>
       </div>
       <div id="pc-groepen-blok" hidden>
-        <div class="sublistlabel" style="margin-top:20px">Ook gekoppeld aan</div>
+        <div class="sublistlabel" style="margin-top:20px">Gekoppelde groepen</div>
         <div id="pc-groepen-tags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
       <div class="sublistlabel" style="margin-top:20px">Wettelijke vertegenwoordiger</div>
@@ -1466,9 +1467,9 @@ function openProfielClient(id){
  el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
  el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
  mailAuto.pc=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
- var andereGroepen=(p.groepen||[]).filter(function(g){return g!==huidigeGroep;});
- el('pc-groepen-blok').hidden=!andereGroepen.length;
- el('pc-groepen-tags').innerHTML=andereGroepen.map(function(g){return '<span class="grouptag">'+g+'</span>';}).join('');
+ var alleGroepen=p.groepen||[];
+ el('pc-groepen-blok').hidden=!alleGroepen.length;
+ el('pc-groepen-tags').innerHTML=alleGroepen.map(function(g){return '<span class="grouptag'+(g===huidigeGroep?' huidig':'')+'">'+g+(g===huidigeGroep?' (huidig)':'')+'</span>';}).join('');
  el('pc-vertegenwoordiger').innerHTML=vertegenwoordigerOpties(p);
  el('pc-rechten').innerHTML=personRechtenRow(id);
  wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
