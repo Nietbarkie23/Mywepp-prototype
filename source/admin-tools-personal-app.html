@@ -1259,22 +1259,10 @@ function dbRowToPerson(r){
 async function loadFromSupabase(){
  if(!sb)return;
  try{
-  var g=await sb.from('groepen').select('naam,locatie').order('id');
+  var g=await sb.from('groepen').select('naam').order('id');
   var p=await sb.from('personen').select('*').order('id');
-  var inst=await sb.from('instituten').select('naam').order('id');
-  var loc=await sb.from('locaties').select('naam,instituut').order('id');
   if(g.error||p.error||!p.data||!p.data.length)return;
-  if(g.data&&g.data.length){
-   GROEPEN.splice.apply(GROEPEN,[0,GROEPEN.length].concat(g.data.map(function(x){return x.naam;})));
-   Object.keys(groepLocatie).forEach(function(k){delete groepLocatie[k];});
-   g.data.forEach(function(x){if(x.locatie)groepLocatie[x.naam]=x.locatie;});
-  }
-  if(inst.data&&inst.data.length){INSTITUTEN.splice.apply(INSTITUTEN,[0,INSTITUTEN.length].concat(inst.data.map(function(x){return x.naam;})));}
-  if(loc.data&&loc.data.length){
-   LOCATIES.splice.apply(LOCATIES,[0,LOCATIES.length].concat(loc.data.map(function(x){return x.naam;})));
-   Object.keys(locatieInstituut).forEach(function(k){delete locatieInstituut[k];});
-   loc.data.forEach(function(x){if(x.instituut)locatieInstituut[x.naam]=x.instituut;});
-  }
+  if(g.data&&g.data.length){GROEPEN.splice.apply(GROEPEN,[0,GROEPEN.length].concat(g.data.map(function(x){return x.naam;})));}
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
   nextId=Math.max.apply(null,people.map(function(x){return x.id;}).concat([0]))+1;
@@ -1868,7 +1856,6 @@ function voegInstituutToe(naamVal){
  if(!naamVal)return false;
  if(INSTITUTEN.indexOf(naamVal)>-1){alert('Er bestaat al een instituut met deze naam.');return false;}
  INSTITUTEN.push(naamVal);
- syncInstitutenToSupabase();
  return true;
 }
 function hernoemInstituut(oud){
@@ -1881,8 +1868,6 @@ function hernoemInstituut(oud){
   INSTITUTEN[INSTITUTEN.indexOf(oud)]=nieuw;
   Object.keys(locatieInstituut).forEach(function(l){if(locatieInstituut[l]===oud)locatieInstituut[l]=nieuw;});
   closeModal();
-  syncInstitutenToSupabase();
-  syncLocatiesToSupabase();
  });
 }
 function verwijderInstituut(naamVal){
@@ -1894,7 +1879,6 @@ function verwijderInstituut(naamVal){
  el('modal-bevestig').addEventListener('click',function(){
   INSTITUTEN.splice(INSTITUTEN.indexOf(naamVal),1);
   closeModal();
-  syncInstitutenToSupabase();
  });
 }
 function voegLocatieToe(naamVal,instituut){
@@ -1903,7 +1887,6 @@ function voegLocatieToe(naamVal,instituut){
  if(LOCATIES.indexOf(naamVal)>-1){alert('Er bestaat al een locatie met deze naam.');return false;}
  LOCATIES.push(naamVal);
  locatieInstituut[naamVal]=instituut||INSTITUTEN[0];
- syncLocatiesToSupabase();
  return true;
 }
 function verwijderLocatie(naamVal){
@@ -1916,7 +1899,6 @@ function verwijderLocatie(naamVal){
   LOCATIES.splice(LOCATIES.indexOf(naamVal),1);
   delete locatieInstituut[naamVal];
   closeModal();
-  syncLocatiesToSupabase();
  });
 }
 function instituutMakenFlow(){
@@ -2094,25 +2076,7 @@ async function syncGroepenToSupabase(){
  try{
   var del=await sb.from('groepen').delete().gte('id',0);
   if(del.error)return false;
-  var ins=await sb.from('groepen').insert(GROEPEN.map(function(n){return {naam:n,locatie:groepLocatie[n]||null};}));
-  return !ins.error;
- }catch(e){return false;}
-}
-async function syncInstitutenToSupabase(){
- if(!sb)return false;
- try{
-  var del=await sb.from('instituten').delete().gte('id',0);
-  if(del.error)return false;
-  var ins=await sb.from('instituten').insert(INSTITUTEN.map(function(n){return {naam:n};}));
-  return !ins.error;
- }catch(e){return false;}
-}
-async function syncLocatiesToSupabase(){
- if(!sb)return false;
- try{
-  var del=await sb.from('locaties').delete().gte('id',0);
-  if(del.error)return false;
-  var ins=await sb.from('locaties').insert(LOCATIES.map(function(n){return {naam:n,instituut:locatieInstituut[n]||null};}));
+  var ins=await sb.from('groepen').insert(GROEPEN.map(function(n){return {naam:n};}));
   return !ins.error;
  }catch(e){return false;}
 }
