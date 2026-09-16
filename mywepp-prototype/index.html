@@ -807,8 +807,10 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Algemene rol (globaal)</label><div class="lockedfield" id="pp-globaal-display"></div></div>
         <div class="field"><label>Groep</label><div class="lockedfield" id="pp-groep-display"></div></div>
       </div>
-      <p class="mini">Type rol, algemene rol en groep worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
-      <p class="mini">Recht op locaties is hier bewust niet getoond — dit heeft vrijwel niemand nodig.</p>
+      <div class="row">
+        <div class="field"><label>Locatierol</label><div class="lockedfield" id="pp-locatierol-display"></div></div>
+      </div>
+      <p class="mini">Type rol, algemene rol, groep en locatierol worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
 
       <div class="sublistlabel" id="pp-lbl-contact" hidden>Contactpersoon</div>
       <div id="pp-contact-blok" hidden>
@@ -816,9 +818,6 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <label class="contactcheck" id="pp-ziek-row" hidden><input type="checkbox" id="pp-ziek">Ziek — toegang en meldingen gaan naar de andere contactpersoon</label>
         <p class="mini" id="pp-contact-hint"></p>
       </div>
-
-      <div class="sublistlabel">Recht op groep</div>
-      <div class="lockedfield" id="pp-groep-recht-display"></div>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
       <div id="pp-clienten"></div>
@@ -1576,9 +1575,12 @@ function openProfielPersoon(id,t){
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
+ var effRechten=effectiveFor(huidigeGroep,t).data;
+ var effGlobaalRol=effRechten.globaal.rol!=='Geen'?effRechten.globaal.rol:ROLLEN[t].globaal[0];
+ p.rol=effGlobaalRol;
  el('pp-globaal-display').textContent=p.rol;
  el('pp-groep-display').textContent=huidigeGroep;
- el('pp-groep-recht-display').textContent=p.rol+' — '+huidigeGroep;
+ el('pp-locatierol-display').textContent=effRechten.groep.rol;
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
  if(t==='medewerker'){
