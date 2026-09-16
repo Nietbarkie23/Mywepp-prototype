@@ -1168,7 +1168,7 @@ el('hub-opmerking').addEventListener('blur',function(){if(el('hub-opmerking').va
 function personRowToDb(p){
  return {id:p.id,type:p.type,voor:p.voor,achter:p.achter,mail:p.mail||null,tel:p.tel||null,rol:p.rol||null,
   contactpersoon:!!p.contactpersoon,contact_volgorde:p.contactVolgorde||null,status:p.status||null,
-  wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,
+  wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,foto:p.foto||null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
   medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
 }
@@ -1180,6 +1180,7 @@ function dbRowToPerson(r){
  if(r.contact_volgorde)p.contactVolgorde=r.contact_volgorde;
  if(r.status)p.status=r.status;
  if(r.wettelijke_vertegenwoordiger)p.wettelijkeVertegenwoordiger=r.wettelijke_vertegenwoordiger;
+ if(r.foto)p.foto=r.foto;
  if(r.client_rechten&&Object.keys(r.client_rechten).length)p.clientRechten=r.client_rechten;
  if(r.medewerker_rechten&&Object.keys(r.medewerker_rechten).length)p.medewerkerRechten=r.medewerker_rechten;
  if(r.naaste_rechten&&Object.keys(r.naaste_rechten).length)p.naasteRechten=r.naaste_rechten;
@@ -1500,7 +1501,7 @@ function openFotoModal(elId,persoon){
   '<button type="button" class="small" id="foto-kiezen">Kies een foto…</button>'+
   (p.foto?'<button type="button" class="removelink" id="foto-verwijderen">Verwijderen</button>':'')+
   '</div>'+
-  '<p class="mini" style="text-align:center;margin:0">JPG of PNG. Wordt alleen lokaal in dit prototype bewaard.</p>'+
+  '<p class="mini" style="text-align:center;margin:0">JPG of PNG.</p>'+
   '</div>'+
   '<div class="modal-actions"><button type="button" id="foto-annuleren">Annuleren</button><button type="button" class="primary" id="foto-opslaan">Opslaan</button></div>');
  el('foto-kiezen').addEventListener('click',function(){el('foto-input').click();});
@@ -1526,6 +1527,8 @@ function openFotoModal(elId,persoon){
   p.foto=nieuweFoto;
   setGrootAvatar(elId,p);
   closeModal();
+  renderAcc(p.type);
+  syncToSupabase();
  });
 }
 el('pc-foto-wijzigen').addEventListener('click',function(){openFotoModal('pc-foto');});
