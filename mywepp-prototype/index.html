@@ -100,7 +100,10 @@ header.top{border-bottom:1px solid var(--line);background:var(--paper)}
 .mark span{font-size:12px;color:var(--ink-faint)}
 .rolebar{display:flex;align-items:center;gap:8px}
 .rolebar label{font-size:12px;color:var(--ink-faint)}
-.rolebar select{width:auto;font-size:12.5px;padding:5px 8px;border-color:var(--line)}
+.rolebar select{width:auto;font-size:12.5px;padding:5px 8px;border-color:var(--line);
+ /* Een select groeit mee met zijn langste optie; zonder grens duwt één lange
+    naam de hele kopbalk breder dan het scherm. */
+ max-width:min(280px,38vw)}
 .maintabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px}
 .maintabs button{border:0;background:transparent;padding:7px 16px;border-radius:999px;font-size:13.5px;font-weight:500;color:var(--ink-soft);cursor:pointer}
 .maintabs button.on{background:var(--accent);color:#fff}
@@ -240,7 +243,10 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 }
 .avatar{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex:0 0 36px}
 .pinfo{flex:1;min-width:0}
-.pinfo .naam{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:8px}
+.pinfo .naam{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:8px;
+ /* Eén heel lange naam of geplakte lap tekst rekte de pagina tientallen
+    duizenden pixels uit; breek zulke tekst af i.p.v. de layout te verbouwen. */
+ min-width:0;overflow-wrap:anywhere}
 .pinfo .mail{font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:999px;background:var(--brick-bg);color:var(--brick);border:1px solid var(--brick-line)}
 .rowbtns{display:flex;gap:6px;flex:0 0 auto}
@@ -614,7 +620,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="note">Dit staat los van een individuele groep: hier beheer je welke groepen er binnen deze organisatie bestaan, en kun je meekijken met elke groep afzonderlijk.</p>
         <div id="sb-groepen-lijst"></div>
         <div class="row" style="margin-top:16px">
-          <div class="field"><label for="sb-nieuwe-groep">Nieuwe groep</label><input id="sb-nieuwe-groep" placeholder="Naam van de groep"></div>
+          <div class="field"><label for="sb-nieuwe-groep">Nieuwe groep</label><input id="sb-nieuwe-groep" maxlength="60" placeholder="Naam van de groep"></div>
         </div>
         <div class="actions end"><button type="button" class="primary" id="sb-groep-toevoegen">Groep toevoegen</button></div>
         <div id="sb-groep-bevestiging"></div>
@@ -865,12 +871,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" class="small" id="pc-foto-wijzigen">Profielfoto wijzigen</button>
       </div>
       <div class="row">
-        <div class="field"><label>Voornaam</label><input id="pc-voornaam"></div>
-        <div class="field"><label>Achternaam</label><input id="pc-achternaam"></div>
+        <div class="field"><label>Voornaam</label><input id="pc-voornaam" maxlength="60"></div>
+        <div class="field"><label>Achternaam</label><input id="pc-achternaam" maxlength="60"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pc-mail" placeholder="Leeg = automatisch gegenereerd"><p class="mini" id="pc-mail-fout" style="color:var(--brick)" hidden></p></div>
-        <div class="field"><label>Telefoonnummer</label><input id="pc-tel" placeholder="06 12 34 56 78"></div>
+        <div class="field"><label>E-mailadres</label><input id="pc-mail" maxlength="120" placeholder="Leeg = automatisch gegenereerd"><p class="mini" id="pc-mail-fout" style="color:var(--brick)" hidden></p></div>
+        <div class="field"><label>Telefoonnummer</label><input id="pc-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div id="pc-groepen-blok">
         <div class="sublistlabel" style="margin-top:20px">Gekoppelde groepen</div>
@@ -899,12 +905,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" class="small" id="pp-foto-wijzigen">Profielfoto wijzigen</button>
       </div>
       <div class="row">
-        <div class="field"><label>Voornaam</label><input id="pp-voornaam"></div>
-        <div class="field"><label>Achternaam</label><input id="pp-achternaam"></div>
+        <div class="field"><label>Voornaam</label><input id="pp-voornaam" maxlength="60"></div>
+        <div class="field"><label>Achternaam</label><input id="pp-achternaam" maxlength="60"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pp-mail" placeholder="naam@voorbeeld.nl"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
-        <div class="field"><label>Telefoonnummer</label><input id="pp-tel" placeholder="06 12 34 56 78"></div>
+        <div class="field"><label>E-mailadres</label><input id="pp-mail" maxlength="120" placeholder="naam@voorbeeld.nl"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
+        <div class="field"><label>Telefoonnummer</label><input id="pp-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
         <div class="field"><label>Type rol</label><div class="lockedfield" id="pp-typerol-display"></div></div>
@@ -995,6 +1001,11 @@ function esc(s){
 }
 var verzondenTimer=null;
 function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
+/* maxlength in het formulier houdt alleen normale invoer tegen; geplakte of via
+   de console gezette waarden moeten hier stranden, anders groeit een record
+   ongelimiteerd en rekt het de hele lijst uit. */
+var MAXLEN={naam:60,mail:120,tel:25,groep:60};
+function kap(tekst,max){return String(tekst==null?'':tekst).slice(0,max);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
 function genereerEmail(voor,achter,domein){
  function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
@@ -1758,9 +1769,9 @@ el('pc-opslaan').addEventListener('click',function(){
  if(!toonMailFout('pc-mail','pc-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
  if(!ok)return;
  var dubbelC=naamgenootInGroep(p,voor,achter);
- p.voor=cap(voor);p.achter=cap(achter);
- p.mail=ingevuldeMail||genereerEmail(p.voor,p.achter);
- p.tel=el('pc-tel').value.trim();
+ p.voor=kap(cap(voor),MAXLEN.naam);p.achter=kap(cap(achter),MAXLEN.naam);
+ p.mail=kap(ingevuldeMail||genereerEmail(p.voor,p.achter),MAXLEN.mail);
+ p.tel=kap(el('pc-tel').value.trim(),MAXLEN.tel);
  if(magContactWijzigen()){
   var nieuweVert=el('pc-vertegenwoordiger').value?+el('pc-vertegenwoordiger').value:null;
   if(nieuweVert!==(p.wettelijkeVertegenwoordiger||null)){
@@ -1921,9 +1932,9 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  if(!toonMailFout('pp-mail','pp-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
  if(!ok)return;
  var dubbelP=naamgenootInGroep(p,voor,achter);
- p.voor=cap(voor);p.achter=cap(achter);
- p.mail=ingevuldeMail;
- p.tel=el('pp-tel').value.trim();
+ p.voor=kap(cap(voor),MAXLEN.naam);p.achter=kap(cap(achter),MAXLEN.naam);
+ p.mail=kap(ingevuldeMail,MAXLEN.mail);
+ p.tel=kap(el('pp-tel').value.trim(),MAXLEN.tel);
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();
  if(dubbelP)naamgenootMelding(dubbelP,p); else show('pp-formulier');
@@ -2069,7 +2080,7 @@ function verversGroepReferenties(){
 }
 var gearchiveerdeGroepen=[];
 function voegGroepToe(naamVal){
- naamVal=(naamVal||'').trim();
+ naamVal=kap((naamVal||'').trim(),MAXLEN.groep);
  if(!naamVal)return false;
  if(GROEPEN.indexOf(naamVal)>-1){alert('Er bestaat al een groep met deze naam.');return false;}
  GROEPEN.push(naamVal);
@@ -2088,7 +2099,7 @@ function hernoemGroep(g){
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
-  var nieuw=el('modal-groep-naam').value.trim();
+  var nieuw=kap(el('modal-groep-naam').value.trim(),MAXLEN.groep);
   var nieuweLocatie=el('modal-groep-locatie').value;
   if(!nieuw)return;
   if(nieuw!==g&&GROEPEN.indexOf(nieuw)>-1){alert('Er bestaat al een groep met deze naam.');return;}
@@ -2263,7 +2274,7 @@ function kiesUitLijstModal(titel,opties,labelFn,onKies){
  });
 }
 function voegInstituutToe(naamVal){
- naamVal=(naamVal||'').trim();
+ naamVal=kap((naamVal||'').trim(),MAXLEN.groep);
  if(!naamVal)return false;
  if(INSTITUTEN.indexOf(naamVal)>-1){alert('Er bestaat al een instituut met deze naam.');return false;}
  INSTITUTEN.push(naamVal);
@@ -2293,7 +2304,7 @@ function verwijderInstituut(naamVal){
  });
 }
 function voegLocatieToe(naamVal,instituut){
- naamVal=(naamVal||'').trim();
+ naamVal=kap((naamVal||'').trim(),MAXLEN.groep);
  if(!naamVal)return false;
  if(LOCATIES.indexOf(naamVal)>-1){alert('Er bestaat al een locatie met deze naam.');return false;}
  LOCATIES.push(naamVal);
