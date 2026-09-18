@@ -829,7 +829,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <p class="mini" id="pc-vertegenwoordiger-hint"></p>
       <div class="sublistlabel" style="margin-top:20px">Wie heeft recht op deze cliënt</div>
       <div id="pc-rechten"></div>
-      <div class="actions"><button type="button" data-back="pp-formulier">Annuleren</button><button type="button" class="primary" id="pc-opslaan">Opslaan</button></div>
+      <div class="actions"><button type="button" id="pc-annuleren">Annuleren</button><button type="button" class="primary" id="pc-opslaan">Opslaan</button></div>
     </div></div>
   </div>
 
@@ -884,7 +884,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="sublistlabel" id="pp-lbl-naasten">Recht op naasten</div>
       <div id="pp-naasten"></div>
 
-      <div class="actions"><button type="button" data-back="pp-formulier">Annuleren</button><button type="button" class="primary" id="pp-persoon-opslaan">Opslaan</button></div>
+      <div class="actions"><button type="button" id="pp-annuleren">Annuleren</button><button type="button" class="primary" id="pp-persoon-opslaan">Opslaan</button></div>
     </div></div>
   </div>
 
@@ -931,6 +931,15 @@ var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_URL,SB_KEY):null;
 
 function el(i){return document.getElementById(i);}
+/* Alles wat een gebruiker zelf intypt (namen, e-mail, groepsnamen, rapportages,
+   berichten) gaat via string-concatenatie het scherm op. Zonder deze escape kan
+   een naam als <img src=x onerror=...> echte code uitvoeren bij iedereen die de
+   lijst opent. Gebruik esc() rond élke waarde die in een HTML-string belandt. */
+function esc(s){
+ return String(s==null?'':s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 var verzondenTimer=null;
 function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
@@ -947,7 +956,7 @@ function avatarGradient(naam){var h=avatarHash(naam);var c1=AVCOLORS[h%AVCOLORS.
 function initials(v,a){return ((v[0]||'')+(a[0]||'')).toUpperCase();}
 function avatarHtmlSized(naam,px,foto){
  if(foto)return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;flex:0 0 '+px+'px;background-image:url('+foto+');background-size:cover;background-position:center"></div>';
- return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,''])+'</div>';
+ return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+esc(initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,'']))+'</div>';
 }
 function avatarHtml(naam,foto){return avatarHtmlSized(naam,36,foto);}
 function setGrootAvatar(elId,p){
@@ -996,7 +1005,7 @@ resetWerk('medewerker');
 
 function renderBulkGroepen(){
  el('bulk-groepen').innerHTML=GROEPEN.map(function(g){
-  return '<label class="chip'+(bulkSel.groepen[g]?' on':'')+'"><input type="checkbox" data-g="'+g+'" '+(bulkSel.groepen[g]?'checked':'')+'>'+g+'</label>';
+  return '<label class="chip'+(bulkSel.groepen[g]?' on':'')+'"><input type="checkbox" data-g="'+esc(g)+'" '+(bulkSel.groepen[g]?'checked':'')+'>'+esc(g)+'</label>';
  }).join('')+'<label class="chip"><input type="checkbox" id="bulk-alle">Alle groepen</label>';
  Array.prototype.forEach.call(el('bulk-groepen').querySelectorAll('[data-g]'),function(c){
   c.addEventListener('change',function(){bulkSel.groepen[c.getAttribute('data-g')]=c.checked;renderBulkGroepen();updateBulkKnop();});});
@@ -1097,7 +1106,7 @@ function initBulkTab(){
    groupOverride[g]=groupOverride[g]||{};
    groupOverride[g][bulkSel.type]=JSON.parse(JSON.stringify(bulkSel.werk));
   });
-  el('bulk-bevestiging').innerHTML='<div class="bevestiging reveal">Standaardrollen voor <b>'+bulkSel.type+'</b> zijn in één keer ingesteld voor: '+gekozen.join(', ')+'.</div>';
+  el('bulk-bevestiging').innerHTML='<div class="bevestiging reveal">Standaardrollen voor <b>'+esc(bulkSel.type)+'</b> zijn in één keer ingesteld voor: '+esc(gekozen.join(', '))+'.</div>';
   renderGroepTab();
  });
 }
@@ -1122,7 +1131,7 @@ function renderGroepTab(){
  });
  groepSel._working=eff.data;
 }
-el('groep-select').innerHTML=GROEPEN.map(function(g){return '<option>'+g+'</option>';}).join('');
+el('groep-select').innerHTML=GROEPEN.map(function(g){return '<option>'+esc(g)+'</option>';}).join('');
 el('groep-select').addEventListener('change',function(){groepSel.groep=el('groep-select').value;el('groep-bevestiging').innerHTML='';renderGroepTab();});
 Array.prototype.forEach.call(el('groep-typetabs').querySelectorAll('.typetab'),function(b){
  b.addEventListener('click',function(){
@@ -1133,7 +1142,7 @@ Array.prototype.forEach.call(el('groep-typetabs').querySelectorAll('.typetab'),f
 el('groep-opslaan').addEventListener('click',function(){
  groupOverride[groepSel.groep]=groupOverride[groepSel.groep]||{};
  groupOverride[groepSel.groep][groepSel.type]=JSON.parse(JSON.stringify(groepSel._working));
- el('groep-bevestiging').innerHTML='<div class="bevestiging reveal">Opgeslagen voor '+groepSel.groep+'.</div>';
+ el('groep-bevestiging').innerHTML='<div class="bevestiging reveal">Opgeslagen voor '+esc(groepSel.groep)+'.</div>';
  renderGroepTab();
 });
 el('groep-reset').addEventListener('click',function(){
@@ -1228,6 +1237,7 @@ function pasContactpersoonToe(p,checked){
   }
  }
  if(p._state!=='nieuw')p._state='gewijzigd';
+ logActie(checked?(naam(p)+' aangewezen als contactpersoon '+p.contactVolgorde):(naam(p)+' is geen contactpersoon meer'));
  return true;
 }
 var nextId=6;
@@ -1292,6 +1302,7 @@ async function loadFromSupabase(){
   });
   verversGroepReferenties();
   synchroniseerGlobaleRollen();
+  await laadLogboek();
   if(typeof renderAll==='function')renderAll();
   if(!el('admintab-groepen').hidden)renderSysteembeheer();
  }catch(e){/* Supabase niet bereikbaar (bv. in preview-omgeving) — lokale demodata blijft actief */}
@@ -1335,6 +1346,17 @@ function mailInGebruik(mail,negeerId){
  return people.some(function(x){return x.id!==negeerId&&!x.archived&&x.mail&&x.mail.toLowerCase()===mail.toLowerCase();});
 }
 function mailGeldig(mail){return !mail||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);}
+/* Twee mensen met exact dezelfde naam in één groep is in de zorg een reëel
+   verwisselingsrisico, dus dat melden we — blokkeren doen we niet, want
+   naamgenoten bestaan echt. */
+function naamgenootInGroep(p,voor,achter){
+ var volledig=(cap(voor)+' '+cap(achter)).toLowerCase();
+ return people.filter(function(x){
+  return x.id!==p.id&&!x.archived&&x._state!=='verwijderd'&&
+   x.groepen.some(function(g){return (p.groepen||[]).indexOf(g)>-1;})&&
+   naam(x).toLowerCase()===volledig;
+ })[0]||null;
+}
 /* Geeft de foutmelding terug, of '' als het adres bruikbaar is. */
 function mailFout(mail,negeerId){
  if(!mailGeldig(mail))return 'Dit is geen geldig e-mailadres.';
@@ -1354,7 +1376,7 @@ function clientRechtenRow(p,t){
  var rollen=ROLLEN[t].clienten.filter(function(r){return r!=='Geen';});
  return clients.map(function(c){
   var huidig=(p.clientRechten||{})[c.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c),c.foto)+'<div class="pinfo"><div class="naam">'+naam(c)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c),c.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(c))+'</div></div>'+
    '<select data-clientrol="'+c.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1363,8 +1385,12 @@ function wireClientRechten(container,t,onchange){
  Array.prototype.forEach.call(container.querySelectorAll('[data-clientrol]'),function(sel){
   sel.addEventListener('change',function(){
    var p=findPerson(+sel.getAttribute('data-id')),clientId=+sel.getAttribute('data-clientrol');
+   var client=findPerson(clientId);
    p.clientRechten=p.clientRechten||{};
    if(sel.value)p.clientRechten[clientId]=sel.value; else delete p.clientRechten[clientId];
+   logActie(client?(sel.value
+    ? naam(p)+' kreeg rol "'+sel.value+'" op cliënt '+naam(client)
+    : 'Toegang van '+naam(p)+' tot cliënt '+naam(client)+' ingetrokken'):'');
    if(p._state!=='nieuw')p._state='gewijzigd';
    onchange&&onchange();
   });
@@ -1377,7 +1403,7 @@ function naasteRechtenRow(p){
  var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return naasten.map(function(n){
   var huidig=(p.naasteRechten||{})[n.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n),n.foto)+'<div class="pinfo"><div class="naam">'+naam(n)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n),n.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(n))+'</div></div>'+
    '<select data-naasterol="'+n.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1399,7 +1425,7 @@ function medewerkerRechtenRow(naasteId){
  var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return medewerkers.map(function(m){
   var huidig=rolOpNaaste(m,naasteId)||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
    '<select data-medewerkerrol="'+m.id+'" data-naasteid="'+naasteId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1422,7 +1448,7 @@ function medewerkerPeerRow(p){
  var rollen=ROLLEN.medewerker.medewerkers.filter(function(r){return r!=='Geen';});
  return peers.map(function(m){
   var huidig=(p.medewerkerRechten||{})[m.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
    '<select data-medewerkerpeerrol="'+m.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1443,7 +1469,7 @@ function rowHtml(p,t){
  var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
  var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
  var head='<div class="uhead">'+avatarHtml(naam(p),p.foto)+
-  '<div class="pinfo"><div class="naam">'+naam(p)+contactBadge+stateTag+'</div><div class="mail">'+(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
+  '<div class="pinfo"><div class="naam">'+esc(naam(p))+contactBadge+stateTag+'</div><div class="mail">'+esc(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
   '<div class="rowbtns">'+
    '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn danger" data-trashrow="'+p.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
@@ -1470,7 +1496,7 @@ function renderAcc(t){
  var lijst=uitgeklapt?volledig:volledig.slice(0,limiet);
  var box=el('rows-'+t);
  var leegTekst=term?'Niemand gevonden voor "'+term+'".':'Nog niemand in deze groep.';
- box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">'+leegTekst+'</p>';
+ box.innerHTML=lijst.length? lijst.map(function(p){return rowHtml(p,t);}).join('') : '<p class="empty-msg">'+esc(leegTekst)+'</p>';
  var toonmeerBtn=el('acc-'+t).querySelector('[data-toonmeer]');
  if(toonmeerBtn){
   var verborgen=volledig.length-limiet;
@@ -1502,7 +1528,7 @@ var huidigProfielId=null;
 function persoonRechtRij(b,clientId){
  var huidig=rolOpClient(b,clientId)||'';
  var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
- return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+naam(b)+'</div><div class="mail">'+(b.mail||'')+'</div></div>'+
+ return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(b))+'</div><div class="mail">'+esc(b.mail||'')+'</div></div>'+
   '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
 }
@@ -1518,8 +1544,12 @@ function wirePersoonRechten(container,onchange){
  Array.prototype.forEach.call(container.querySelectorAll('[data-persoonrol]'),function(sel){
   sel.addEventListener('change',function(){
    var persoon=findPerson(+sel.getAttribute('data-persoonrol')),clientId=+sel.getAttribute('data-clientid');
+   var client=findPerson(clientId);
    persoon.clientRechten=persoon.clientRechten||{};
    if(sel.value)persoon.clientRechten[clientId]=sel.value; else delete persoon.clientRechten[clientId];
+   logActie(client?(sel.value
+    ? naam(persoon)+' kreeg rol "'+sel.value+'" op cliënt '+naam(client)
+    : 'Toegang van '+naam(persoon)+' tot cliënt '+naam(client)+' ingetrokken'):'');
    if(persoon._state!=='nieuw')persoon._state='gewijzigd';
    onchange&&onchange();
   });
@@ -1527,7 +1557,7 @@ function wirePersoonRechten(container,onchange){
 }
 function vertegenwoordigerOpties(client){
  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
- return '<option value="">Geen</option>'+betrokkenen.map(function(b){return '<option value="'+b.id+'"'+(client.wettelijkeVertegenwoordiger===b.id?' selected':'')+'>'+naam(b)+'</option>';}).join('');
+ return '<option value="">Geen</option>'+betrokkenen.map(function(b){return '<option value="'+b.id+'"'+(client.wettelijkeVertegenwoordiger===b.id?' selected':'')+'>'+esc(naam(b))+'</option>';}).join('');
 }
 function openProfielClient(id){
  var p=findPerson(id);if(!p)return;
@@ -1555,12 +1585,21 @@ el('pc-opslaan').addEventListener('click',function(){
  var ingevuldeMail=el('pc-mail').value.trim();
  if(!toonMailFout('pc-mail','pc-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
  if(!ok)return;
+ var dubbelC=naamgenootInGroep(p,voor,achter);
  p.voor=cap(voor);p.achter=cap(achter);
  p.mail=ingevuldeMail||genereerEmail(p.voor,p.achter);
  p.tel=el('pc-tel').value.trim();
- if(magContactWijzigen())p.wettelijkeVertegenwoordiger=el('pc-vertegenwoordiger').value?+el('pc-vertegenwoordiger').value:null;
+ if(magContactWijzigen()){
+  var nieuweVert=el('pc-vertegenwoordiger').value?+el('pc-vertegenwoordiger').value:null;
+  if(nieuweVert!==(p.wettelijkeVertegenwoordiger||null)){
+   var vertPersoon=nieuweVert?findPerson(nieuweVert):null;
+   logActie('Wettelijk vertegenwoordiger van '+naam(p)+' '+(vertPersoon?('gezet op '+naam(vertPersoon)):'verwijderd'));
+  }
+  p.wettelijkeVertegenwoordiger=nieuweVert;
+ }
  if(p._state!=='nieuw')p._state='gewijzigd';
- renderAcc('client');updateTally();show('pp-formulier');
+ renderAcc('client');updateTally();
+ if(dubbelC)naamgenootMelding(dubbelC,p); else show('pp-formulier');
 });
 function openFotoModal(elId,persoon){
  var p=persoon||findPerson(huidigProfielId);if(!p)return;
@@ -1614,7 +1653,7 @@ function renderGroepenKeuze(p,keuzeId,hintId){
  var meervoud=(p.groepen||[]).length>1;
  el(keuzeId).innerHTML=GROEPEN.map(function(g){
   var aan=(p.groepen||[]).indexOf(g)>-1;
-  return '<label class="chip'+(aan?' on':'')+'"><input type="checkbox" data-pgroep="'+g+'" '+(aan?'checked':'')+'>'+g+(g===huidigeGroep?' (huidig)':'')+'</label>';
+  return '<label class="chip'+(aan?' on':'')+'"><input type="checkbox" data-pgroep="'+esc(g)+'" '+(aan?'checked':'')+'>'+esc(g)+(g===huidigeGroep?' (huidig)':'')+'</label>';
  }).join('');
  el(hintId).textContent=meervoud
   ? 'Gekoppeld aan meerdere groepen. Vink een groep uit om te ontkoppelen of te verplaatsen.'
@@ -1697,12 +1736,52 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  var ingevuldeMail=el('pp-mail').value.trim();
  if(!toonMailFout('pp-mail','pp-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
  if(!ok)return;
+ var dubbelP=naamgenootInGroep(p,voor,achter);
  p.voor=cap(voor);p.achter=cap(achter);
  p.mail=ingevuldeMail;
  p.tel=el('pp-tel').value.trim();
  if(p._state!=='nieuw')p._state='gewijzigd';
- renderAll();show('pp-formulier');
+ renderAll();
+ if(dubbelP)naamgenootMelding(dubbelP,p); else show('pp-formulier');
 });
+/* Annuleren gooide ingevulde gegevens zonder waarschuwing weg. Bij een nieuw
+   aangemaakte persoon is dat extra vervelend: die verdwijnt dan half ingevuld
+   in de lijst. */
+function profielGewijzigd(p,prefix){
+ if(!p)return false;
+ var v=el(prefix+'-voornaam').value.trim(),a=el(prefix+'-achternaam').value.trim();
+ return cap(v)!==p.voor||cap(a)!==p.achter||
+  el(prefix+'-mail').value.trim()!==(p.mail||'')||
+  el(prefix+'-tel').value.trim()!==(p.tel||'');
+}
+function naamgenootMelding(bestaande,nieuwe){
+ openModal('<h3>Let op: dezelfde naam bestaat al</h3><div class="msec"><p>Er staat al een '+
+  esc(TYPELABEL[bestaande.type].toLowerCase())+' met de naam <b>'+esc(naam(bestaande))+'</b> in deze groep'+
+  (bestaande.mail?' ('+esc(bestaande.mail)+')':'')+'.</p>'+
+  '<p>De wijziging is opgeslagen. Controleer of je niet per ongeluk twee keer dezelfde persoon hebt aangemaakt — verwisseling is in de zorg een reëel risico.</p></div>'+
+  '<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Begrepen</button></div>');
+ el('modal-snap').addEventListener('click',function(){closeModal();show('pp-formulier');});
+}
+function annuleerProfiel(prefix){
+ var p=findPerson(huidigProfielId);
+ var nieuwEnLeeg=p&&p._state==='nieuw';
+ if(p&&(profielGewijzigd(p,prefix)||nieuwEnLeeg)){
+  openModal('<h3>Wijzigingen niet opgeslagen</h3><div class="msec"><p>'+
+   (nieuwEnLeeg?'Deze persoon is nog niet opgeslagen. Als je nu teruggaat, wordt hij niet aangemaakt.'
+              :'Je hebt gegevens aangepast die nog niet zijn opgeslagen. Als je nu teruggaat, gaan ze verloren.')+
+   '</p></div><div class="modal-actions"><button type="button" id="modal-blijf">Blijf hier</button><button type="button" class="danger" id="modal-weg">Toch teruggaan</button></div>');
+  el('modal-blijf').addEventListener('click',closeModal);
+  el('modal-weg').addEventListener('click',function(){
+   if(nieuwEnLeeg&&!p.voor&&!p.achter){people=people.filter(function(x){return x.id!==p.id;});}
+   closeModal();renderAll();show('pp-formulier');
+  });
+  return;
+ }
+ show('pp-formulier');
+}
+el('pc-annuleren').addEventListener('click',function(){annuleerProfiel('pc');});
+el('pp-annuleren').addEventListener('click',function(){annuleerProfiel('pp');});
+
 ['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
 [['pc-mail','pc-mail-fout'],['pp-mail','pp-mail-fout']].forEach(function(paar){
  el(paar[0]).addEventListener('input',function(){toonMailFout(paar[0],paar[1],'');});
@@ -1737,14 +1816,14 @@ function trashRow(id,t){
 function renderContactpersonen(){
  var lijst=contactpersonenVanGroep();
  el('contactpersonen-lijst').innerHTML=lijst.length? lijst.map(function(m){
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+naam(m)+' <span class="mini">(contactpersoon '+m.contactVolgorde+')</span></div><div class="mail">'+(m.mail||'—')+'</div></div></div>';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+' <span class="mini">(contactpersoon '+m.contactVolgorde+')</span></div><div class="mail">'+esc(m.mail||'—')+'</div></div></div>';
  }).join('') : '<p class="empty-msg">Nog geen medewerkers gemarkeerd als contactpersoon.</p>';
 }
 function renderContactBanner(){
  var lijst=contactpersonenVanGroep(),eff=effectieveContactpersoon();
  el('contact-banner-lijst').innerHTML=lijst.length? lijst.map(function(m){
   var isEff=eff&&eff.id===m.id;
-  return '<span style="display:inline-flex;align-items:center;margin:0 14px 4px 0">'+naam(m)+
+  return '<span style="display:inline-flex;align-items:center;margin:0 14px 4px 0">'+esc(naam(m))+
    (m.status==='ziek'?'<span class="statuschip ziek">Ziek</span>':'')+
    (isEff?'<span class="statuschip" style="background:var(--moss-bg);color:var(--moss)">Actief aanspreekpunt</span>':'')+
    '</span>';
@@ -1756,7 +1835,7 @@ function renderAccountSelect(){
  var systeembeheerOptie='<option value="systeembeheer"'+(isSysteembeheerder?' selected':'')+'>Systeembeheerder — alle groepen</option>';
  el('account-select').innerHTML=systeembeheerOptie+opties.map(function(p){
   var label=naam(p)+' — '+(p.type==='medewerker'?'Medewerker':'Naaste')+(p.contactVolgorde?', contactpersoon '+p.contactVolgorde:'')+(p.groepen.indexOf(huidigeGroep)<0?' (andere groep)':'');
-  return '<option value="'+p.id+'"'+(!isSysteembeheerder&&p.id===huidigeGebruikerId?' selected':'')+'>'+label+'</option>';
+  return '<option value="'+p.id+'"'+(!isSysteembeheerder&&p.id===huidigeGebruikerId?' selected':'')+'>'+esc(label)+'</option>';
  }).join('');
 }
 function verlaatSysteembeheer(){
@@ -1796,7 +1875,7 @@ function sbBevestig(tekst){
  setTimeout(function(){var b=el('sb-groep-bevestiging');if(b)b.textContent='';},2500);
 }
 function verversGroepReferenties(){
- el('groep-select').innerHTML=GROEPEN.map(function(x){return '<option'+(x===groepSel.groep?' selected':'')+'>'+x+'</option>';}).join('');
+ el('groep-select').innerHTML=GROEPEN.map(function(x){return '<option'+(x===groepSel.groep?' selected':'')+'>'+esc(x)+'</option>';}).join('');
  el('pp-groep-naam').textContent=huidigeGroep;
  el('hub-groepnaam').textContent=huidigeGroep;
  renderBulkGroepen();
@@ -1812,12 +1891,13 @@ function voegGroepToe(naamVal){
  verversGroepReferenties();
  renderSysteembeheer();
  syncGroepenToSupabase();
+ logActie('Groep "'+naamVal+'" aangemaakt');
  sbBevestig('Groep "'+naamVal+'" toegevoegd.');
  return true;
 }
 function hernoemGroep(g){
- openModal('<h3>Groep bewerken</h3><div class="field"><label>Naam</label><input id="modal-groep-naam" value="'+g.replace(/"/g,'&quot;')+'"></div>'+
-  '<div class="field"><label>Locatie</label><select id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option'+(l===groepLocatie[g]?' selected':'')+'>'+l+'</option>';}).join('')+'</select></div>'+
+ openModal('<h3>Groep bewerken</h3><div class="field"><label>Naam</label><input id="modal-groep-naam" value="'+esc(g)+'"></div>'+
+  '<div class="field"><label>Locatie</label><select id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option'+(l===groepLocatie[g]?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></div>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
@@ -1846,6 +1926,7 @@ function hernoemGroep(g){
   renderSysteembeheer();
   renderAll();
   syncGroepenToSupabase();
+  logActie(hernoemd?('Groep "'+g+'" hernoemd naar "'+nieuw+'"'):('Locatie van groep "'+nieuw+'" gewijzigd naar "'+nieuweLocatie+'"'));
   sbBevestig(hernoemd?('Groep hernoemd naar "'+nieuw+'".'):('Locatie van "'+nieuw+'" bijgewerkt.'));
  });
 }
@@ -1856,7 +1937,7 @@ function verwijderGroep(g){
   return;
  }
  if(GROEPEN.length<=1){alert('Er moet minimaal één groep overblijven.');return;}
- openModal('<h3>Groep verwijderen</h3><div class="msec"><p>Weet je zeker dat je de groep "'+g+'" wilt verwijderen? Je kunt haar daarna terugzetten via "Groep herstellen".</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+ openModal('<h3>Groep verwijderen</h3><div class="msec"><p>Weet je zeker dat je de groep "'+esc(g)+'" wilt verwijderen? Je kunt haar daarna terugzetten via "Groep herstellen".</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-bevestig').addEventListener('click',function(){
   GROEPEN.splice(GROEPEN.indexOf(g),1);
@@ -1870,6 +1951,7 @@ function verwijderGroep(g){
   renderSysteembeheer();
   renderAll();
   syncGroepenToSupabase();
+  logActie('Groep "'+g+'" verwijderd');
   sbBevestig('Groep "'+g+'" verwijderd.');
  });
 }
@@ -1890,11 +1972,11 @@ function herstelGroep(g){
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
  if(!opties.length){
-  openModal('<h3>'+titel+'</h3><div class="msec"><p>Er is niets om uit te kiezen.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  openModal('<h3>'+esc(titel)+'</h3><div class="msec"><p>Er is niets om uit te kiezen.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
   el('modal-snap').addEventListener('click',closeModal);
   return;
  }
- openModal('<h3>'+titel+'</h3><div class="field"><select id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+labelFn(o)+'</option>';}).join('')+'</select></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
+ openModal('<h3>'+esc(titel)+'</h3><div class="field"><select id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+esc(labelFn(o))+'</option>';}).join('')+'</select></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
   var idx=+el('modal-kies-lijst').value;
@@ -1910,7 +1992,7 @@ function voegInstituutToe(naamVal){
  return true;
 }
 function hernoemInstituut(oud){
- openModal('<h3>Instituut hernoemen</h3><div class="field"><label>Naam</label><input id="modal-naam-veld" value="'+oud.replace(/"/g,'&quot;')+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+ openModal('<h3>Instituut hernoemen</h3><div class="field"><label>Naam</label><input id="modal-naam-veld" value="'+esc(oud)+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
   var nieuw=el('modal-naam-veld').value.trim();
@@ -1925,7 +2007,7 @@ function verwijderInstituut(naamVal){
  var gekoppeld=Object.keys(locatieInstituut).filter(function(l){return locatieInstituut[l]===naamVal;});
  if(gekoppeld.length){alert('Dit instituut heeft nog '+gekoppeld.length+' gekoppelde locatie(s) en kan niet verwijderd worden.');return;}
  if(INSTITUTEN.length<=1){alert('Er moet minimaal één instituut overblijven.');return;}
- openModal('<h3>Instituut verwijderen</h3><div class="msec"><p>Weet je zeker dat je "'+naamVal+'" wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+ openModal('<h3>Instituut verwijderen</h3><div class="msec"><p>Weet je zeker dat je "'+esc(naamVal)+'" wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-bevestig').addEventListener('click',function(){
   INSTITUTEN.splice(INSTITUTEN.indexOf(naamVal),1);
@@ -1944,7 +2026,7 @@ function verwijderLocatie(naamVal){
  var gekoppeld=Object.keys(groepLocatie).filter(function(g){return groepLocatie[g]===naamVal;});
  if(gekoppeld.length){alert('Deze locatie heeft nog '+gekoppeld.length+' gekoppelde groep(en) en kan niet verwijderd worden.');return;}
  if(LOCATIES.length<=1){alert('Er moet minimaal één locatie overblijven.');return;}
- openModal('<h3>Locatie verwijderen</h3><div class="msec"><p>Weet je zeker dat je "'+naamVal+'" wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+ openModal('<h3>Locatie verwijderen</h3><div class="msec"><p>Weet je zeker dat je "'+esc(naamVal)+'" wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-bevestig').addEventListener('click',function(){
   LOCATIES.splice(LOCATIES.indexOf(naamVal),1);
@@ -2010,7 +2092,7 @@ function persoonBewerkenFlow(){
  });
 }
 function verwijderPersoonBevestiging(p){
- openModal('<h3>Klaargezet om te verwijderen</h3><div class="msec"><p>'+naam(p)+' is gemarkeerd om verwijderd te worden. Dit wordt definitief zodra de wijzigingen worden doorgevoerd (Wijzigingen controleren → Bevestigen).</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ openModal('<h3>Klaargezet om te verwijderen</h3><div class="msec"><p>'+esc(naam(p))+' is gemarkeerd om verwijderd te worden. Dit wordt definitief zodra de wijzigingen worden doorgevoerd (Wijzigingen controleren → Bevestigen).</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
 }
 function clientVerwijderenFlow(){
@@ -2047,9 +2129,9 @@ function persoonHerstelFlow(){
 function contactpersonenFlow(){
  var secties=GROEPEN.map(function(g){
   var lijst=people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p.groepen.indexOf(g)>-1&&p.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
-  return '<div class="sublistlabel" style="margin-top:14px">'+g+'</div>'+(lijst.length?lijst.map(function(m){
-   return '<div class="personrow" style="box-shadow:none"><div class="pinfo"><div class="naam">'+naam(m)+' <span class="mini">(contactpersoon '+m.contactVolgorde+(m.status==='ziek'?', ziek':'')+')</span></div><div class="mail">'+(m.mail||'—')+'</div></div>'+
-    '<button type="button" class="small" data-cp-open="'+m.id+'" data-cp-groep="'+g+'">Openen</button></div>';
+  return '<div class="sublistlabel" style="margin-top:14px">'+esc(g)+'</div>'+(lijst.length?lijst.map(function(m){
+   return '<div class="personrow" style="box-shadow:none"><div class="pinfo"><div class="naam">'+esc(naam(m))+' <span class="mini">(contactpersoon '+m.contactVolgorde+(m.status==='ziek'?', ziek':'')+')</span></div><div class="mail">'+esc(m.mail||'—')+'</div></div>'+
+    '<button type="button" class="small" data-cp-open="'+m.id+'" data-cp-groep="'+esc(g)+'">Openen</button></div>';
   }).join(''):'<p class="empty-msg" style="padding:0">Geen contactpersonen.</p>');
  }).join('');
  openModal('<h3>Contactpersonen per groep</h3>'+secties+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
@@ -2097,8 +2179,8 @@ function renderSysteembeheer(){
  el('sb-groepen-lijst').innerHTML=GROEPEN.map(function(g,i){
   var c=sbCounts(g);
   return '<div class="personrow">'+
-   '<div class="pinfo"><div class="naam">'+g+(g===huidigeGroep?' <span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Wordt nu bekeken</span>':'')+'</div>'+
-   '<div class="mail">'+c.m+' medewerker'+(c.m===1?'':'s')+' · '+c.n+' naaste'+(c.n===1?'':'n')+' · '+c.c+' cliënt'+(c.c===1?'':'en')+(groepLocatie[g]?' · locatie: '+groepLocatie[g]:'')+'</div></div>'+
+   '<div class="pinfo"><div class="naam">'+esc(g)+(g===huidigeGroep?' <span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Wordt nu bekeken</span>':'')+'</div>'+
+   '<div class="mail">'+c.m+' medewerker'+(c.m===1?'':'s')+' · '+c.n+' naaste'+(c.n===1?'':'n')+' · '+c.c+' cliënt'+(c.c===1?'':'en')+(groepLocatie[g]?' · locatie: '+esc(groepLocatie[g]):'')+'</div></div>'+
    '<button type="button" class="small" data-sb-bekijk="'+i+'">Bekijk</button>'+
    '<button type="button" class="iconbtn" data-sb-hernoem="'+i+'" aria-label="Hernoemen">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn" data-sb-verwijder="'+i+'" aria-label="Verwijderen" style="background:var(--brick)">'+TRASH_SVG+'</button>'+
@@ -2248,13 +2330,48 @@ document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener(
  if(target==='pp-digibord')renderDigibordPreview();
  show(target);
 });});
-var LOGBOEK=[
- {tijd:'09-09-2026 14:12',tekst:'Sofie Mulder toegevoegd als medewerker met standaardrollen'},
- {tijd:'02-09-2026 10:03',tekst:'Bram Smit aangemaakt als cliënt, rechten toegekend aan 2 medewerkers'},
- {tijd:'28-08-2026 16:47',tekst:'Ingrid Alkema gekoppeld als naaste aan Elif Yildiz'}
-];
+/* Wie welke toegang tot cliëntgegevens geeft of intrekt, moet achteraf te
+   herleiden zijn. Het logboek was eerder vaste voorbeeldtekst; het houdt nu de
+   echte handelingen bij en bewaart ze in Supabase. */
+var LOGBOEK=[];
+function logboekTijd(d){
+ function tweeCijfers(n){return (n<10?'0':'')+n;}
+ return tweeCijfers(d.getDate())+'-'+tweeCijfers(d.getMonth()+1)+'-'+d.getFullYear()+
+  ' '+tweeCijfers(d.getHours())+':'+tweeCijfers(d.getMinutes());
+}
+function wieBenIk(){
+ if(isSysteembeheerder)return 'Systeembeheerder';
+ var ik=huidigeGebruiker();
+ return ik?naam(ik):'Onbekend';
+}
+function logActie(tekst){
+ if(!tekst)return;
+ var regel={tijd:logboekTijd(new Date()),wie:wieBenIk(),groep:huidigeGroep,tekst:tekst};
+ LOGBOEK.unshift(regel);
+ if(LOGBOEK.length>200)LOGBOEK.length=200;
+ if(sb){
+  try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst}]).then(function(){},function(){});}
+  catch(e){/* logboek mag het opslaan van de wijziging zelf nooit blokkeren */}
+ }
+}
+async function laadLogboek(){
+ if(!sb)return;
+ try{
+  var res=await sb.from('logboek').select('tijd,wie,groep,tekst').order('tijd',{ascending:false}).limit(100);
+  if(res.error||!res.data)return;
+  LOGBOEK=res.data.map(function(r){
+   return {tijd:logboekTijd(new Date(r.tijd)),wie:r.wie,groep:r.groep,tekst:r.tekst};
+  });
+ }catch(e){/* zonder verbinding blijft het logboek van deze sessie zichtbaar */}
+}
 el('logboek-btn').addEventListener('click',function(){
- openModal('<h3>Logboek</h3>'+LOGBOEK.map(function(l){return '<div class="msec"><b>'+l.tijd+'</b><p>'+l.tekst+'</p></div>';}).join('')
+ var inhoud=LOGBOEK.length
+  ? LOGBOEK.map(function(l){
+     return '<div class="msec"><b>'+esc(l.tijd)+' — '+esc(l.wie)+'</b><p>'+esc(l.tekst)+
+      (l.groep?' <span class="mini">('+esc(l.groep)+')</span>':'')+'</p></div>';
+    }).join('')
+  : '<div class="msec"><p>Nog geen wijzigingen vastgelegd.</p></div>';
+ openModal('<h3>Logboek</h3><p class="mini" style="margin:0 0 10px">Wie heeft wanneer iets aan gebruikers of rechten gewijzigd.</p>'+inhoud
   +'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
 });
@@ -2263,13 +2380,14 @@ el('logboek-btn').addEventListener('click',function(){
 function renderGearchiveerd(){
  var gearchiveerd=people.filter(function(p){return p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
  el('gearchiveerd-lijst').innerHTML=gearchiveerd.length? gearchiveerd.map(function(p){
-  return '<div class="personrow"><div class="pinfo"><div class="naam">'+naam(p)+' <span class="mini">— '+TYPELABEL[p.type]+'</span></div><div class="mail">'+(p.mail||'—')+'</div></div>'+
+  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span></div><div class="mail">'+esc(p.mail||'—')+'</div></div>'+
    '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button></div>';
  }).join('') : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>';
  Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-herstel]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-herstel'));
    p.archived=false;
+   logActie(naam(p)+' teruggezet uit het archief');
    renderGearchiveerd();renderAll();
    syncToSupabase();
   });
@@ -2283,7 +2401,7 @@ function renderControleren(){
  var wijzigingen=people.filter(function(p){return p._state;});
  el('controleren-lijst').innerHTML=wijzigingen.length? wijzigingen.map(function(p){
   return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
-   '<div class="rtxt"><b>'+naam(p)+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+p.mail:'')+(p._nieuweGroep?' · verplaatst naar '+p._nieuweGroep:'')+'</div>'+
+   '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+(p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
    '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+STATE_LABEL[p._state]+'</span></div>';
  }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om door te voeren.</p>';
 }
@@ -2321,7 +2439,13 @@ el('av-versturen').addEventListener('click',async function(){
    /* Blijft in een andere groep: daar houdt hij zijn rechten, dus niets opruimen. */
    p.groepen=p.groepen.filter(function(g){return g!==huidigeGroep;});ontkoppeld++;
   }else{
-   p.archived=true;p.contactpersoon=false;delete p.contactVolgorde;gearchiveerd++;
+   var wasContact=p.contactVolgorde;
+   p.archived=true;p.contactpersoon=false;delete p.contactVolgorde;delete p.status;gearchiveerd++;
+   /* Anders blijft er een "contactpersoon 2" over zonder dat er een eerste is. */
+   if(wasContact===1){
+    var tweede=contactpersonenVanGroep().filter(function(x){return x.contactVolgorde===2;})[0];
+    if(tweede)tweede.contactVolgorde=1;
+   }
    verwijderVerwijzingenNaar(p.id);
   }
  });
@@ -2331,6 +2455,15 @@ el('av-versturen').addEventListener('click',async function(){
   verplaatst++;
  });
  people.forEach(function(p){delete p._state;delete p._nieuweGroep;});
+ if(nieuw||gewijzigd||ontkoppeld||gearchiveerd||verplaatst){
+  var delen=[];
+  if(nieuw)delen.push(nieuw+' toegevoegd');
+  if(gewijzigd)delen.push(gewijzigd+' gewijzigd');
+  if(ontkoppeld)delen.push(ontkoppeld+' ontkoppeld');
+  if(gearchiveerd)delen.push(gearchiveerd+' gearchiveerd');
+  if(verplaatst)delen.push(verplaatst+' verplaatst');
+  logActie('Wijzigingen doorgevoerd: '+delen.join(', '));
+ }
  var opgeslagen=await syncToSupabase();
  renderAll();
  el('av-versturen').disabled=false;
@@ -2340,7 +2473,7 @@ el('av-versturen').addEventListener('click',async function(){
  if(gearchiveerd)verwijderdTekst.push(gearchiveerd+' gearchiveerd');
  if(verplaatst)verwijderdTekst.push(verplaatst+' verplaatst naar een andere groep');
  var contactpersoon=huidigeGebruiker();
- var contactzin=contactpersoon?' Bij vragen nemen we contact op met '+naam(contactpersoon)+'.':'';
+ var contactzin=contactpersoon?' Bij vragen nemen we contact op met '+esc(naam(contactpersoon))+'.':'';
  var waarschuwing=opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">Let op: het opslaan in de database is niet gelukt. De wijzigingen zijn hier wel lokaal doorgevoerd — probeer het later opnieuw zodat ze ook echt bewaard blijven.</div>';
  el('verzonden-tekst').innerHTML='Je wijzigingen ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin+waarschuwing;
  show('pp-verzonden');
@@ -2360,7 +2493,7 @@ function renderStatTable(){
  var clienten=personenVanType('client');
  var html='<thead><tr><th>Cliënt</th>'+STAT_KOLOMMEN.map(function(k){return '<th>'+k+'</th>';}).join('')+'</tr></thead><tbody>';
  clienten.forEach(function(p,i){
-  html+='<tr><td>'+naam(p)+'</td>'+STAT_KOLOMMEN.map(function(_,ci){return '<td>'+((seed+i*3+ci*2+4)%11)+'</td>';}).join('')+'</tr>';
+  html+='<tr><td>'+esc(naam(p))+'</td>'+STAT_KOLOMMEN.map(function(_,ci){return '<td>'+((seed+i*3+ci*2+4)%11)+'</td>';}).join('')+'</tr>';
  });
  html+='</tbody>';
  el('stat-table').innerHTML=clienten.length?html:'<tbody><tr><td class="empty-msg">Geen cliënten in deze groep.</td></tr></tbody>';
@@ -2396,7 +2529,7 @@ function openStatDagdetails(day,month,year){
  var clienten=personenVanType('client');
  var html='<h3>Dagdetails — '+day+' '+MAANDNAMEN[month]+' '+year+'</h3>';
  html+=clienten.length? clienten.map(function(p,i){
-  return '<div class="msec"><b>'+naam(p)+'</b><p>'+STAT_KOLOMMEN.map(function(k,ci){return k+': '+((day+i*3+ci*2)%6);}).join(' · ')+'</p></div>';
+  return '<div class="msec"><b>'+esc(naam(p))+'</b><p>'+STAT_KOLOMMEN.map(function(k,ci){return k+': '+((day+i*3+ci*2)%6);}).join(' · ')+'</p></div>';
  }).join('') : '<div class="msec"><p>Geen cliënten in deze groep.</p></div>';
  html+='<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>';
  openModal(html);
@@ -2417,7 +2550,7 @@ function renderMaaltijdKalender(){
  var clienten=personenVanType('client');
  if(!clienten.length){el('maaltijd-kalender').innerHTML='<p class="empty-msg">Geen cliënten in deze groep.</p>';return;}
  if(!el('maaltijd-client').options.length||el('maaltijd-client').dataset.groep!==huidigeGroep){
-  el('maaltijd-client').innerHTML=clienten.map(function(c){return '<option value="'+c.id+'">'+naam(c)+'</option>';}).join('');
+  el('maaltijd-client').innerHTML=clienten.map(function(c){return '<option value="'+c.id+'">'+esc(naam(c))+'</option>';}).join('');
   el('maaltijd-client').dataset.groep=huidigeGroep;
  }
  if(!el('maaltijd-client').dataset.wired){el('maaltijd-client').addEventListener('change',renderMaaltijdKalender);el('maaltijd-client').dataset.wired='1';}
@@ -2461,13 +2594,13 @@ function renderDigibordPreview(){
  var clienten=personenVanType('client'),medewerkers=personenVanType('medewerker');
  var cards=[];
  if(digiOn('informatiebord'))cards.push('<div class="digicard wide"><h4>Informatiebord</h4><div class="drow">📢 Vrijdag is er een gezamenlijk koffie-uurtje om 15:00 in de huiskamer.</div></div>');
- if(digiOn('aanwezigheid'))cards.push('<div class="digicard"><h4>Aanwezigheidsbord</h4>'+(clienten.length?clienten.map(function(c){var aanw=avatarHash(naam(c))%3!==0;return '<div class="drow"><span><span class="dot" style="background:'+(aanw?'var(--moss)':'var(--brick)')+'"></span>'+naam(c)+'</span><span class="dsub">'+(aanw?'Aanwezig':'Afwezig')+'</span></div>';}).join(''):'<div class="dsub">Geen cliënten in deze groep.</div>')+'</div>');
+ if(digiOn('aanwezigheid'))cards.push('<div class="digicard"><h4>Aanwezigheidsbord</h4>'+(clienten.length?clienten.map(function(c){var aanw=avatarHash(naam(c))%3!==0;return '<div class="drow"><span><span class="dot" style="background:'+(aanw?'var(--moss)':'var(--brick)')+'"></span>'+esc(naam(c))+'</span><span class="dsub">'+(aanw?'Aanwezig':'Afwezig')+'</span></div>';}).join(''):'<div class="dsub">Geen cliënten in deze groep.</div>')+'</div>');
  if(digiOn('dagprogramma')){
   var progItems=clienten.map(function(c){var d=ensureClientData(c.id);var a=d.agenda[0];return a?{tijd:a.tijd,tekst:naam(c)+' — '+a.titel}:null;}).filter(Boolean).sort(function(a,b){return a.tijd.localeCompare(b.tijd);});
-  cards.push('<div class="digicard"><h4>Dagprogramma</h4>'+(progItems.length?progItems.map(function(i){return '<div class="drow"><span>'+i.tekst+'</span><span class="dsub">'+i.tijd+'</span></div>';}).join(''):'<div class="dsub">Geen programma-items vandaag.</div>')+'</div>');
+  cards.push('<div class="digicard"><h4>Dagprogramma</h4>'+(progItems.length?progItems.map(function(i){return '<div class="drow"><span>'+esc(i.tekst)+'</span><span class="dsub">'+esc(i.tijd)+'</span></div>';}).join(''):'<div class="dsub">Geen programma-items vandaag.</div>')+'</div>');
  }
  if(digiOn('takenbord'))cards.push('<div class="digicard"><h4>Takenbord</h4>'+['Afwas inruimen','Planten water geven','Was vouwen'].map(function(t,i){return '<div class="drow"><span><span class="dot" style="background:'+(i===0?'var(--moss)':'var(--line-strong)')+'"></span>'+t+'</span><span class="dsub">'+(i===0?'Gedaan':'Open')+'</span></div>';}).join('')+'</div>');
- if(digiOn('dienstenbord'))cards.push('<div class="digicard"><h4>Dienstenbord</h4>'+(medewerkers.length?medewerkers.map(function(m,i){return '<div class="drow"><span>'+naam(m)+'</span><span class="dsub">'+(i===0?'Vandaag':'Morgen')+'</span></div>';}).join(''):'<div class="dsub">Geen medewerkers in deze groep.</div>')+'</div>');
+ if(digiOn('dienstenbord'))cards.push('<div class="digicard"><h4>Dienstenbord</h4>'+(medewerkers.length?medewerkers.map(function(m,i){return '<div class="drow"><span>'+esc(naam(m))+'</span><span class="dsub">'+(i===0?'Vandaag':'Morgen')+'</span></div>';}).join(''):'<div class="dsub">Geen medewerkers in deze groep.</div>')+'</div>');
  if(digiOn('maaltijdenbord'))cards.push('<div class="digicard"><h4>Maaltijdenbord</h4><div class="drow"><span>Ontbijt</span><span class="dsub">Volkoren & fruit</span></div><div class="drow"><span>Lunch</span><span class="dsub">Soep & broodjes</span></div><div class="drow"><span>Diner</span><span class="dsub">Stamppot</span></div></div>');
  if(digiOn('kalenderbord'))cards.push('<div class="digicard wide"><h4>Kalenderbord</h4><div class="drow"><span>Koffie-uurtje</span><span class="dsub">Vrijdag 15:00</span></div><div class="drow"><span>Familiedag</span><span class="dsub">Zaterdag 24 sep</span></div></div>');
  el('digibord-preview').innerHTML=cards.length?cards.join(''):'<div class="digiscreen-empty">Niets aangevinkt — het Digibord toont nu niks.</div>';
@@ -2484,7 +2617,7 @@ function renderDigibord(){
 }
 renderDigibord();
 el('digibord-opslaan').addEventListener('click',function(){
- el('digibord-bevestiging').innerHTML='<div class="bevestiging reveal">Digibord-instellingen opgeslagen voor '+huidigeGroep+'.</div>';
+ el('digibord-bevestiging').innerHTML='<div class="bevestiging reveal">Digibord-instellingen opgeslagen voor '+esc(huidigeGroep)+'.</div>';
  verzondenTimer=setTimeout(function(){show('pp-hub');},1500);
 });
 
@@ -2518,7 +2651,7 @@ function ensureClientData(id){
 function renderClientApp(){
  var clients=personenVanType('client');
  if(!caClientId||!clients.some(function(c){return c.id===caClientId;}))caClientId=clients[0]?clients[0].id:null;
- el('ca-client-select').innerHTML=clients.map(function(c){return '<option value="'+c.id+'"'+(c.id===caClientId?' selected':'')+'>'+naam(c)+'</option>';}).join('');
+ el('ca-client-select').innerHTML=clients.map(function(c){return '<option value="'+c.id+'"'+(c.id===caClientId?' selected':'')+'>'+esc(naam(c))+'</option>';}).join('');
  renderCaHeader();
  renderCaTab(caTab);
 }
@@ -2546,11 +2679,11 @@ function renderCaTab(tab){
 /* --- Info --- */
 function renderCaInfo(){
  var p=findPerson(caClientId);
- var html='<div style="text-align:center;margin-bottom:16px">'+avatarHtmlSized(naam(p),64).replace('style="','style="margin:0 auto 8px;')+'<b style="font-size:16px">'+naam(p)+'</b></div>';
- html+='<div class="infocard-row"><span>Groep</span><span>'+huidigeGroep+'</span></div>';
- html+='<div class="infocard-row"><span>E-mailadres</span><span>'+(p.mail||'—')+'</span></div>';
+ var html='<div style="text-align:center;margin-bottom:16px">'+avatarHtmlSized(naam(p),64).replace('style="','style="margin:0 auto 8px;')+'<b style="font-size:16px">'+esc(naam(p))+'</b></div>';
+ html+='<div class="infocard-row"><span>Groep</span><span>'+esc(huidigeGroep)+'</span></div>';
+ html+='<div class="infocard-row"><span>E-mailadres</span><span>'+esc(p.mail||'—')+'</span></div>';
  html+='<div class="sublistlabel">Betrokkenen</div>';
- html+='<p class="mini" style="margin:0 0 8px">Wijzig hier direct wie welke rol op '+naam(p)+' heeft.</p>';
+ html+='<p class="mini" style="margin:0 0 8px">Wijzig hier direct wie welke rol op '+esc(naam(p))+' heeft.</p>';
  html+='<div id="ca-info-rechten">'+personRechtenRow(p.id)+'</div>';
  html+='<div class="sublistlabel">Beheer</div>';
  html+='<button type="button" class="addbtn-row" style="justify-content:space-between;background:var(--surface);border-style:solid;border-color:var(--line);color:var(--ink)" id="ca-naar-geheugen">Geheugen <svg class="chev-r" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>';
@@ -2814,19 +2947,19 @@ var caDoelenView='doelen';
 /* --- Media viewer (gedeeld) --- */
 var PLAY_SVG='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
 function mediaThumbHtml(type,gradient,caption){
- var esc=(caption||'').replace(/"/g,'&quot;');
- if(type==='video')return '<div class="mediathumb video" data-mediatype="video" data-caption="'+esc+'"><div class="playbtn">'+PLAY_SVG+'</div></div>';
- return '<div class="mediathumb" data-mediatype="foto" data-gradient="'+gradient+'" data-caption="'+esc+'" style="background:'+gradient+'">Foto</div>';
+ var capAttr=esc(caption||'');
+ if(type==='video')return '<div class="mediathumb video" data-mediatype="video" data-caption="'+capAttr+'"><div class="playbtn">'+PLAY_SVG+'</div></div>';
+ return '<div class="mediathumb" data-mediatype="foto" data-gradient="'+esc(gradient)+'" data-caption="'+capAttr+'" style="background:'+esc(gradient)+'">Foto</div>';
 }
 function audioBarHtml(caption){
- var esc=(caption||'').replace(/"/g,'&quot;');
- return '<div class="audiobar" data-audiobar="1" data-caption="'+esc+'"><span class="playbtn-sm">'+PLAY_SVG+'</span><span class="waveform">▂▄▆▃▅▇▂▄▆▃▄▇▂</span><span class="adur">0:14</span></div>';
+ var capAttr=esc(caption||'');
+ return '<div class="audiobar" data-audiobar="1" data-caption="'+capAttr+'"><span class="playbtn-sm">'+PLAY_SVG+'</span><span class="waveform">▂▄▆▃▅▇▂▄▆▃▄▇▂</span><span class="adur">0:14</span></div>';
 }
 function openMediaViewer(type,gradient,caption){
  var big=type==='video'
   ?'<div class="mediathumb-lg video" style="aspect-ratio:16/9"><div class="playbtn" style="width:60px;height:60px">'+PLAY_SVG.replace('viewBox','style="width:22px;height:22px" viewBox')+'</div></div>'
   :'<div class="mediathumb-lg" style="background:'+gradient+'"></div>';
- openModal('<h3>'+(type==='video'?'Video':'Foto')+'</h3>'+big+(caption?'<p class="mini" style="margin-top:10px">'+caption+'</p>':'')+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ openModal('<h3>'+(type==='video'?'Video':'Foto')+'</h3>'+big+(caption?'<p class="mini" style="margin-top:10px">'+esc(caption)+'</p>':'')+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
 }
 function wireMediaThumbs(container){
@@ -2950,7 +3083,7 @@ function renderCaDoelen(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editdoel]'),function(b){
   b.addEventListener('click',function(){
    var doel=d.doelen.filter(function(x){return x.id===+b.getAttribute('data-editdoel');})[0];
-   openModal('<h3>Doel hernoemen</h3><div class="field"><label>Titel</label><input id="modal-doel-titel" value="'+doel.titel.replace(/"/g,'&quot;')+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Doel hernoemen</h3><div class="field"><label>Titel</label><input id="modal-doel-titel" value="'+esc(doel.titel)+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
@@ -2973,7 +3106,7 @@ function renderCaDoelen(){
   b.addEventListener('click',function(){
    var parts=b.getAttribute('data-editrapport').split('|'),doelId=+parts[0],rapId=+parts[1];
    var doel=d.doelen.filter(function(x){return x.id===doelId;})[0],r=doel.rapportages.filter(function(x){return x.id===rapId;})[0];
-   openModal('<h3>Rapportage bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-rap-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+r.tekst.replace(/</g,'&lt;')+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Rapportage bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-rap-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(r.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-rap-tekst').value.trim();if(!tekst){el('modal-rap-tekst').style.borderColor='var(--brick)';return;}
@@ -3064,12 +3197,12 @@ function agendaCardHtml(a){
  if(a.locatie)extra.push('📍 '+a.locatie);
  if(a.herinnerdAan&&a.herinnerdAan.length){
   var voornamen=a.herinnerdAan.map(function(id){var p=findPerson(id);return p?naam(p).split(' ')[0]:null;}).filter(Boolean);
-  if(voornamen.length)extra.push('👤 '+voornamen.join(', '));
+  if(voornamen.length)extra.push('👤 '+esc(voornamen.join(', ')));
  }
  return '<div class="agendacard">'+
   '<input type="checkbox" data-klaar="'+a.id+'" '+(a.klaar?'checked':'')+' style="width:auto;flex:0 0 auto" aria-label="Klaar">'+
   '<div class="adate">'+a.datumlabel+'</div><div class="atxt"><b'+(a.klaar?' style="text-decoration:line-through;opacity:.55"':'')+'>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
-  (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+a.locatie.replace(/"/g,'&quot;')+'">🗺️ '+a.locatie+'</div>':'')+
+  (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+esc(a.locatie)+'">🗺️ '+esc(a.locatie)+'</div>':'')+
   (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
 }
 var PIJL_L='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>';
@@ -3122,7 +3255,7 @@ function renderCaAgenda(){
   var herinneringOpties=HERINNERING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
   var herhalingOpties=HERHALING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
   var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId);});
-  var herinnerChecklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'+avatarHtmlSized(naam(p),26)+'<input type="checkbox" value="'+p.id+'" class="afspr-herinner" style="width:auto">'+naam(p)+'</label>';}).join('');
+  var herinnerChecklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'+avatarHtmlSized(naam(p),26)+'<input type="checkbox" value="'+p.id+'" class="afspr-herinner" style="width:auto">'+esc(naam(p))+'</label>';}).join('');
   openModal('<h3>Afspraak toevoegen</h3>'+
    '<div class="field"><label>Titel</label><input id="modal-afspr-titel" placeholder="Bijv. Fysiotherapie"></div>'+
    '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="2026-09-20"></div>'+
@@ -3187,7 +3320,7 @@ function renderCaIkboek(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editikboek]'),function(b){
   b.addEventListener('click',function(){
    var e=d.ikboek.filter(function(x){return x.id===+b.getAttribute('data-editikboek');})[0];
-   openModal('<h3>Pagina bewerken</h3><div class="field"><label>Wat wil je vastleggen?</label><textarea id="modal-ikb-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+e.tekst.replace(/</g,'&lt;')+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Pagina bewerken</h3><div class="field"><label>Wat wil je vastleggen?</label><textarea id="modal-ikb-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(e.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-ikb-tekst').value.trim();if(!tekst){el('modal-ikb-tekst').style.borderColor='var(--brick)';return;}
@@ -3250,7 +3383,7 @@ function renderCaChatList(){
  var html=threads.map(function(t){
   var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg),last=th.berichten[th.berichten.length-1];
   return '<div class="chatlist-row" data-openchat="'+t.key+'">'+avatarHtmlSized(th.naam,38)+
-   '<div class="ctxt"><b>'+th.naam+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+(last?last.van+': '+last.tekst:'Nog geen berichten')+'</span></div>'+
+   '<div class="ctxt"><b>'+esc(th.naam)+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+esc(last?last.van+': '+last.tekst:'Nog geen berichten')+'</span></div>'+
    '<span class="ctime">'+(last?last.tijd:'')+'</span></div>';
  }).join('');
  html+='<button type="button" class="addbtn-row" id="ca-nieuw-gesprek">+ Nieuw gesprek</button>';
@@ -3265,8 +3398,8 @@ function renderCaChatList(){
    el('modal-snap').addEventListener('click',closeModal);
    return;
   }
-  var persoonOpties=betrokkenen.map(function(p){return '<option value="'+p.id+'">'+naam(p)+' — '+(p.type==='naaste'?'Naaste':'Medewerker')+'</option>';}).join('');
-  var checklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px"><input type="checkbox" value="'+p.id+'" class="gesprek-lid" style="width:auto">'+naam(p)+'</label>';}).join('');
+  var persoonOpties=betrokkenen.map(function(p){return '<option value="'+p.id+'">'+esc(naam(p))+' — '+(p.type==='naaste'?'Naaste':'Medewerker')+'</option>';}).join('');
+  var checklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px"><input type="checkbox" value="'+p.id+'" class="gesprek-lid" style="width:auto">'+esc(naam(p))+'</label>';}).join('');
   openModal('<h3>Nieuw gesprek</h3>'+
    '<div class="minitabs"><button type="button" class="on" data-gesprektype="persoon">Met één persoon</button><button type="button" data-gesprektype="groep">Nieuwe groep</button></div>'+
    '<div id="gesprek-persoon-veld"><div class="field"><label>Kies iemand</label><select id="modal-gesprek-persoon">'+persoonOpties+'</select></div></div>'+
@@ -3310,7 +3443,7 @@ function renderCaChatThread(){
  var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg);
  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
   '<button type="button" class="ghost small" id="ca-chat-terug">← Terug</button>'+
-  '<b style="font-size:13.5px">'+th.naam+'</b>'+
+  '<b style="font-size:13.5px">'+esc(th.naam)+'</b>'+
   (t.groep?'<div style="display:flex;gap:6px"><button type="button" class="small" id="ca-chat-media">Media</button><button type="button" class="small" id="ca-chat-leden">Leden</button></div>':'<span></span>')+'</div>';
  html+='<div id="ca-chat-berichten">'+th.berichten.map(function(m){
   var mine=m.van==='Jij';
@@ -3341,7 +3474,7 @@ function renderCaChatThread(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editmsg]'),function(b){
   b.addEventListener('click',function(){
    var m=th.berichten.filter(function(x){return x.id===+b.getAttribute('data-editmsg');})[0];
-   openModal('<h3>Bericht bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-msg-tekst" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+m.tekst.replace(/</g,'&lt;')+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Bericht bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-msg-tekst" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(m.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-msg-tekst').value.trim();if(!tekst){el('modal-msg-tekst').style.borderColor='var(--brick)';return;}
@@ -3365,15 +3498,15 @@ function renderCaGroepBewerken(){
  var leden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)>-1;});
  var nietleden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)<0;});
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-groep-terug">← Terug</button><b style="font-size:15px">Chatgroep bewerken</b></div>';
- html+='<div class="field"><label>Groepsnaam</label><input id="ca-groep-naam" value="'+th.naam+'"></div>';
+ html+='<div class="field"><label>Groepsnaam</label><input id="ca-groep-naam" value="'+esc(th.naam)+'"></div>';
  html+='<div class="sublistlabel" style="margin-top:14px">Leden ('+leden.length+')</div>';
  html+=leden.length? leden.map(function(l){
-  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+naam(l)+'</b><span>'+(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
+  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+esc(naam(l))+'</b><span>'+esc(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
    '<button type="button" class="iconbtn danger" data-verwijderlid="'+l.id+'" aria-label="Verwijder">'+TRASH_SVG+'</button></div>';
  }).join('') : '<p class="empty-msg">Nog geen leden.</p>';
  html+='<div class="sublistlabel">Toevoegen</div>';
  html+=nietleden.length? nietleden.map(function(l){
-  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+naam(l)+'</b><span>'+(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
+  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+esc(naam(l))+'</b><span>'+esc(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
    '<button type="button" class="small" data-toevoegenlid="'+l.id+'">+ Toevoegen</button></div>';
  }).join('') : '<p class="empty-msg">Iedereen zit al in de groep.</p>';
  el('ca-body').innerHTML=html;
@@ -3396,7 +3529,7 @@ var SOS_HOLD_MS=1400,SOS_CIRC=452,sosHoldTimer=null;
 function sosActivate(){
  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;}).slice(0,3);
  el('sos-card').innerHTML='<h3>Hulp is onderweg</h3><div class="msec"><p>De volgende personen zijn zojuist gewaarschuwd:</p></div>'+
-  betrokkenen.map(function(b){return '<div class="msec"><b>'+naam(b)+'</b><p>Gewaarschuwd, wacht op reactie…</p></div>';}).join('')+
+  betrokkenen.map(function(b){return '<div class="msec"><b>'+esc(naam(b))+'</b><p>Gewaarschuwd, wacht op reactie…</p></div>';}).join('')+
   '<div class="modal-actions"><button type="button" class="primary" id="sos-sluiten">Sluiten</button></div>';
  el('sos-sluiten').addEventListener('click',function(){el('sos-overlay').hidden=true;});
 }
@@ -3416,7 +3549,7 @@ function sosCancelHold(){
 }
 el('ca-sos-btn').addEventListener('click',function(){
  el('sos-card').innerHTML='<h3>Houd ingedrukt om SOS te activeren</h3>'+
-  '<div class="msec"><p>Dit waarschuwt direct de aanwezige medewerkers en de contactpersonen van '+(findPerson(caClientId)?naam(findPerson(caClientId)):'deze cliënt')+'.</p></div>'+
+  '<div class="msec"><p>Dit waarschuwt direct de aanwezige medewerkers en de contactpersonen van '+esc(findPerson(caClientId)?naam(findPerson(caClientId)):'deze cliënt')+'.</p></div>'+
   '<div class="sosholdwrap"><svg class="sosring" viewBox="0 0 170 170"><circle cx="85" cy="85" r="72" fill="none" stroke="var(--line)" stroke-width="6"/><circle id="sos-progress" cx="85" cy="85" r="72" fill="none" stroke="var(--brick)" stroke-width="6" stroke-linecap="round" transform="rotate(-90 85 85)" style="stroke-dasharray:452;stroke-dashoffset:452"/></svg><button type="button" class="sosbtn" id="sos-hold-btn">SOS</button></div>'+
   '<p class="mini" style="text-align:center">Houd de knop ingedrukt tot de ring vol is</p>'+
   '<div class="modal-actions"><button type="button" id="sos-cancel">Annuleren</button></div>';
