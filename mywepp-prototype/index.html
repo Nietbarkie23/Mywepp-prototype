@@ -126,7 +126,37 @@ button.danger:hover{border-color:var(--brick)}
 button.small{padding:5px 10px;font-size:12.5px;border-radius:8px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
+/* Grote tekst: de instelling bestond al in de cliënt-app maar deed niets. Omdat
+   de maten in px staan helpt een root-font-size niet; daarom gericht de tekst
+   vergroten die mensen echt lezen. Ook bruikbaar in de beheerkant, want juist
+   begeleiders werken hier de hele dag in. */
+html[data-tekst="groot"] body{font-size:17.5px}
+html[data-tekst="groot"] .pinfo .naam,
+html[data-tekst="groot"] .acc-head b,
+html[data-tekst="groot"] .panel .head h2{font-size:16.5px}
+html[data-tekst="groot"] .pinfo .mail,
+html[data-tekst="groot"] .mini,
+html[data-tekst="groot"] .panel .head .sub,
+html[data-tekst="groot"] .empty-msg{font-size:14.5px}
+html[data-tekst="groot"] button,
+html[data-tekst="groot"] input,
+html[data-tekst="groot"] select,
+html[data-tekst="groot"] textarea{font-size:15.5px}
+html[data-tekst="groot"] .abtn{font-size:12.5px}
+html[data-tekst="groot"] .crumbs{font-size:14px}
+html[data-tekst="groot"] .intro p{font-size:15px}
+
+.tekstknop{font-size:12.5px;padding:5px 9px;border-radius:8px;font-weight:600}
+.tekstknop.aan{background:var(--accent);color:#fff;border-color:var(--accent)}
+
 .zoekveld{width:100%;margin-bottom:10px;font-size:13.5px;padding:7px 11px}
+.rowkies{width:auto;flex:0 0 auto;margin-right:2px;cursor:pointer}
+.bulkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;
+ border:1px solid var(--accent-line);background:var(--accent-bg);border-radius:var(--radius-sm)}
+/* Een expliciete display wint van het hidden-attribuut, dus die moet terug. */
+.bulkbar[hidden]{display:none}
+.bulkbar b{font-size:13.5px;color:var(--accent);margin-right:4px}
+.bulkbar button{font-size:12.5px;padding:5px 10px;border-radius:8px}
 
 .adminbar-wrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;background:var(--adminbar-bg);padding:10px;border-radius:var(--radius);margin-bottom:18px}
 .adminbar-group{display:flex;flex-wrap:wrap;gap:6px}
@@ -467,6 +497,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="rolebar">
       <label for="account-select">Ingelogd als</label>
       <select id="account-select"></select>
+      <button type="button" class="tekstknop" id="tekst-groter" aria-pressed="false" title="Grotere tekst in het hele scherm">A+</button>
       <label for="rol-select">Weergave</label>
       <select id="rol-select">
         <option value="groep">Teamleider — groepsprofiel</option>
@@ -527,6 +558,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <button type="button" class="tab on" data-admintab="bulk">1 — Standaardrollen in bulk instellen</button>
     <button type="button" class="tab" data-admintab="groep">2 — Groep bewerken</button>
     <button type="button" class="tab" data-admintab="groepen">3 — Groepen beheren</button>
+    <button type="button" class="tab" data-admintab="controle">4 — Controle <span class="countchip" id="controle-teller"></span></button>
   </div>
 
   <section id="admintab-bulk">
@@ -586,6 +618,17 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         </div>
         <div class="actions end"><button type="button" class="primary" id="sb-groep-toevoegen">Groep toevoegen</button></div>
         <div id="sb-groep-bevestiging"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admintab-controle" hidden>
+    <div class="panel">
+      <div class="head"><h2>Controle</h2><span class="sub">Signalen die aandacht nodig hebben</span></div>
+      <div class="body">
+        <p class="note">Deze lijst kijkt over alle groepen heen naar situaties die in de zorg problemen geven — bijvoorbeeld een cliënt waar niemand toegang toe heeft, of een groep zonder aanspreekpunt.</p>
+        <div id="controle-lijst"></div>
+        <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
       </div>
     </div>
   </section>
@@ -668,6 +711,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="acc-body">
         <input type="search" class="zoekveld" id="zoek-client" placeholder="Zoeken op naam of e-mailadres…" hidden>
         <div id="rows-client"></div>
+        <div class="bulkbar" id="bulkbar-client" hidden></div>
         <div class="acc-actions">
           <button type="button" class="addbtn-row" data-add="client">+ Cliënt toevoegen</button>
           <button type="button" class="toonmeer-btn" data-toonmeer="client" hidden></button>
@@ -680,6 +724,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="acc-body">
         <input type="search" class="zoekveld" id="zoek-medewerker" placeholder="Zoeken op naam of e-mailadres…" hidden>
         <div id="rows-medewerker"></div>
+        <div class="bulkbar" id="bulkbar-medewerker" hidden></div>
         <div class="acc-actions">
           <button type="button" class="addbtn-row" data-add="medewerker">+ Medewerker toevoegen</button>
           <button type="button" class="toonmeer-btn" data-toonmeer="medewerker" hidden></button>
@@ -692,6 +737,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="acc-body">
         <input type="search" class="zoekveld" id="zoek-naaste" placeholder="Zoeken op naam of e-mailadres…" hidden>
         <div id="rows-naaste"></div>
+        <div class="bulkbar" id="bulkbar-naaste" hidden></div>
         <div class="acc-actions">
           <button type="button" class="addbtn-row" data-add="naaste">+ Naaste toevoegen</button>
           <button type="button" class="toonmeer-btn" data-toonmeer="naaste" hidden></button>
@@ -1178,6 +1224,7 @@ function kiesAdmintab(naamVal){
  var btn=document.querySelector('.tabs .tab[data-admintab="'+naamVal+'"]');if(btn)btn.classList.add('on');
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
  if(naamVal==='groepen')renderSysteembeheer();
+ if(naamVal==='controle')renderControle();
 }
 Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
  b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
@@ -1490,7 +1537,10 @@ function rowHtml(p,t){
  var staged=p._state==='verwijderd';
  var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
  var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
- var head='<div class="uhead">'+avatarHtml(naam(p),p.foto)+
+ var gekozen=selectie[t]&&selectie[t][p.id];
+ var head='<div class="uhead">'+
+  '<input type="checkbox" class="rowkies" data-kies="'+p.id+'" '+(gekozen?'checked':'')+' aria-label="Selecteer '+esc(naam(p))+'">'+
+  avatarHtml(naam(p),p.foto)+
   '<div class="pinfo"><div class="naam">'+esc(naam(p))+contactBadge+stateTag+'</div><div class="mail">'+esc(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
   '<div class="rowbtns">'+
    '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
@@ -1499,6 +1549,76 @@ function rowHtml(p,t){
  return '<div class="urow'+(staged?' staged':'')+'" data-row="'+p.id+'">'+head+'</div>';
 }
 
+/* Meerdere mensen tegelijk koppelen, verplaatsen of archiveren. Zonder dit moet
+   je bij elke verhuizing of nieuwe collega iedereen los aanklikken. */
+var selectie={client:{},medewerker:{},naaste:{}};
+function gekozenIds(t){return Object.keys(selectie[t]).filter(function(id){return selectie[t][id];}).map(Number);}
+function wisSelectie(t){selectie[t]={};}
+function renderBulkbar(t){
+ var balk=el('bulkbar-'+t),ids=gekozenIds(t);
+ if(!ids.length){balk.hidden=true;balk.innerHTML='';return;}
+ balk.hidden=false;
+ var label=TYPELABEL[t]+(ids.length===1?'':'en');
+ balk.innerHTML='<b>'+ids.length+' geselecteerd</b>'+
+  '<button type="button" data-bulk="koppel">Koppelen aan groep…</button>'+
+  (t==='medewerker'?'<button type="button" data-bulk="rol">Rol op alle cliënten…</button>':'')+
+  '<button type="button" class="danger" data-bulk="verwijder">Verwijderen</button>'+
+  '<button type="button" class="ghost" data-bulk="wis">Selectie wissen</button>';
+ Array.prototype.forEach.call(balk.querySelectorAll('[data-bulk]'),function(b){
+  b.addEventListener('click',function(){bulkActie(t,b.getAttribute('data-bulk'),gekozenIds(t));});
+ });
+}
+function bulkActie(t,actie,ids){
+ if(actie==='wis'){wisSelectie(t);renderAcc(t);return;}
+ var personen=ids.map(findPerson).filter(Boolean);
+ if(!personen.length)return;
+ if(actie==='koppel'){
+  kiesUitLijstModal('Aan welke groep koppelen?',GROEPEN,function(g){return g;},function(g){
+   var aantal=0;
+   personen.forEach(function(p){
+    if(p.groepen.indexOf(g)<0){p.groepen.push(g);if(p._state!=='nieuw')p._state='gewijzigd';aantal++;}
+   });
+   logActie(aantal+' '+TYPELABEL[t].toLowerCase()+'(en) gekoppeld aan groep "'+g+'"');
+   wisSelectie(t);renderAll();
+   openMelding('Gekoppeld',aantal+' van de '+personen.length+' gekoppeld aan "'+g+'". De rest zat er al in.');
+  });
+  return;
+ }
+ if(actie==='rol'){
+  var rollen=ROLLEN.medewerker.clienten;
+  kiesUitLijstModal('Welke rol op alle cliënten in deze groep?',rollen,function(r){return r;},function(rol){
+   var clienten=personenVanType('client');
+   personen.forEach(function(m){
+    m.clientRechten=m.clientRechten||{};
+    clienten.forEach(function(c){
+     if(rol==='Geen')delete m.clientRechten[c.id]; else m.clientRechten[c.id]=rol;
+    });
+    if(m._state!=='nieuw')m._state='gewijzigd';
+   });
+   logActie(personen.length+' medewerker(s) kregen rol "'+rol+'" op alle '+clienten.length+' cliënten van '+huidigeGroep);
+   wisSelectie(t);renderAll();
+   openMelding('Rollen aangepast',personen.length+' medewerker(s) hebben nu de rol "'+rol+'" op alle cliënten in deze groep.');
+  });
+  return;
+ }
+ if(actie==='verwijder'){
+  openModal('<h3>'+personen.length+' '+esc(TYPELABEL[t].toLowerCase())+'(en) verwijderen</h3><div class="msec"><p>'+
+   esc(personen.map(naam).join(', '))+'</p><p>Ze worden gemarkeerd om verwijderd te worden. Dit wordt pas definitief bij "Wijzigingen doorvoeren".</p></div>'+
+   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+  el('modal-annuleer').addEventListener('click',closeModal);
+  el('modal-bevestig').addEventListener('click',function(){
+   personen.forEach(function(p){trashRow(p.id,t);});
+   logActie(personen.length+' '+TYPELABEL[t].toLowerCase()+'(en) gemarkeerd om te verwijderen');
+   wisSelectie(t);closeModal();renderAll();
+  });
+ }
+}
+function openMelding(titel,tekst){
+ openModal('<h3>'+esc(titel)+'</h3><div class="msec"><p>'+esc(tekst)+'</p></div>'+
+  '<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+}
+var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
 var lijstLimiet={client:5,medewerker:3,naaste:3};
 var lijstUitgeklapt={client:false,medewerker:false,naaste:false};
 var lijstZoek={client:'',medewerker:'',naaste:''};
@@ -1539,6 +1659,14 @@ function renderAcc(t){
  Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
   b.addEventListener('click',function(){trashRow(+b.getAttribute('data-trashrow'),t);});
  });
+ Array.prototype.forEach.call(box.querySelectorAll('[data-kies]'),function(c){
+  c.addEventListener('click',function(e){e.stopPropagation();});
+  c.addEventListener('change',function(){
+   selectie[t][+c.getAttribute('data-kies')]=c.checked;
+   renderBulkbar(t);
+  });
+ });
+ renderBulkbar(t);
 }
 ['client','medewerker','naaste'].forEach(function(t){
  el('zoek-'+t).addEventListener('input',function(){lijstZoek[t]=this.value;renderAcc(t);});
@@ -1894,7 +2022,10 @@ el('account-select').addEventListener('change',function(){
  MIJN_PROFIEL.mail=gekozen.mail||'';MIJN_PROFIEL.mobiel=gekozen.tel||'';
  renderAll();
 });
-function renderAll(){['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();}
+function renderAll(){
+ ['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();
+ if(el('admintab-controle')&&!el('admintab-controle').hidden)renderControle();
+}
 
 /* ============== SYSTEEMBEHEER (boven groepsniveau) ============== */
 function sbCounts(g){
@@ -2002,6 +2133,97 @@ function herstelGroep(g){
  renderSysteembeheer();
  syncGroepenToSupabase();
 }
+
+/* ============== CONTROLE: signalen over alle groepen heen ==============
+   Een prototype laat makkelijk situaties ontstaan die in de praktijk pas
+   opvallen als het misgaat: een cliënt waar niemand toegang toe heeft, een
+   groep zonder aanspreekpunt, of een zieke contactpersoon zonder vervanger.
+   Deze controle maakt dat vooraf zichtbaar. */
+function actieveIn(groep,type){
+ return people.filter(function(p){return p.type===type&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(groep)>-1;});
+}
+function controleSignalen(){
+ var signalen=[];
+ GROEPEN.forEach(function(g){
+  var clienten=actieveIn(g,'client'),medewerkers=actieveIn(g,'medewerker'),naasten=actieveIn(g,'naaste');
+  /* 1. Cliënt zonder enige medewerker met toegang: niemand kan iets voor
+        deze persoon vastleggen of zien. */
+  clienten.forEach(function(c){
+   var metToegang=medewerkers.filter(function(m){return rolOpClient(m,c.id);});
+   if(!metToegang.length){
+    signalen.push({ernst:'hoog',groep:g,tekst:naam(c)+' heeft geen enkele medewerker met toegang.',
+     actie:{soort:'client',id:c.id,groep:g,label:'Toegang regelen'}});
+   }
+  });
+  /* 2. Groep zonder contactpersoon: naasten hebben geen aanspreekpunt. */
+  var contacten=medewerkers.filter(function(m){return m.contactVolgorde;});
+  if(medewerkers.length&&!contacten.length){
+   signalen.push({ernst:'hoog',groep:g,tekst:'Geen contactpersoon aangewezen voor deze groep.',
+    actie:{soort:'groep',groep:g,label:'Groep openen'}});
+  }
+  /* 3. Enige contactpersoon is ziek: meldingen komen nergens aan. */
+  var ziek=contacten.filter(function(m){return m.status==='ziek';});
+  if(contacten.length&&ziek.length===contacten.length){
+   signalen.push({ernst:'hoog',groep:g,tekst:'De contactperso(o)n(en) van deze groep staan allemaal op ziek.',
+    actie:{soort:'groep',groep:g,label:'Groep openen'}});
+  }
+  /* 4. Eén contactpersoon: bij ziekte is er geen terugval. */
+  if(contacten.length===1&&medewerkers.length>1){
+   signalen.push({ernst:'laag',groep:g,tekst:'Maar één contactpersoon — bij ziekte is er geen vervanger.',
+    actie:{soort:'groep',groep:g,label:'Groep openen'}});
+  }
+  /* 5. Medewerkers en naasten zonder e-mailadres kunnen niet inloggen. */
+  medewerkers.concat(naasten).forEach(function(p){
+   if(!p.mail)signalen.push({ernst:'laag',groep:g,tekst:naam(p)+' heeft geen e-mailadres en kan dus niet inloggen.',
+    actie:{soort:'persoon',id:p.id,type:p.type,groep:g,label:'Profiel openen'}});
+  });
+  /* 6. Naamgenoten in dezelfde groep: verwisselingsrisico. */
+  var gezien={};
+  clienten.concat(medewerkers,naasten).forEach(function(p){
+   var sleutel=naam(p).toLowerCase();
+   if(gezien[sleutel]){
+    signalen.push({ernst:'laag',groep:g,tekst:'Twee keer dezelfde naam in deze groep: '+naam(p)+'.',
+     actie:{soort:'groep',groep:g,label:'Groep openen'}});
+   }
+   gezien[sleutel]=true;
+  });
+ });
+ /* 7. Groep zonder mensen. */
+ GROEPEN.forEach(function(g){
+  if(!actieveIn(g,'client').length&&!actieveIn(g,'medewerker').length&&!actieveIn(g,'naaste').length){
+   signalen.push({ernst:'laag',groep:g,tekst:'Deze groep is helemaal leeg.',actie:{soort:'groep',groep:g,label:'Groep openen'}});
+  }
+ });
+ var volgorde={hoog:0,laag:1};
+ return signalen.sort(function(a,b){return volgorde[a.ernst]-volgorde[b.ernst];});
+}
+function renderControle(){
+ var signalen=controleSignalen();
+ var hoog=signalen.filter(function(s){return s.ernst==='hoog';}).length;
+ var teller=el('controle-teller');
+ if(teller){teller.textContent=signalen.length?signalen.length:'';teller.style.color=hoog?'var(--brick)':'var(--ink-faint)';}
+ el('controle-lijst').innerHTML=signalen.length?signalen.map(function(s,i){
+  var kleur=s.ernst==='hoog'?'var(--brick)':'var(--amber)';
+  var label=s.ernst==='hoog'?'Actie nodig':'Aandachtspunt';
+  return '<div class="personrow">'+
+   '<div class="pinfo"><div class="naam"><span class="statuschip" style="background:transparent;color:'+kleur+';border:1px solid '+kleur+'">'+label+'</span> '+esc(s.tekst)+'</div>'+
+   '<div class="mail">'+esc(s.groep)+'</div></div>'+
+   '<button type="button" class="small" data-ctrl="'+i+'">'+esc(s.actie.label)+'</button></div>';
+ }).join('')
+  :'<p class="empty-msg">Geen signalen — alles ziet er goed uit.</p>';
+ Array.prototype.forEach.call(el('controle-lijst').querySelectorAll('[data-ctrl]'),function(b){
+  b.addEventListener('click',function(){
+   var s=signalen[+b.getAttribute('data-ctrl')];if(!s)return;
+   huidigeGroep=s.actie.groep;
+   verversGroepReferenties();renderAll();
+   showView('personal');
+   if(s.actie.soort==='client')openProfielClient(s.actie.id);
+   else if(s.actie.soort==='persoon')openProfielPersoon(s.actie.id,s.actie.type);
+   else show('pp-formulier');
+  });
+ });
+}
+el('controle-ververs').addEventListener('click',renderControle);
 
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
@@ -2398,6 +2620,7 @@ async function laadLogboek(){
   });
  }catch(e){/* zonder verbinding blijft het logboek van deze sessie zichtbaar */}
 }
+el('tekst-groter').addEventListener('click',function(){zetGroteTekst(!groteTekstAan());});
 el('logboek-btn').addEventListener('click',function(){
  var inhoud=LOGBOEK.length
   ? LOGBOEK.map(function(l){
@@ -2406,9 +2629,24 @@ el('logboek-btn').addEventListener('click',function(){
     }).join('')
   : '<div class="msec"><p>Nog geen wijzigingen vastgelegd.</p></div>';
  openModal('<h3>Logboek</h3><p class="mini" style="margin:0 0 10px">Wie heeft wanneer iets aan gebruikers of rechten gewijzigd.</p>'+inhoud
-  +'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  +'<div class="modal-actions"><button type="button" id="logboek-export"'+(LOGBOEK.length?'':' disabled')+'>Exporteren (CSV)</button><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
+ el('logboek-export').addEventListener('click',exporteerLogboek);
 });
+/* Bij een audit of incident wil je het logboek buiten de app kunnen aanleveren. */
+function csvVeld(waarde){return '"'+String(waarde==null?'':waarde).replace(/"/g,'""')+'"';}
+function exporteerLogboek(){
+ if(!LOGBOEK.length)return;
+ var regels=[['Tijd','Wie','Groep','Wat'].map(csvVeld).join(';')];
+ LOGBOEK.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
+ /* BOM zodat Excel de accenten goed leest. */
+ var blob=new Blob(['\ufeff'+regels.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+ var url=URL.createObjectURL(blob);
+ var a=document.createElement('a');
+ a.href=url;a.download='mywepp-logboek-'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.appendChild(a);a.click();document.body.removeChild(a);
+ setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
 
 /* --- Gearchiveerd --- */
 function renderGearchiveerd(){
@@ -2430,7 +2668,6 @@ function renderGearchiveerd(){
 el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
 
 /* --- Wijzigingen: controleren -> bevestigen -> doorgevoerd --- */
-var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
 function renderControleren(){
  var wijzigingen=people.filter(function(p){return p._state;});
  el('controleren-lijst').innerHTML=wijzigingen.length? wijzigingen.map(function(p){
@@ -2671,6 +2908,12 @@ async function laadClientData(){
   }
  }catch(e){/* zonder verbinding blijft de demodata actief */}
 }
+function zetGroteTekst(aan){
+ document.documentElement.setAttribute('data-tekst',aan?'groot':'normaal');
+ var knop=el('tekst-groter');
+ if(knop){knop.classList.toggle('aan',!!aan);knop.setAttribute('aria-pressed',aan?'true':'false');}
+}
+function groteTekstAan(){return document.documentElement.getAttribute('data-tekst')==='groot';}
 function digiOn(k){return DIGIBORD.filter(function(d){return d.k===k;})[0].on;}
 function renderDigibordPreview(){
  var clienten=personenVanType('client'),medewerkers=personenVanType('medewerker');
@@ -2858,6 +3101,7 @@ function caToggleRow(label,key,waarden){
 }
 function renderCaInstellingen(){
  var w=ensureCaInstellingen(caClientId);
+ w.groteTekst=groteTekstAan();
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-instellingen-terug">← Terug</button><b style="font-size:15px">Meer instellingen</b></div>';
  html+='<div class="sublistlabel" style="margin-top:0">Meldingen</div>';
  html+=caToggleRow('Nieuwe rapportage','nieuweRapportage',w);
@@ -2890,6 +3134,7 @@ function renderCaInstellingen(){
   Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-inst]'),function(inp){
    w[inp.getAttribute('data-inst')]=inp.checked;
   });
+  zetGroteTekst(w.groteTekst);
   bewaarClientData(caClientId);
   el('ca-instellingen-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Instellingen opgeslagen.</div>';
  });
