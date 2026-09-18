@@ -1552,14 +1552,37 @@ function rowHtml(p,t){
 /* Meerdere mensen tegelijk koppelen, verplaatsen of archiveren. Zonder dit moet
    je bij elke verhuizing of nieuwe collega iedereen los aanklikken. */
 var selectie={client:{},medewerker:{},naaste:{}};
-function gekozenIds(t){return Object.keys(selectie[t]).filter(function(id){return selectie[t][id];}).map(Number);}
+/* Alleen wie nu echt in de lijst staat telt mee. Anders blijft een selectie uit
+   een andere groep actief en zou "Verwijderen" iemand raken die je niet ziet. */
+function gekozenIds(t){
+ var zichtbaar={};
+ personenVanType(t).forEach(function(p){zichtbaar[p.id]=true;});
+ return Object.keys(selectie[t]).filter(function(id){return selectie[t][id]&&zichtbaar[id];}).map(Number);
+}
+/* De lijst zoals hij nu op het scherm staat, inclusief de zoekterm. */
+function gefilterdePersonen(t){
+ var term=(lijstZoek[t]||'').trim().toLowerCase();
+ var alles=personenVanType(t);
+ if(!term)return alles;
+ return alles.filter(function(p){
+  return naam(p).toLowerCase().indexOf(term)>-1||(p.mail||'').toLowerCase().indexOf(term)>-1;
+ });
+}
+function schoonSelectie(t){
+ var zichtbaar={};
+ personenVanType(t).forEach(function(p){zichtbaar[p.id]=true;});
+ Object.keys(selectie[t]).forEach(function(id){if(!zichtbaar[id])delete selectie[t][id];});
+}
 function wisSelectie(t){selectie[t]={};}
 function renderBulkbar(t){
  var balk=el('bulkbar-'+t),ids=gekozenIds(t);
  if(!ids.length){balk.hidden=true;balk.innerHTML='';return;}
  balk.hidden=false;
- var label=TYPELABEL[t]+(ids.length===1?'':'en');
+ var inBeeld={};
+ gefilterdePersonen(t).forEach(function(p){inBeeld[p.id]=true;});
+ var verborgen=ids.filter(function(id){return !inBeeld[id];}).length;
  balk.innerHTML='<b>'+ids.length+' geselecteerd</b>'+
+  (verborgen?'<span class="mini" style="color:var(--amber)">waarvan '+verborgen+' buiten je zoekresultaat</span>':'')+
   '<button type="button" data-bulk="koppel">Koppelen aan groep…</button>'+
   (t==='medewerker'?'<button type="button" data-bulk="rol">Rol op alle cliënten…</button>':'')+
   '<button type="button" class="danger" data-bulk="verwijder">Verwijderen</button>'+
@@ -1631,9 +1654,7 @@ function renderAcc(t){
  zoekveld.hidden=!zoekZinvol;
  if(!zoekZinvol&&lijstZoek[t]){lijstZoek[t]='';zoekveld.value='';}
  var term=lijstZoek[t].trim().toLowerCase();
- var volledig=term?alles.filter(function(p){
-  return naam(p).toLowerCase().indexOf(term)>-1||(p.mail||'').toLowerCase().indexOf(term)>-1;
- }):alles;
+ var volledig=gefilterdePersonen(t);
  var limiet=lijstLimiet[t],uitgeklapt=lijstUitgeklapt[t]||volledig.length<=limiet;
  var lijst=uitgeklapt?volledig:volledig.slice(0,limiet);
  var box=el('rows-'+t);
@@ -1659,6 +1680,7 @@ function renderAcc(t){
  Array.prototype.forEach.call(box.querySelectorAll('[data-trashrow]'),function(b){
   b.addEventListener('click',function(){trashRow(+b.getAttribute('data-trashrow'),t);});
  });
+ schoonSelectie(t);
  Array.prototype.forEach.call(box.querySelectorAll('[data-kies]'),function(c){
   c.addEventListener('click',function(e){e.stopPropagation();});
   c.addEventListener('change',function(){
