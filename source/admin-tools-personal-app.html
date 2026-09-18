@@ -1303,6 +1303,7 @@ async function loadFromSupabase(){
   verversGroepReferenties();
   synchroniseerGlobaleRollen();
   await laadLogboek();
+  await laadClientData();
   if(typeof renderAll==='function')renderAll();
   if(!el('admintab-groepen').hidden)renderSysteembeheer();
  }catch(e){/* Supabase niet bereikbaar (bv. in preview-omgeving) — lokale demodata blijft actief */}
@@ -2589,6 +2590,54 @@ var DIGIBORD=[
  {k:'kalenderbord',l:'Kalenderbord',s:'Algemene afspraken van de groep',on:false}
 ];
 var CLIENTDATA={};
+/* Alles wat in de cliënt-app wordt vastgelegd — doelen, rapportages, agenda,
+   ik-boek, geheugensteuntjes, instellingen en chats — leefde alleen in het
+   geheugen en was na een herlaad weg. Het wordt nu bewaard in Supabase.
+   Opslaan gebeurt met een korte vertraging en mag nooit de UI blokkeren. */
+var bewaarTimers={};
+function bewaarStraks(sleutel,fn){
+ clearTimeout(bewaarTimers[sleutel]);
+ bewaarTimers[sleutel]=setTimeout(fn,600);
+}
+function bewaarClientData(clientId){
+ if(!sb||!clientId)return;
+ bewaarStraks('client-'+clientId,function(){
+  try{
+   sb.from('client_data').upsert([{
+    client_id:clientId,
+    dossier:CLIENTDATA[clientId]||{},
+    geheugen:GEHEUGEN[clientId]||{},
+    instellingen:CA_INSTELLINGEN[clientId]||{},
+    bijgewerkt:new Date().toISOString()
+   }],{onConflict:'client_id'}).then(function(){},function(){});
+  }catch(e){/* opslaan mag de app nooit tegenhouden */}
+ });
+}
+function bewaarChatThread(sleutel){
+ if(!sb||!sleutel||!CHATSTORE[sleutel])return;
+ bewaarStraks('chat-'+sleutel,function(){
+  try{
+   sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'}).then(function(){},function(){});
+  }catch(e){/* idem */}
+ });
+}
+async function laadClientData(){
+ if(!sb)return;
+ try{
+  var cd=await sb.from('client_data').select('client_id,dossier,geheugen,instellingen');
+  if(cd&&!cd.error&&cd.data){
+   cd.data.forEach(function(r){
+    if(r.dossier&&r.dossier.doelen)CLIENTDATA[r.client_id]=r.dossier;
+    if(r.geheugen&&r.geheugen.items)GEHEUGEN[r.client_id]=r.geheugen;
+    if(r.instellingen&&Object.keys(r.instellingen).length)CA_INSTELLINGEN[r.client_id]=r.instellingen;
+   });
+  }
+  var ct=await sb.from('chat_threads').select('sleutel,thread');
+  if(ct&&!ct.error&&ct.data){
+   ct.data.forEach(function(r){if(r.thread)CHATSTORE[r.sleutel]=r.thread;});
+  }
+ }catch(e){/* zonder verbinding blijft de demodata actief */}
+}
 function digiOn(k){return DIGIBORD.filter(function(d){return d.k===k;})[0].on;}
 function renderDigibordPreview(){
  var clienten=personenVanType('client'),medewerkers=personenVanType('medewerker');
@@ -2749,15 +2798,15 @@ function renderCaGeheugen(){
     dagen='Eenmalig · '+d.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
    }
    g.items.push({id:g.nextId++,titel:titel,tijd:el('modal-geh-tijd').value.trim()||'—',dagen:dagen,actief:true});
-   closeModal();renderCaGeheugen();
+   bewaarClientData(caClientId);closeModal();renderCaGeheugen();
   });
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-geh-actief]'),function(c){
-  c.addEventListener('change',function(){g.items.filter(function(x){return x.id===+c.getAttribute('data-geh-actief');})[0].actief=c.checked;});
+  c.addEventListener('change',function(){g.items.filter(function(x){return x.id===+c.getAttribute('data-geh-actief');})[0].actief=c.checked;bewaarClientData(caClientId);});
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-geh-verwijder]'),function(b){
   b.addEventListener('click',function(){
-   g.items=g.items.filter(function(x){return x.id!==+b.getAttribute('data-geh-verwijder');});renderCaGeheugen();
+   g.items=g.items.filter(function(x){return x.id!==+b.getAttribute('data-geh-verwijder');});bewaarClientData(caClientId);renderCaGeheugen();
   });
  });
 }
@@ -2808,6 +2857,7 @@ function renderCaInstellingen(){
   Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-inst]'),function(inp){
    w[inp.getAttribute('data-inst')]=inp.checked;
   });
+  bewaarClientData(caClientId);
   el('ca-instellingen-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Instellingen opgeslagen.</div>';
  });
 }
@@ -2987,6 +3037,7 @@ function emojiRowHtml(attrName,attrValuePrefix,item){
  }).join('')+'</div>';
 }
 function toggleReactie(item,emoji){
+ bewaarStraks('reactie-'+caClientId,function(){bewaarClientData(caClientId);});
  if(item.mijnReactie===emoji){
   item.reacties[emoji]=Math.max(0,(item.reacties[emoji]||1)-1);
   if(!item.reacties[emoji])delete item.reacties[emoji];
@@ -3041,7 +3092,7 @@ function renderCaDoelen(){
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
    var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
-   d.doelen.push({id:d._nextDoelId++,titel:titel,rapportages:[]});closeModal();renderCaDoelen();
+   d.doelen.push({id:d._nextDoelId++,titel:titel,rapportages:[]});bewaarClientData(caClientId);closeModal();renderCaDoelen();
   });
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-newrapport]'),function(b){
@@ -3067,7 +3118,7 @@ function renderCaDoelen(){
     var dienst=el('rapport-dienst-'+doelId).value;
     var datum=el('rapport-datum-'+doelId).value;
     var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
-    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',dienst:dienst,datum:datum,auteur:'Jij',media:media,audio:audio,reacties:{}});
+    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',dienst:dienst,datum:datum,auteur:'Jij',media:media,audio:audio,reacties:{}});bewaarClientData(caClientId);
     renderCaDoelen();
    });
   });
@@ -3087,7 +3138,7 @@ function renderCaDoelen(){
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
-    doel.titel=titel;closeModal();renderCaDoelen();
+    doel.titel=titel;bewaarClientData(caClientId);closeModal();renderCaDoelen();
    });
   });
  });
@@ -3097,7 +3148,7 @@ function renderCaDoelen(){
    openModal('<h3>Doel verwijderen</h3><div class="msec"><p>Weet je zeker dat je dit doel en alle rapportages daaronder wilt verwijderen? Dit kan niet ongedaan gemaakt worden.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-bevestig').addEventListener('click',function(){
-    d.doelen=d.doelen.filter(function(x){return x.id!==doelId;});
+    d.doelen=d.doelen.filter(function(x){return x.id!==doelId;});bewaarClientData(caClientId);
     closeModal();renderCaDoelen();
    });
   });
@@ -3110,7 +3161,7 @@ function renderCaDoelen(){
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-rap-tekst').value.trim();if(!tekst){el('modal-rap-tekst').style.borderColor='var(--brick)';return;}
-    r.tekst=tekst;closeModal();renderCaDoelen();
+    r.tekst=tekst;bewaarClientData(caClientId);closeModal();renderCaDoelen();
    });
   });
  });
@@ -3121,7 +3172,7 @@ function renderCaDoelen(){
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-bevestig').addEventListener('click',function(){
     var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
-    doel.rapportages=doel.rapportages.filter(function(x){return x.id!==rapId;});
+    doel.rapportages=doel.rapportages.filter(function(x){return x.id!==rapId;});bewaarClientData(caClientId);
     closeModal();renderCaDoelen();
    });
   });
@@ -3231,7 +3282,7 @@ function renderCaAgenda(){
   c.addEventListener('click',function(e){
    e.stopPropagation();
    var a=d.agenda.filter(function(x){return x.id===+c.getAttribute('data-klaar');})[0];
-   a.klaar=c.checked;renderCaAgenda();
+   a.klaar=c.checked;bewaarClientData(caClientId);renderCaAgenda();
   });
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-agendaview]'),function(b){
@@ -3277,6 +3328,7 @@ function renderCaAgenda(){
    d.agenda.push({id:d._nextAgendaId++,titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
     locatie:el('modal-afspr-locatie').value.trim(),herinnerdAan:herinnerdAan,klaar:false,
     herinnering:el('modal-afspr-herinnering').value,herhaling:el('modal-afspr-herhaling').value});
+   bewaarClientData(caClientId);
    closeModal();renderCaAgenda();
   });
  });
@@ -3305,7 +3357,7 @@ function renderCaIkboek(){
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
    var tekst=el('modal-ikboek-tekst').value.trim();if(!tekst){el('modal-ikboek-tekst').style.borderColor='var(--brick)';return;}
-   d.ikboek.push({id:d._nextIkboekId++,tekst:tekst,tijd:'vandaag',mediaType:el('modal-ikboek-mediatype').value,reacties:{}});
+   d.ikboek.push({id:d._nextIkboekId++,tekst:tekst,tijd:'vandaag',mediaType:el('modal-ikboek-mediatype').value,reacties:{}});bewaarClientData(caClientId);
    closeModal();renderCaIkboek();
   });
  });
@@ -3324,7 +3376,7 @@ function renderCaIkboek(){
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-ikb-tekst').value.trim();if(!tekst){el('modal-ikb-tekst').style.borderColor='var(--brick)';return;}
-    e.tekst=tekst;closeModal();renderCaIkboek();
+    e.tekst=tekst;bewaarClientData(caClientId);closeModal();renderCaIkboek();
    });
   });
  });
@@ -3334,7 +3386,7 @@ function renderCaIkboek(){
    openModal('<h3>Pagina verwijderen</h3><div class="msec"><p>Weet je zeker dat je deze pagina wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-bevestig').addEventListener('click',function(){
-    d.ikboek=d.ikboek.filter(function(x){return x.id!==id;});
+    d.ikboek=d.ikboek.filter(function(x){return x.id!==id;});bewaarClientData(caClientId);
     closeModal();renderCaIkboek();
    });
   });
@@ -3343,11 +3395,15 @@ function renderCaIkboek(){
 
 /* --- Chat --- */
 var CHATSTORE={};
+/* De sleutel van een 1-op-1 gesprek bevatte alleen het medewerker-id, waardoor
+   hetzelfde gesprek bij elke cliënt van die medewerker verscheen — berichten over
+   de ene cliënt waren zo zichtbaar bij de andere. De cliënt hoort in de sleutel. */
+function chatSleutel1op1(clientId,persoonId){return '1on1-'+clientId+'-'+persoonId;}
 function chatThreadsForClient(clientId){
  var p=findPerson(clientId);
  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,clientId);});
  var threads=[{key:'group-'+clientId,naam:'Team '+naam(p),groep:true,defaultLeden:betrokkenen}];
- betrokkenen.filter(function(b){return b.type==='medewerker';}).forEach(function(m){threads.push({key:'1on1-'+m.id,naam:naam(m),groep:false,persoon:m});});
+ betrokkenen.filter(function(b){return b.type==='medewerker';}).forEach(function(m){threads.push({key:chatSleutel1op1(clientId,m.id),naam:naam(m),groep:false,persoon:m});});
  var d=ensureClientData(clientId);
  (d.customChats||[]).forEach(function(c){
   if(threads.some(function(th){return th.key===c.key;}))return;
@@ -3421,7 +3477,7 @@ function renderCaChatList(){
    d.customChats=d.customChats||[];
    if(type==='persoon'){
     var pid=+el('modal-gesprek-persoon').value;
-    var key='1on1-'+pid;
+    var key=chatSleutel1op1(caClientId,pid);
     var bestaatAl=chatThreadsForClient(caClientId).some(function(th){return th.key===key;});
     if(!bestaatAl)d.customChats.push({key:key,groep:false,persoonId:pid});
     caChatKey=key;
@@ -3429,7 +3485,7 @@ function renderCaChatList(){
     var naamVal=el('modal-gesprek-naam').value.trim();if(!naamVal){el('modal-gesprek-naam').style.borderColor='var(--brick)';return;}
     var leden=Array.from(document.querySelectorAll('.gesprek-lid:checked')).map(function(c){return +c.value;});
     if(!leden.length)return;
-    var key='groep-custom-'+(d._nextChatId++);
+    var key='groep-custom-'+caClientId+'-'+(d._nextChatId++);
     d.customChats.push({key:key,groep:true,naam:naamVal,leden:leden});
     caChatKey=key;
    }
@@ -3465,7 +3521,7 @@ function renderCaChatThread(){
  el('ca-chat-terug').addEventListener('click',renderCaChatList);
  el('ca-chat-send').addEventListener('click',function(){
   var v=el('ca-chat-input').value.trim();if(!v)return;
-  th.berichten.push({id:th._nextMsgId++,van:'Jij',tekst:v,tijd:'nu'});el('ca-chat-input').value='';renderCaChatThread();
+  th.berichten.push({id:th._nextMsgId++,van:'Jij',tekst:v,tijd:'nu'});bewaarChatThread(caChatKey);el('ca-chat-input').value='';renderCaChatThread();
  });
  if(t.groep){
   el('ca-chat-media').addEventListener('click',function(){el('ca-chat-media-grid').hidden=!el('ca-chat-media-grid').hidden;});
@@ -3478,14 +3534,14 @@ function renderCaChatThread(){
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-msg-tekst').value.trim();if(!tekst){el('modal-msg-tekst').style.borderColor='var(--brick)';return;}
-    m.tekst=tekst;m.bewerkt=true;closeModal();renderCaChatThread();
+    m.tekst=tekst;m.bewerkt=true;bewaarChatThread(caChatKey);closeModal();renderCaChatThread();
    });
   });
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-delmsg]'),function(b){
   b.addEventListener('click',function(){
    var id=+b.getAttribute('data-delmsg');
-   th.berichten=th.berichten.filter(function(x){return x.id!==id;});
+   th.berichten=th.berichten.filter(function(x){return x.id!==id;});bewaarChatThread(caChatKey);
    renderCaChatThread();
   });
  });
