@@ -152,6 +152,20 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .tekstknop{font-size:12.5px;padding:5px 9px;border-radius:8px;font-weight:600}
 .tekstknop.aan{background:var(--accent);color:#fff;border-color:var(--accent)}
 
+.matrixwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-sm)}
+.matrix{border-collapse:collapse;width:100%;font-size:13px}
+.matrix th,.matrix td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:7px 9px;text-align:left;white-space:nowrap}
+.matrix thead th{background:var(--paper);position:sticky;top:0;font-weight:600}
+.matrix tbody th{background:var(--surface);position:sticky;left:0;font-weight:500;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+.matrix td{text-align:center}
+.matrix select{width:auto;min-width:108px;font-size:12px;padding:3px 6px}
+.matrix .geen{color:var(--ink-faint)}
+/* De algemene th-stijl zet kopteksten in hoofdletters; bij persoonsnamen leest
+   dat slecht ("MARIEKE DE VRIES"), dus die uitzondering hier. */
+.matrix th{text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
+.matrix thead th:first-child{color:var(--ink-soft)}
+.matrix tr:hover td{background:var(--accent-bg)}
+
 .zoekveld{width:100%;margin-bottom:10px;font-size:13.5px;padding:7px 11px}
 .rowkies{width:auto;flex:0 0 auto;margin-right:2px;cursor:pointer}
 .bulkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;
@@ -565,6 +579,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <button type="button" class="tab" data-admintab="groep">2 — Groep bewerken</button>
     <button type="button" class="tab" data-admintab="groepen">3 — Groepen beheren</button>
     <button type="button" class="tab" data-admintab="controle">4 — Controle <span class="countchip" id="controle-teller"></span></button>
+    <button type="button" class="tab" data-admintab="matrix">5 — Wie ziet wie</button>
   </div>
 
   <section id="admintab-bulk">
@@ -635,6 +650,20 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="note">Deze lijst kijkt over alle groepen heen naar situaties die in de zorg problemen geven — bijvoorbeeld een cliënt waar niemand toegang toe heeft, of een groep zonder aanspreekpunt.</p>
         <div id="controle-lijst"></div>
         <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admintab-matrix" hidden>
+    <div class="panel">
+      <div class="head"><h2>Wie ziet wie</h2><span class="sub" id="matrix-sub"></span></div>
+      <div class="body">
+        <p class="note">Wie heeft toegang tot welke cliënt, in één overzicht. Handig bij een overdracht of als iemand vraagt wie er bij een dossier kan. Klik op een vakje om de rol te wijzigen.</p>
+        <div class="row" style="margin-bottom:12px">
+          <div class="field"><label for="matrix-groep">Groep</label><select id="matrix-groep"></select></div>
+        </div>
+        <div id="matrix-inhoud"></div>
+        <div class="actions end"><button type="button" id="matrix-export">Exporteren (CSV)</button></div>
       </div>
     </div>
   </section>
@@ -979,7 +1008,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 </div>
 
 <div class="modal-overlay" id="modal-overlay" hidden>
-  <div class="modal-card" id="modal-card"></div>
+  <div class="modal-card" id="modal-card" role="dialog" aria-modal="true" tabindex="-1"></div>
 </div>
 </main>
 
@@ -1236,6 +1265,7 @@ function kiesAdmintab(naamVal){
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
  if(naamVal==='groepen')renderSysteembeheer();
  if(naamVal==='controle')renderControle();
+ if(naamVal==='matrix')renderMatrix();
 }
 Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
  b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
@@ -2258,6 +2288,70 @@ function renderControle(){
 }
 el('controle-ververs').addEventListener('click',renderControle);
 
+/* ============== WIE ZIET WIE ==============
+   "Welke medewerker kan bij welke cliënt?" is bij een overdracht of een
+   AVG-vraag steeds opnieuw uitzoekwerk, omdat de rechten per persoon verspreid
+   staan. Hier staan ze in één raster, en direct aanpasbaar. */
+var matrixGroep=null;
+function matrixPersonen(groep){
+ return people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(groep)>-1;});
+}
+function matrixClienten(groep){
+ return people.filter(function(p){return p.type==='client'&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(groep)>-1;});
+}
+function renderMatrix(){
+ if(!matrixGroep||GROEPEN.indexOf(matrixGroep)<0)matrixGroep=huidigeGroep;
+ el('matrix-groep').innerHTML=GROEPEN.map(function(g){
+  return '<option'+(g===matrixGroep?' selected':'')+'>'+esc(g)+'</option>';
+ }).join('');
+ var medewerkers=matrixPersonen(matrixGroep),clienten=matrixClienten(matrixGroep);
+ el('matrix-sub').textContent=medewerkers.length+' medewerkers × '+clienten.length+' cliënten';
+ if(!medewerkers.length||!clienten.length){
+  el('matrix-inhoud').innerHTML='<p class="empty-msg">'+
+   (!clienten.length?'Geen cliënten in deze groep.':'Geen medewerkers in deze groep.')+'</p>';
+  return;
+ }
+ var rollen=ROLLEN.medewerker.clienten.filter(function(r){return r!=='Geen';});
+ var html='<div class="matrixwrap"><table class="matrix"><thead><tr><th>Medewerker</th>'+
+  clienten.map(function(c){return '<th>'+esc(naam(c))+'</th>';}).join('')+'</tr></thead><tbody>';
+ medewerkers.forEach(function(m){
+  html+='<tr><th>'+esc(naam(m))+'</th>'+clienten.map(function(c){
+   var huidig=rolOpClient(m,c.id)||'';
+   return '<td><select data-mx="'+m.id+'|'+c.id+'" class="'+(huidig?'':'geen')+'">'+
+    '<option value="">Geen toegang</option>'+
+    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+esc(r)+'</option>';}).join('')+
+    '</select></td>';
+  }).join('')+'</tr>';
+ });
+ html+='</tbody></table></div>';
+ el('matrix-inhoud').innerHTML=html;
+ Array.prototype.forEach.call(el('matrix-inhoud').querySelectorAll('[data-mx]'),function(sel){
+  sel.addEventListener('change',function(){
+   var delen=sel.getAttribute('data-mx').split('|');
+   var m=findPerson(+delen[0]),c=findPerson(+delen[1]);
+   if(!m||!c)return;
+   m.clientRechten=m.clientRechten||{};
+   if(sel.value)m.clientRechten[c.id]=sel.value; else delete m.clientRechten[c.id];
+   if(m._state!=='nieuw')m._state='gewijzigd';
+   sel.className=sel.value?'':'geen';
+   logActie(sel.value
+    ? naam(m)+' kreeg rol "'+sel.value+'" op cliënt '+naam(c)
+    : 'Toegang van '+naam(m)+' tot cliënt '+naam(c)+' ingetrokken');
+   updateTally();renderAcc('medewerker');
+  });
+ });
+}
+el('matrix-groep').addEventListener('change',function(){matrixGroep=this.value;renderMatrix();});
+el('matrix-export').addEventListener('click',function(){
+ var medewerkers=matrixPersonen(matrixGroep),clienten=matrixClienten(matrixGroep);
+ if(!medewerkers.length||!clienten.length)return;
+ var regels=[['Medewerker'].concat(clienten.map(naam)).map(csvVeld).join(';')];
+ medewerkers.forEach(function(m){
+  regels.push([naam(m)].concat(clienten.map(function(c){return rolOpClient(m,c.id)||'Geen toegang';})).map(csvVeld).join(';'));
+ });
+ downloadCsv(regels,'mywepp-toegang-'+matrixGroep.replace(/[^a-z0-9]+/gi,'-').toLowerCase());
+});
+
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
  if(!opties.length){
@@ -2547,9 +2641,40 @@ function updateTally(){
 function heeftOnopgeslagenWijzigingen(){return people.some(function(p){return p._state;});}
 
 /* --- Modal --- */
-function openModal(html){el('modal-card').innerHTML=html;el('modal-overlay').hidden=false;}
-function closeModal(){el('modal-overlay').hidden=true;}
+/* Zonder toetsenbordafhandeling zit je in een venster vast zodra je geen muis
+   gebruikt: Escape deed niets en de focus bleef achter de overlay hangen. */
+var modalHerkomst=null;
+function focusbaarIn(container){
+ return Array.prototype.filter.call(
+  container.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'),
+  function(e){return !e.disabled&&e.offsetParent!==null;});
+}
+function openModal(html){
+ modalHerkomst=document.activeElement;
+ el('modal-card').innerHTML=html;
+ el('modal-overlay').hidden=false;
+ var eerste=focusbaarIn(el('modal-card'))[0];
+ (eerste||el('modal-card')).focus();
+}
+function closeModal(){
+ el('modal-overlay').hidden=true;
+ /* Terug naar de knop waarmee het venster geopend werd, zodat je niet
+    bovenaan de pagina opnieuw moet zoeken waar je was. */
+ if(modalHerkomst&&document.contains(modalHerkomst)&&modalHerkomst.offsetParent!==null)modalHerkomst.focus();
+ modalHerkomst=null;
+}
+function modalOpen(){return !el('modal-overlay').hidden;}
 el('modal-overlay').addEventListener('click',function(e){if(e.target===el('modal-overlay'))closeModal();});
+document.addEventListener('keydown',function(e){
+ if(!modalOpen())return;
+ if(e.key==='Escape'){e.preventDefault();closeModal();return;}
+ if(e.key!=='Tab')return;
+ var lijst=focusbaarIn(el('modal-card'));
+ if(!lijst.length)return;
+ var eerste=lijst[0],laatste=lijst[lijst.length-1];
+ if(e.shiftKey&&document.activeElement===eerste){e.preventDefault();laatste.focus();}
+ else if(!e.shiftKey&&document.activeElement===laatste){e.preventDefault();eerste.focus();}
+});
 
 var INFOTEXT={
  client:{titel:'Over cliënten',tekst:'Cliënten zijn de bewoners van deze groep. Je maakt een cliënt aan met alleen een naam en eventueel een e-mailadres — wie er toegang toe krijgt bepaal je apart, per medewerker of naaste.'},
@@ -2668,17 +2793,20 @@ el('logboek-btn').addEventListener('click',function(){
 });
 /* Bij een audit of incident wil je het logboek buiten de app kunnen aanleveren. */
 function csvVeld(waarde){return '"'+String(waarde==null?'':waarde).replace(/"/g,'""')+'"';}
+/* BOM zodat Excel de accenten goed leest. */
+function downloadCsv(regels,bestandsnaam){
+ var blob=new Blob(['\ufeff'+regels.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+ var url=URL.createObjectURL(blob);
+ var a=document.createElement('a');
+ a.href=url;a.download=bestandsnaam+'-'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.appendChild(a);a.click();document.body.removeChild(a);
+ setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
 function exporteerLogboek(){
  if(!LOGBOEK.length)return;
  var regels=[['Tijd','Wie','Groep','Wat'].map(csvVeld).join(';')];
  LOGBOEK.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
- /* BOM zodat Excel de accenten goed leest. */
- var blob=new Blob(['\ufeff'+regels.join('\r\n')],{type:'text/csv;charset=utf-8;'});
- var url=URL.createObjectURL(blob);
- var a=document.createElement('a');
- a.href=url;a.download='mywepp-logboek-'+new Date().toISOString().slice(0,10)+'.csv';
- document.body.appendChild(a);a.click();document.body.removeChild(a);
- setTimeout(function(){URL.revokeObjectURL(url);},1000);
+ downloadCsv(regels,'mywepp-logboek');
 }
 
 /* --- Gearchiveerd --- */
