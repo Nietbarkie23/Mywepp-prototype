@@ -388,7 +388,11 @@ td.dot{text-align:center}
 .modal-card .msec{margin-bottom:14px}
 .modal-card .msec:last-of-type{margin-bottom:0}
 .modal-card .msec b{display:block;font-size:14px;margin-bottom:3px}
+/* Die blokweergave is bedoeld voor een kopje boven een alinea. Vet midden in een
+   zin (een groepsnaam benadrukken) brak daardoor naar een eigen regel. */
+.modal-card .msec p b{display:inline;font-size:inherit;margin:0;color:var(--ink);font-weight:600}
 .modal-card .msec p{margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.6}
+.modal-card .msec p+p{margin-top:8px}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 
 .helpbtn{width:22px;height:22px;padding:0;border-radius:999px;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);flex:0 0 22px}
@@ -1668,12 +1672,20 @@ function bulkActie(t,actie,ids){
   return;
  }
  if(actie==='verwijder'){
+  /* Wie ook elders zit wordt niet verwijderd maar losgekoppeld. Dat hoort hier te
+     staan, want per persoon een venster openen zou dit venster overschrijven. */
+  var blijvers=personen.filter(blijftElders);
+  var elderszin=blijvers.length
+   ? '<p>Let op: '+esc(blijvers.map(naam).join(', '))+' '+(blijvers.length>1?'zitten':'zit')+
+     ' ook in een andere groep en '+(blijvers.length>1?'worden':'wordt')+
+     ' alleen losgekoppeld van <b>'+esc(huidigeGroep)+'</b>. Daar verandert er niets.</p>'
+   : '';
   openModal('<h3>'+personen.length+' '+esc(TYPELABEL[t].toLowerCase())+'(en) verwijderen</h3><div class="msec"><p>'+
-   esc(personen.map(naam).join(', '))+'</p><p>Ze worden gemarkeerd om verwijderd te worden. Dit wordt pas definitief bij "Wijzigingen doorvoeren".</p></div>'+
+   esc(personen.map(naam).join(', '))+'</p><p>Ze worden gemarkeerd om verwijderd te worden. Dit wordt pas definitief bij "Wijzigingen doorvoeren".</p>'+elderszin+'</div>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-bevestig').addEventListener('click',function(){
-   personen.forEach(function(p){trashRow(p.id,t);});
+   personen.forEach(function(p){markeerVerwijderd(p.id,t);});
    logActie(personen.length+' '+TYPELABEL[t].toLowerCase()+'(en) gemarkeerd om te verwijderen');
    wisSelectie(t);closeModal();renderAll();
   });
@@ -1683,6 +1695,37 @@ function openMelding(titel,tekst){
  openModal('<h3>'+esc(titel)+'</h3><div class="msec"><p>'+esc(tekst)+'</p></div>'+
   '<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
+}
+/* Een melding met twee knoppen: er was alleen een variant om iets te bevestigen
+   die je niet kon tegenhouden. De tekst is bewust html, zodat een waarschuwing
+   de groepsnaam kan benadrukken. */
+function bevestigModal(titel,htmlTekst,knopLabel,onJa){
+ openModal('<h3>'+esc(titel)+'</h3><div class="msec">'+htmlTekst+'</div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="danger" id="modal-bevestig">'+esc(knopLabel)+'</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){closeModal();onJa();});
+}
+/* De groepen waar iemand ook nog in zit, dus zonder de groep waar je nu werkt. */
+function andereGroepenVan(p){
+ return (p.groepen||[]).filter(function(g){return g!==huidigeGroep;});
+}
+/* Dezelfde voorwaarde die het doorvoeren gebruikt om te kiezen tussen ontkoppelen
+   en archiveren, zodat waarschuwing, label en uitkomst niet uit elkaar lopen. */
+function blijftElders(p){return (p.groepen||[]).length>1;}
+/* Iemand uit een groep halen terwijl hij elders nog gekoppeld is, is iets heel
+   anders dan iemand verwijderen: hij blijft gewoon bestaan, inclusief rechten.
+   Zonder deze waarschuwing lijkt het alsof je iemand weggooit. */
+function waarschuwOntkoppelen(p,onJa){
+ var anderen=andereGroepenVan(p);
+ if(!blijftElders(p)||!anderen.length){onJa();return;}
+ bevestigModal(
+  'Let op: '+naam(p)+' blijft bestaan',
+  '<p>'+esc(naam(p))+' is ook gekoppeld aan <b>'+anderen.map(esc).join('</b>, <b>')+'</b>.</p>'+
+  '<p>Je haalt '+esc(naam(p))+' hiermee alleen weg uit <b>'+esc(huidigeGroep)+'</b>. '+
+  'In '+(anderen.length>1?'die groepen':'die groep')+' blijft '+esc(naam(p))+
+  ' gewoon bestaan, met de rechten die daar gelden. Er wordt dus niemand verwijderd of gearchiveerd.</p>',
+  'Ja, alleen uit '+huidigeGroep+' halen',onJa);
 }
 var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
 var lijstLimiet={client:5,medewerker:3,naaste:3};
@@ -1892,7 +1935,20 @@ function renderGroepenKeuze(p,keuzeId,hintId){
     if(p.groepen.indexOf(g)<0)p.groepen.push(g);
    }else{
     if(p.groepen.length<=1){alert('Iemand moet aan minimaal één groep gekoppeld blijven.');c.checked=true;return;}
-    p.groepen=p.groepen.filter(function(x){return x!==g;});
+    /* Ook hier geldt: hij blijft elders bestaan. Het vinkje gaat pas uit als je
+       die uitleg hebt gezien, anders springt het terug. */
+    c.checked=true;
+    bevestigModal('Loskoppelen van '+g,
+     '<p>'+esc(naam(p))+' blijft daarna gekoppeld aan <b>'+
+     p.groepen.filter(function(x){return x!==g;}).map(esc).join('</b>, <b>')+'</b>.</p>'+
+     '<p>De rechten die '+esc(naam(p))+' binnen <b>'+esc(g)+'</b> had, blijven bewaard en gelden weer zodra je '+
+     esc(naam(p))+' later opnieuw aan die groep koppelt.</p>',
+     'Ja, loskoppelen van '+g,function(){
+      p.groepen=p.groepen.filter(function(x){return x!==g;});
+      if(p._state!=='nieuw')p._state='gewijzigd';
+      renderGroepenKeuze(p,keuzeId,hintId);updateTally();
+     });
+    return;
    }
    if(p._state!=='nieuw')p._state='gewijzigd';
    renderGroepenKeuze(p,keuzeId,hintId);updateTally();
@@ -2034,11 +2090,18 @@ function verwijderVerwijzingenNaar(id){
   if(x.wettelijkeVertegenwoordiger===id)x.wettelijkeVertegenwoordiger=null;
  });
 }
-function trashRow(id,t){
+/* Het markeren zelf, zonder venster. Flows die al een eigen bevestiging tonen
+   (bulk, de adminknoppen) gebruiken deze; anders stapelen de vensters zich op. */
+function markeerVerwijderd(id,t){
  var p=findPerson(id);if(!p)return;
  if(p._state==='nieuw'){people=people.filter(function(x){return x.id!==id;});}
  else{p._state='verwijderd';}
  renderAcc(t);updateTally();renderAccountSelect();
+}
+function trashRow(id,t){
+ var p=findPerson(id);if(!p)return;
+ if(p._state==='nieuw'){markeerVerwijderd(id,t);return;}
+ waarschuwOntkoppelen(p,function(){markeerVerwijderd(id,t);});
 }
 function renderContactpersonen(){
  var lijst=contactpersonenVanGroep();
@@ -2505,14 +2568,21 @@ function persoonBewerkenFlow(){
  });
 }
 function verwijderPersoonBevestiging(p){
- openModal('<h3>Klaargezet om te verwijderen</h3><div class="msec"><p>'+esc(naam(p))+' is gemarkeerd om verwijderd te worden. Dit wordt definitief zodra de wijzigingen worden doorgevoerd (Wijzigingen controleren → Bevestigen).</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ var anderen=andereGroepenVan(p);
+ var elders=blijftElders(p)&&anderen.length;
+ var kop=elders?'Alleen losgekoppeld':'Klaargezet om te verwijderen';
+ var tekst=elders
+  ? esc(naam(p))+' is gemarkeerd om losgekoppeld te worden van <b>'+esc(huidigeGroep)+'</b>. '+
+    'In <b>'+anderen.map(esc).join('</b>, <b>')+'</b> blijft '+esc(naam(p))+' gewoon bestaan, met de rechten die daar gelden.'
+  : esc(naam(p))+' is gemarkeerd om verwijderd te worden.';
+ openModal('<h3>'+kop+'</h3><div class="msec"><p>'+tekst+'</p><p>Dit wordt definitief zodra de wijzigingen worden doorgevoerd (Wijzigingen controleren → Bevestigen).</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
 }
 function clientVerwijderenFlow(){
  kiesGroepDan('In welke groep staat de cliënt?',function(g){
   huidigeGroep=g;verversGroepReferenties();renderAll();
   kiesUitLijstModal('Welke cliënt verwijderen?',personenVanType('client'),naam,function(p){
-   trashRow(p.id,'client');
+   markeerVerwijderd(p.id,'client');
    verwijderPersoonBevestiging(p);
   });
  });
@@ -2522,7 +2592,7 @@ function persoonVerwijderenFlow(){
   kiesGroepDan('In welke groep?',function(g){
    huidigeGroep=g;verversGroepReferenties();renderAll();
    kiesUitLijstModal('Wie wil je verwijderen?',personenVanType(t),naam,function(p){
-    trashRow(p.id,t);
+    markeerVerwijderd(p.id,t);
     verwijderPersoonBevestiging(p);
    });
   });
@@ -2859,6 +2929,12 @@ function renderGearchiveerd(){
 el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
 
 /* --- Wijzigingen: controleren -> bevestigen -> doorgevoerd --- */
+/* "wordt verwijderd" klopte niet voor iemand die aan meerdere groepen hangt: die
+   wordt alleen losgekoppeld. Het scherm zegt nu wat er echt gebeurt. */
+function wijzigingLabel(p){
+ if(p._state==='verwijderd'&&blijftElders(p))return 'alleen uit '+huidigeGroep;
+ return STATE_LABEL[p._state];
+}
 function renderControleren(){
  var wijzigingen=people.filter(function(p){return p._state;});
  el('controleren-lijst').innerHTML=wijzigingen.length? wijzigingen.map(function(p){
@@ -2870,7 +2946,7 @@ function renderControleren(){
    '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+
    (elders?' <span class="mini">· uit groep '+esc(elders)+'</span>':'')+
    (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
-   '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+STATE_LABEL[p._state]+'</span></div>';
+   '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+esc(wijzigingLabel(p))+'</span></div>';
  }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om door te voeren.</p>';
 }
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
