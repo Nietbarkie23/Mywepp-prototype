@@ -2397,6 +2397,7 @@ function voegInstituutToe(naamVal){
  if(!naamVal)return false;
  if(INSTITUTEN.indexOf(naamVal)>-1){alert('Er bestaat al een instituut met deze naam.');return false;}
  INSTITUTEN.push(naamVal);
+ syncOrganisatieData();
  return true;
 }
 function hernoemInstituut(oud){
@@ -2408,6 +2409,7 @@ function hernoemInstituut(oud){
   if(nieuw!==oud&&INSTITUTEN.indexOf(nieuw)>-1){alert('Er bestaat al een instituut met deze naam.');return;}
   INSTITUTEN[INSTITUTEN.indexOf(oud)]=nieuw;
   Object.keys(locatieInstituut).forEach(function(l){if(locatieInstituut[l]===oud)locatieInstituut[l]=nieuw;});
+  syncOrganisatieData();
   closeModal();
  });
 }
@@ -2419,6 +2421,7 @@ function verwijderInstituut(naamVal){
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-bevestig').addEventListener('click',function(){
   INSTITUTEN.splice(INSTITUTEN.indexOf(naamVal),1);
+  syncOrganisatieData();
   closeModal();
  });
 }
@@ -2428,6 +2431,7 @@ function voegLocatieToe(naamVal,instituut){
  if(LOCATIES.indexOf(naamVal)>-1){alert('Er bestaat al een locatie met deze naam.');return false;}
  LOCATIES.push(naamVal);
  locatieInstituut[naamVal]=instituut||INSTITUTEN[0];
+ syncOrganisatieData();
  return true;
 }
 function verwijderLocatie(naamVal){
@@ -2439,6 +2443,7 @@ function verwijderLocatie(naamVal){
  el('modal-bevestig').addEventListener('click',function(){
   LOCATIES.splice(LOCATIES.indexOf(naamVal),1);
   delete locatieInstituut[naamVal];
+  syncOrganisatieData();
   closeModal();
  });
 }
