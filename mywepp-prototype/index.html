@@ -654,6 +654,18 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div id="sb-groep-bevestiging"></div>
       </div>
     </div>
+    <div class="panel">
+      <div class="head"><h2>Bereikbaarheid</h2><span class="sub">Voor technische vragen uit alle groepen</span></div>
+      <div class="body">
+        <p class="note">De systeembeheerder is geen medewerker van een groep en stond daardoor nergens met een telefoonnummer. Wat je hier invult, zien medewerkers in elke groep staan bij de contactpersonen.</p>
+        <div class="row">
+          <div class="field"><label for="sb-tel">Telefoonnummer systeembeheer</label><input id="sb-tel" maxlength="25" placeholder="088 123 45 67"></div>
+        </div>
+        <div id="sb-tel-fout" class="mini" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minimaal 9 cijfers), of laat het veld leeg.</div>
+        <div class="actions end"><button type="button" class="primary" id="sb-tel-opslaan">Nummer opslaan</button></div>
+        <div id="sb-tel-bevestiging"></div>
+      </div>
+    </div>
   </section>
 
   <section id="admintab-controle" hidden>
@@ -742,6 +754,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel" id="contact-banner" style="padding:14px 20px">
       <div style="font-weight:600;font-size:13.5px;margin-bottom:6px">Contactpersonen van deze groep</div>
       <div id="contact-banner-lijst"></div>
+      <div id="contact-banner-systeembeheer" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-soft)" hidden></div>
     </div>
 
     <div class="panel" style="padding:0">
@@ -1411,6 +1424,7 @@ async function loadFromSupabase(){
    if(opgeslagen.locatie_instituut)locatieInstituut=opgeslagen.locatie_instituut;
    if(opgeslagen.groep_locatie)groepLocatie=opgeslagen.groep_locatie;
    if(Array.isArray(opgeslagen.gearchiveerde_groepen))gearchiveerdeGroepen=opgeslagen.gearchiveerde_groepen;
+   if(opgeslagen.systeembeheer&&typeof opgeslagen.systeembeheer.tel==='string')SYSTEEMBEHEER.tel=opgeslagen.systeembeheer.tel;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
@@ -1685,7 +1699,7 @@ function bulkActie(t,actie,ids){
   var elderszin=blijvers.length
    ? '<p>Let op: '+esc(blijvers.map(naam).join(', '))+' '+(blijvers.length>1?'zitten':'zit')+
      ' ook in een andere groep en '+(blijvers.length>1?'worden':'wordt')+
-     ' alleen losgekoppeld van <b>'+esc(huidigeGroep)+'</b>. Daar verandert er niets.</p>'
+     ' alleen losgekoppeld van <b>'+esc(huidigeGroep)+'</b>. De rechten binnen deze groep vervallen daarbij.</p>'
    : '';
   openModal('<h3>'+personen.length+' '+esc(TYPELABEL[t].toLowerCase())+'(en) verwijderen</h3><div class="msec"><p>'+
    esc(personen.map(naam).join(', '))+'</p><p>Ze worden gemarkeerd om verwijderd te worden. Dit wordt pas definitief bij "Wijzigingen doorvoeren".</p>'+elderszin+'</div>'+
@@ -1731,7 +1745,10 @@ function waarschuwOntkoppelen(p,onJa){
   '<p>'+esc(naam(p))+' is ook gekoppeld aan <b>'+anderen.map(esc).join('</b>, <b>')+'</b>.</p>'+
   '<p>Je haalt '+esc(naam(p))+' hiermee alleen weg uit <b>'+esc(huidigeGroep)+'</b>. '+
   'In '+(anderen.length>1?'die groepen':'die groep')+' blijft '+esc(naam(p))+
-  ' gewoon bestaan, met de rechten die daar gelden. Er wordt dus niemand verwijderd of gearchiveerd.</p>',
+  ' gewoon bestaan. Er wordt dus niemand verwijderd of gearchiveerd.</p>'+
+  '<p>Wel vervalt alle toegang binnen <b>'+esc(huidigeGroep)+'</b>: de rechten van '+esc(naam(p))+
+  ' op de cliënten, medewerkers en naasten hier, en de rechten die zij op '+esc(naam(p))+
+  ' hadden. Koppel je '+esc(naam(p))+' later terug, dan moeten die opnieuw worden ingesteld.</p>',
   'Ja, alleen uit '+huidigeGroep+' halen',onJa);
 }
 var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
@@ -1948,12 +1965,14 @@ function renderGroepenKeuze(p,keuzeId,hintId){
     bevestigModal('Loskoppelen van '+g,
      '<p>'+esc(naam(p))+' blijft daarna gekoppeld aan <b>'+
      p.groepen.filter(function(x){return x!==g;}).map(esc).join('</b>, <b>')+'</b>.</p>'+
-     '<p>De rechten die '+esc(naam(p))+' binnen <b>'+esc(g)+'</b> had, blijven bewaard en gelden weer zodra je '+
-     esc(naam(p))+' later opnieuw aan die groep koppelt.</p>',
+     '<p>Alle rechten binnen <b>'+esc(g)+'</b> vervallen: zowel wat '+esc(naam(p))+
+     ' daar mocht zien, als wat anderen daar op '+esc(naam(p))+
+     ' mochten. Dit kun je niet ongedaan maken door opnieuw te koppelen.</p>',
      'Ja, loskoppelen van '+g,function(){
       p.groepen=p.groepen.filter(function(x){return x!==g;});
+      ruimRechtenZonderGedeeldeGroepOp(p);
       if(p._state!=='nieuw')p._state='gewijzigd';
-      renderGroepenKeuze(p,keuzeId,hintId);updateTally();
+      renderGroepenKeuze(p,keuzeId,hintId);updateTally();renderAll();
      });
     return;
    }
@@ -2097,6 +2116,38 @@ function verwijderVerwijzingenNaar(id){
   if(x.wettelijkeVertegenwoordiger===id)x.wettelijkeVertegenwoordiger=null;
  });
 }
+var RECHTVELDEN=['clientRechten','medewerkerRechten','naasteRechten'];
+function deeltGroepMet(a,b){
+ return (a.groepen||[]).some(function(g){return (b.groepen||[]).indexOf(g)>-1;});
+}
+/* Een recht slaat altijd op iemand binnen dezelfde groep. Wie een groep verlaat,
+   hoort daar dus geen toegang meer te hebben — niet op cliënten en niet op
+   collega's. Rechten op mensen met wie hij nog ergens samen zit blijven staan.
+   Roep dit aan nadat de groep uit p.groepen is gehaald. */
+function ruimRechtenZonderGedeeldeGroepOp(p){
+ var aantal=0;
+ RECHTVELDEN.forEach(function(veld){
+  if(!p[veld])return;
+  Object.keys(p[veld]).forEach(function(sleutel){
+   var ander=findPerson(+sleutel);
+   if(!ander||!deeltGroepMet(p,ander)){delete p[veld][sleutel];aantal++;}
+  });
+ });
+ people.forEach(function(x){
+  if(x.id===p.id||deeltGroepMet(p,x))return;
+  RECHTVELDEN.forEach(function(veld){
+   if(x[veld]&&x[veld][p.id]!==undefined){delete x[veld][p.id];aantal++;}
+  });
+  /* Een vertegenwoordiger die niet meer bij de cliënt in de groep zit, is geen
+     vertegenwoordiger meer; anders blijft er een naam staan zonder toegang. */
+  if(x.wettelijkeVertegenwoordiger===p.id){x.wettelijkeVertegenwoordiger=null;aantal++;}
+ });
+ if(p.wettelijkeVertegenwoordiger){
+  var eigen=findPerson(p.wettelijkeVertegenwoordiger);
+  if(!eigen||!deeltGroepMet(p,eigen)){p.wettelijkeVertegenwoordiger=null;aantal++;}
+ }
+ return aantal;
+}
 /* Het markeren zelf, zonder venster. Flows die al een eigen bevestiging tonen
    (bulk, de adminknoppen) gebruiken deze; anders stapelen de vensters zich op. */
 function markeerVerwijderd(id,t){
@@ -2125,8 +2176,22 @@ function renderContactBanner(){
    (isEff?'<span class="statuschip" style="background:var(--moss-bg);color:var(--moss)">Actief aanspreekpunt</span>':'')+
    '</span>';
  }).join('') : '<p class="empty-msg" style="padding:0">Nog geen contactpersonen aangewezen voor deze groep.</p>';
+ /* De systeembeheerder hoort bij geen enkele groep, maar is wel degene die je
+    belt als er iets technisch mis is. Daarom staat hij hier los onder. */
+ var regel=el('contact-banner-systeembeheer');
+ if(regel){
+  regel.hidden=!SYSTEEMBEHEER.tel;
+  if(SYSTEEMBEHEER.tel){
+   regel.innerHTML='Systeembeheer <a href="tel:'+esc(SYSTEEMBEHEER.tel.replace(/[^0-9+]/g,''))+'">'+
+    esc(SYSTEEMBEHEER.tel)+'</a> <span class="mini">voor technische vragen</span>';
+  }
+ }
 }
 var isSysteembeheerder=false;
+/* De systeembeheerder is geen persoon in "people" en had dus nergens gegevens.
+   Het nummer hoort bij de organisatie, niet bij een groep, en staat daarom bij
+   de overige organisatiegegevens. */
+var SYSTEEMBEHEER={tel:'088 123 45 67'};
 /* Wie in deze groep werkt, en verder niemand: vanuit een groep hoor je niet te
    zien wie er in een andere groep zit. Iemand die aan meerdere groepen is
    gekoppeld verschijnt uiteraard in elk van die groepen. */
@@ -2580,7 +2645,8 @@ function verwijderPersoonBevestiging(p){
  var kop=elders?'Alleen losgekoppeld':'Klaargezet om te verwijderen';
  var tekst=elders
   ? esc(naam(p))+' is gemarkeerd om losgekoppeld te worden van <b>'+esc(huidigeGroep)+'</b>. '+
-    'In <b>'+anderen.map(esc).join('</b>, <b>')+'</b> blijft '+esc(naam(p))+' gewoon bestaan, met de rechten die daar gelden.'
+    'In <b>'+anderen.map(esc).join('</b>, <b>')+'</b> blijft '+esc(naam(p))+' gewoon bestaan. '+
+    'De rechten binnen <b>'+esc(huidigeGroep)+'</b> vervallen zodra je de wijzigingen doorvoert.'
   : esc(naam(p))+' is gemarkeerd om verwijderd te worden.';
  openModal('<h3>'+kop+'</h3><div class="msec"><p>'+tekst+'</p><p>Dit wordt definitief zodra de wijzigingen worden doorgevoerd (Wijzigingen controleren → Bevestigen).</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
@@ -2666,6 +2732,7 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(b)
 
 function renderSysteembeheer(){
  el('sb-groepen-sub').textContent=GROEPEN.length+' groep'+(GROEPEN.length===1?'':'en')+' in deze organisatie';
+ if(el('sb-tel')&&document.activeElement!==el('sb-tel'))el('sb-tel').value=SYSTEEMBEHEER.tel||'';
  el('sb-groepen-lijst').innerHTML=GROEPEN.map(function(g,i){
   var c=sbCounts(g);
   return '<div class="personrow">'+
@@ -2693,6 +2760,32 @@ function renderSysteembeheer(){
 }
 el('sb-groep-toevoegen').addEventListener('click',function(){
  if(voegGroepToe(el('sb-nieuwe-groep').value))el('sb-nieuwe-groep').value='';
+});
+/* Leeg mag: dan heeft de organisatie (nog) geen nummer en verbergen we de regel
+   liever dan een half ingevuld nummer te tonen. */
+function bewaarSysteembeheerTel(){
+ var waarde=kap(el('sb-tel').value.trim(),MAXLEN.tel);
+ var fout=waarde!==''&&!telGeldig(waarde);
+ el('sb-tel-fout').hidden=!fout;
+ el('sb-tel').style.borderColor=fout?'var(--brick)':'';
+ if(fout)return false;
+ var gewijzigd=SYSTEEMBEHEER.tel!==waarde;
+ SYSTEEMBEHEER.tel=waarde;
+ el('sb-tel').value=waarde;
+ renderContactBanner();
+ if(gewijzigd){
+  logActie(waarde?('Telefoonnummer systeembeheer gewijzigd naar '+waarde):'Telefoonnummer systeembeheer gewist');
+  syncOrganisatieData();
+ }
+ el('sb-tel-bevestiging').textContent=waarde?'Nummer opgeslagen.':'Nummer gewist.';
+ setTimeout(function(){var b=el('sb-tel-bevestiging');if(b)b.textContent='';},2500);
+ return true;
+}
+el('sb-tel-opslaan').addEventListener('click',bewaarSysteembeheerTel);
+el('sb-tel').addEventListener('input',function(){
+ if(!el('sb-tel-fout').hidden&&(this.value.trim()===''||telGeldig(this.value))){
+  el('sb-tel-fout').hidden=true;this.style.borderColor='';
+ }
 });
 /* Eerst toevoegen, daarna pas opruimen: zo staat de tabel nooit leeg als een van
    beide stappen faalt (een delete-alles-dan-insert kon alle groepen wissen). */
@@ -2726,7 +2819,8 @@ async function syncOrganisatieData(){
    {sleutel:'locaties',waarde:LOCATIES},
    {sleutel:'locatie_instituut',waarde:locatieInstituut},
    {sleutel:'groep_locatie',waarde:groepLocatie},
-   {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen}
+   {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen},
+   {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER}
   ],{onConflict:'sleutel'});
   return !res.error;
  }catch(e){return false;}
@@ -2987,8 +3081,10 @@ el('av-versturen').addEventListener('click',async function(){
  var ontkoppeld=0,gearchiveerd=0,verplaatst=0;
  people.filter(function(p){return p._state==='verwijderd';}).forEach(function(p){
   if(p.groepen.length>1){
-   /* Blijft in een andere groep: daar houdt hij zijn rechten, dus niets opruimen. */
-   p.groepen=p.groepen.filter(function(g){return g!==huidigeGroep;});ontkoppeld++;
+   /* Blijft elders bestaan, maar de toegang binnen deze groep vervalt. */
+   p.groepen=p.groepen.filter(function(g){return g!==huidigeGroep;});
+   ruimRechtenZonderGedeeldeGroepOp(p);
+   ontkoppeld++;
   }else{
    var wasContact=p.contactVolgorde;
    p.archived=true;p.contactpersoon=false;delete p.contactVolgorde;delete p.status;gearchiveerd++;
