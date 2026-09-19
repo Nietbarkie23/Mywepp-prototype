@@ -247,7 +247,13 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .grouplist h2{font-size:15px;font-weight:600;margin:0 0 3px}
 .grouplist .sub{font-size:13px;color:var(--ink-soft);margin:0 0 12px}
 .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.personrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);margin-bottom:8px;box-shadow:var(--shadow)}
+.personrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);margin-bottom:8px;box-shadow:var(--shadow);flex-wrap:wrap}
+/* In een smalle kolom (zoals de telefoonweergave van MyWepp Personal) eiste de
+   keuzelijst alle ruimte op en hield de naam nul pixels over, waardoor die
+   letter voor letter onder elkaar kwam. De naam houdt nu altijd leesbare
+   ruimte en de keuzelijst zakt eronder zodra het te krap wordt. */
+.personrow>.pinfo{flex:1 1 130px;min-width:110px}
+.personrow>select{flex:0 1 auto;max-width:100%}
 .personrow.archived{opacity:.55}
 @media (max-width:560px){
  .personrow{flex-wrap:wrap}
@@ -259,8 +265,11 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .pinfo{flex:1;min-width:0}
 .pinfo .naam{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:8px;
  /* Eén heel lange naam of geplakte lap tekst rekte de pagina tientallen
-    duizenden pixels uit; breek zulke tekst af i.p.v. de layout te verbouwen. */
- min-width:0;overflow-wrap:anywhere}
+    duizenden pixels uit; breek zulke tekst af i.p.v. de layout te verbouwen.
+    Bewust break-word en niet anywhere: bij anywhere wordt de minimale breedte
+    één letter, waarna een keuzelijst ernaast alle ruimte opeist en de naam
+    verticaal werd afgebroken. */
+ min-width:0;overflow-wrap:break-word}
 .pinfo .mail{font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:999px;background:var(--brick-bg);color:var(--brick);border:1px solid var(--brick-line)}
 .rowbtns{display:flex;gap:6px;flex:0 0 auto}
@@ -2055,11 +2064,34 @@ function renderContactBanner(){
  }).join('') : '<p class="empty-msg" style="padding:0">Nog geen contactpersonen aangewezen voor deze groep.</p>';
 }
 var isSysteembeheerder=false;
+/* Wie in deze groep werkt, en verder niemand: vanuit een groep hoor je niet te
+   zien wie er in een andere groep zit. Iemand die aan meerdere groepen is
+   gekoppeld verschijnt uiteraard in elk van die groepen. */
+function accountsInGroep(){
+ return people.filter(function(p){
+  return (p.type==='medewerker'||p.type==='naaste')&&!p.archived&&p._state!=='verwijderd'&&
+   p.groepen.indexOf(huidigeGroep)>-1;
+ });
+}
+/* Na een groepswissel kan de "ingelogde" persoon hier niet meer werken; dan
+   verder gaan als iemand die er wel bij hoort, anders blijf je hangen als
+   iemand die in deze groep niet bestaat. */
+function borgGeldigeGebruiker(){
+ if(isSysteembeheerder)return;
+ var ik=findPerson(huidigeGebruikerId);
+ if(ik&&!ik.archived&&ik.groepen.indexOf(huidigeGroep)>-1)return;
+ var vervanger=accountsInGroep()[0];
+ if(!vervanger)return;
+ huidigeGebruikerId=vervanger.id;
+ MIJN_PROFIEL.voor=vervanger.voor;MIJN_PROFIEL.achter=vervanger.achter;
+ MIJN_PROFIEL.mail=vervanger.mail||'';MIJN_PROFIEL.mobiel=vervanger.tel||'';
+}
 function renderAccountSelect(){
- var opties=people.filter(function(p){return (p.type==='medewerker'||p.type==='naaste')&&p._state!=='verwijderd';});
+ borgGeldigeGebruiker();
+ var opties=accountsInGroep();
  var systeembeheerOptie='<option value="systeembeheer"'+(isSysteembeheerder?' selected':'')+'>Systeembeheerder — alle groepen</option>';
  el('account-select').innerHTML=systeembeheerOptie+opties.map(function(p){
-  var label=naam(p)+' — '+(p.type==='medewerker'?'Medewerker':'Naaste')+(p.contactVolgorde?', contactpersoon '+p.contactVolgorde:'')+(p.groepen.indexOf(huidigeGroep)<0?' (andere groep)':'');
+  var label=naam(p)+' — '+(p.type==='medewerker'?'Medewerker':'Naaste')+(p.contactVolgorde?', contactpersoon '+p.contactVolgorde:'');
   return '<option value="'+p.id+'"'+(!isSysteembeheerder&&p.id===huidigeGebruikerId?' selected':'')+'>'+esc(label)+'</option>';
  }).join('');
 }
@@ -2444,11 +2476,11 @@ function clientMakenFlow(){
   showView('personal');
  });
 }
-function persoonTypeKeuze(onType){
- kiesUitLijstModal('Welk type wil je aanmaken?',['medewerker','naaste'],function(t){return t==='medewerker'?'Professional (medewerker)':'Non-professional (naaste)';},onType);
+function persoonTypeKeuze(titel,onType){
+ kiesUitLijstModal(titel,['medewerker','naaste'],function(t){return t==='medewerker'?'Professional (medewerker)':'Non-professional (naaste)';},onType);
 }
 function persoonMakenFlow(){
- persoonTypeKeuze(function(t){
+ persoonTypeKeuze('Welk type wil je aanmaken?',function(t){
   kiesGroepDan('In welke groep?',function(g){
    huidigeGroep=g;verversGroepReferenties();
    pushNew(t);
@@ -2465,7 +2497,7 @@ function clientBewerkenFlow(){
  });
 }
 function persoonBewerkenFlow(){
- persoonTypeKeuze(function(t){
+ persoonTypeKeuze('Welk type wil je bewerken?',function(t){
   kiesGroepDan('In welke groep?',function(g){
    huidigeGroep=g;verversGroepReferenties();renderAll();
    kiesUitLijstModal('Wie wil je bewerken?',personenVanType(t),naam,function(p){
@@ -2488,7 +2520,7 @@ function clientVerwijderenFlow(){
  });
 }
 function persoonVerwijderenFlow(){
- persoonTypeKeuze(function(t){
+ persoonTypeKeuze('Welk type wil je verwijderen?',function(t){
   kiesGroepDan('In welke groep?',function(g){
    huidigeGroep=g;verversGroepReferenties();renderAll();
    kiesUitLijstModal('Wie wil je verwijderen?',personenVanType(t),naam,function(p){
@@ -2832,8 +2864,14 @@ el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd()
 function renderControleren(){
  var wijzigingen=people.filter(function(p){return p._state;});
  el('controleren-lijst').innerHTML=wijzigingen.length? wijzigingen.map(function(p){
+  /* Alle openstaande wijzigingen worden straks doorgevoerd, ook die van iemand
+     uit een andere groep. Die verbergen zou betekenen dat je iets doorvoert wat
+     je niet ziet, dus vermelden we er dan bij om welke groep het gaat. */
+  var elders=p.groepen&&p.groepen.indexOf(huidigeGroep)<0?(p.groepen[0]||''):'';
   return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
-   '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+(p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
+   '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+
+   (elders?' <span class="mini">· uit groep '+esc(elders)+'</span>':'')+
+   (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
    '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+STATE_LABEL[p._state]+'</span></div>';
  }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om door te voeren.</p>';
 }
