@@ -401,6 +401,16 @@ td.dot{text-align:center}
 .modal-card .msec p b{display:inline;font-size:inherit;margin:0;color:var(--ink);font-weight:600}
 .modal-card .msec p{margin:0;font-size:13.5px;color:var(--ink-soft);line-height:1.6}
 .modal-card .msec p+p{margin-top:8px}
+/* Een mislukte opslag mag niet stil blijven: wat je op het scherm ziet klopt
+   dan niet met wat er bewaard is, en dat merk je pas als het misgaat. */
+#opslag-balk{position:fixed;left:16px;right:16px;bottom:16px;z-index:60;max-width:560px;margin:0 auto;
+ display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+ padding:12px 16px;border-radius:var(--radius);font-size:13.5px;
+ background:var(--brick-bg);border:1px solid var(--brick-line);color:var(--brick);
+ box-shadow:0 6px 22px -8px rgba(23,35,54,.35)}
+#opslag-balk[hidden]{display:none}
+#opslag-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
+#opslag-balk button{flex:0 0 auto}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 
 .helpbtn{width:22px;height:22px;padding:0;border-radius:999px;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);flex:0 0 22px}
@@ -595,7 +605,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <button type="button" class="tab" data-admintab="controle">4 — Controle <span class="countchip" id="controle-teller"></span></button>
     <button type="button" class="tab" data-admintab="matrix">5 — Wie ziet wie</button>
     <button type="button" class="tab" data-admintab="zoeken">6 — Zoeken</button>
-    <button type="button" class="tab" data-admintab="datalek">7 — Datalekken <span class="countchip" id="datalek-teller"></span></button>
+    <button type="button" class="tab" data-admintab="datalek">7 — AVG <span class="countchip" id="datalek-teller"></span></button>
   </div>
 
   <section id="admintab-bulk">
@@ -689,6 +699,14 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="note">Elke inbreuk op persoonsgegevens moet worden vastgelegd, ook als hij niet bij de Autoriteit Persoonsgegevens wordt gemeld (AVG art. 33 lid 5). Een melding aan de AP moet binnen 72 uur na ontdekking; deze lijst rekent die termijn voor je uit.</p>
         <div id="datalek-lijst"></div>
         <div class="actions end"><button type="button" class="primary" id="datalek-nieuw">Datalek vastleggen</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Verwerkingsregister</h2><span class="sub">AVG art. 30</span></div>
+      <div class="body">
+        <p class="note">Een organisatie moet kunnen laten zien wélke persoonsgegevens ze verwerkt, waarvoor, op welke grondslag en hoe lang ze bewaard blijven. Dit overzicht wordt opgebouwd uit wat er nu daadwerkelijk in MyWepp staat, zodat het niet uit de pas loopt met de praktijk.</p>
+        <div id="register-lijst"></div>
+        <div class="actions end"><button type="button" id="register-export">Exporteren (CSV)</button></div>
       </div>
     </div>
   </section>
@@ -1085,6 +1103,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   </div>
 </div>
 
+<div id="opslag-balk" role="status" aria-live="polite" hidden></div>
 <div class="modal-overlay" id="modal-overlay" hidden>
   <div class="modal-card" id="modal-card" role="dialog" aria-modal="true" tabindex="-1"></div>
 </div>
@@ -1357,6 +1376,7 @@ function kiesAdmintab(naamVal){
  if(naamVal==='matrix')renderMatrix();
  if(naamVal==='zoeken')renderZoeken();
  if(naamVal==='datalek')renderDatalekken();
+ if(naamVal==='datalek')renderVerwerkingsregister();
 }
 Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
  b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
@@ -1566,13 +1586,52 @@ async function loadFromSupabase(){
   if(!el('admintab-groepen').hidden)renderSysteembeheer();
  }catch(e){/* Supabase niet bereikbaar (bv. in preview-omgeving) — lokale demodata blijft actief */}
 }
+/* ---- Zichtbaar maken of het opslaan lukt ----
+   De meeste opslagaanroepen keken niet naar het resultaat. Ging het mis, dan
+   bleef het scherm de nieuwe situatie tonen terwijl de database de oude hield;
+   dat merk je pas als iemand toegang blijkt te hebben die je had ingetrokken.
+   Zonder database (de demo-stand) is er niets om over te melden. */
+var opslagMislukt={};
+function registreerOpslag(soort,gelukt){
+ if(!sb)return gelukt;
+ if(gelukt)delete opslagMislukt[soort]; else opslagMislukt[soort]=true;
+ toonOpslagStatus();
+ return gelukt;
+}
+var OPSLAGNAMEN={personen:'gebruikers en rechten',organisatie:'instituten, locaties en groepen',
+ clientdata:'gegevens uit de cliënt-app',chat:'chatberichten',logboek:'het logboek'};
+function toonOpslagStatus(){
+ var balk=el('opslag-balk');if(!balk)return;
+ var soorten=Object.keys(opslagMislukt);
+ balk.hidden=!soorten.length;
+ if(!soorten.length)return;
+ var wat=soorten.map(function(k){return OPSLAGNAMEN[k]||k;}).join(' en ');
+ balk.innerHTML='<span class="tekst"><b>Niet opgeslagen.</b> De wijziging in '+esc(wat)+
+  ' staat wel op je scherm, maar is niet in de database beland. Sluit dit venster niet zonder het opnieuw te proberen.</span>'+
+  '<button type="button" class="primary" id="opslag-opnieuw">Opnieuw proberen</button>';
+ el('opslag-opnieuw').addEventListener('click',probeerOpslagOpnieuw);
+}
+async function probeerOpslagOpnieuw(){
+ var knop=el('opslag-opnieuw');
+ if(knop){knop.disabled=true;knop.textContent='Bezig…';}
+ if(opslagMislukt.personen)await syncToSupabase();
+ if(opslagMislukt.organisatie)await syncOrganisatieData();
+ if(opslagMislukt.clientdata&&typeof caClientId!=='undefined'&&caClientId)bewaarClientDataNu(caClientId);
+ if(opslagMislukt.chat&&typeof caChatKey!=='undefined'&&caChatKey)bewaarChatThreadNu(caChatKey);
+ toonOpslagStatus();
+ var nogSteeds=Object.keys(opslagMislukt).length;
+ if(nogSteeds){
+  var k2=el('opslag-opnieuw');
+  if(k2){k2.disabled=false;k2.textContent='Opnieuw proberen';}
+ }
+}
 async function syncToSupabase(){
  if(!sb)return false;
  try{
   var res=await sb.from('personen').upsert(people.map(personRowToDb));
-  return !res.error;
+  return registreerOpslag('personen',!res.error);
  }
- catch(e){return false;}
+ catch(e){return registreerOpslag('personen',false);}
 }
 
 function naam(p){return p.voor+' '+p.achter;}
@@ -3001,6 +3060,85 @@ function openDatalekVenster(bestaand){
 }
 el('datalek-nieuw').addEventListener('click',function(){openDatalekVenster(null);});
 
+/* ============== VERWERKINGSREGISTER (AVG art. 30) ==============
+   Zo'n register wordt meestal los in een document bijgehouden en loopt daardoor
+   achter op de werkelijkheid. Hier komt het uit de app zelf: de aantallen en de
+   bewaartermijn zijn wat er nu echt is ingesteld. */
+function registerRegels(){
+ var tel=function(t){return people.filter(function(p){return p.type===t&&!p.archived;}).length;};
+ var gearchiveerd=people.filter(function(p){return p.archived;}).length;
+ var metFoto=people.filter(function(p){return !!p.foto;}).length;
+ var zonderToestemming=people.filter(function(p){return p.type==='client'&&!p.archived&&!toestemmingVan(p).vastgelegdOp;}).length;
+ return [
+  {verwerking:'Gebruikersbeheer en toegangsrechten',
+   doel:'Bepalen wie welke cliëntgegevens mag inzien en wijzigen, en dat kunnen verantwoorden.',
+   grondslag:'Noodzakelijk voor de uitvoering van de zorgovereenkomst en een wettelijke plicht tot zorgvuldige toegangsbeveiliging.',
+   betrokkenen:tel('client')+' cliënten, '+tel('medewerker')+' medewerkers, '+tel('naaste')+' naasten, verdeeld over '+GROEPEN.length+' groepen',
+   gegevens:'Naam, e-mailadres, telefoonnummer, groepskoppeling, rol en toegangsrechten, einddatum van de toegang, laatste gebruik',
+   bewaartermijn:'Actief zolang de betrokkene aan een groep is gekoppeld; daarna '+BEWAARTERMIJN_MAANDEN+' maanden in het archief',
+   ontvangers:'Alleen medewerkers en naasten met een rol binnen dezelfde groep'},
+  {verwerking:'Cliëntdossier in de MyWepp-app',
+   doel:'Doelen, rapportages, agenda, ik-boek en geheugensteuntjes vastleggen en delen met de betrokkenen.',
+   grondslag:'Uitvoering van de zorgovereenkomst; voor beeldmateriaal aanvullend de toestemming van de cliënt of zijn vertegenwoordiger.',
+   betrokkenen:tel('client')+' cliënten',
+   gegevens:'Gezondheids- en begeleidingsgegevens, agenda-afspraken, foto\'s en video\'s, spraakberichten',
+   bewaartermijn:'Volgt de bewaartermijn van het cliëntdossier van de organisatie',
+   ontvangers:'Medewerkers en naasten met een rol op deze cliënt'},
+  {verwerking:'Beeldmateriaal en profielfoto\'s',
+   doel:'Herkenbaarheid in de app en beeld bij rapportages.',
+   grondslag:'Toestemming (art. 6 lid 1 sub a). Zonder vastgelegde toestemming toont MyWepp geen foto.',
+   betrokkenen:metFoto+' personen met een opgeslagen foto'+(zonderToestemming?'; van '+zonderToestemming+' cliënt(en) is nog geen toestemming vastgelegd':''),
+   gegevens:'Profielfoto, foto\'s en video\'s in het dossier',
+   bewaartermijn:'Tot de toestemming wordt ingetrokken of de betrokkene wordt gewist',
+   ontvangers:'Zie cliëntdossier'},
+  {verwerking:'Onderlinge berichten',
+   doel:'Communicatie tussen cliënt, naasten en medewerkers.',
+   grondslag:'Uitvoering van de zorgovereenkomst.',
+   betrokkenen:'Deelnemers per gesprek',
+   gegevens:'Berichtteksten, afzender en tijdstip',
+   bewaartermijn:'Zolang het gesprek bestaat',
+   ontvangers:'Alleen de deelnemers aan het betreffende gesprek'},
+  {verwerking:'Logboek en verantwoording',
+   doel:'Kunnen aantonen wie wanneer een wijziging in rechten of gegevens heeft gedaan (art. 5 lid 2).',
+   grondslag:'Wettelijke verplichting; gerechtvaardigd belang bij controle op misbruik.',
+   betrokkenen:'Iedereen die met de beheeromgeving werkt',
+   gegevens:'Naam van de uitvoerder, groep, tijdstip en omschrijving van de handeling',
+   bewaartermijn:'Blijft ook na een verwijderverzoek bestaan; wordt niet gewist',
+   ontvangers:'Beheerders en de systeembeheerder'},
+  {verwerking:'Archief van vertrokken betrokkenen',
+   doel:'Terug kunnen halen wie er is geweest en welke toegang die had.',
+   grondslag:'Gerechtvaardigd belang; daarna opslagbeperking (art. 5 lid 1 sub e).',
+   betrokkenen:gearchiveerd+' gearchiveerde personen',
+   gegevens:'Dezelfde gegevens als bij gebruikersbeheer, plus de datum van archivering',
+   bewaartermijn:BEWAARTERMIJN_MAANDEN+' maanden; daarna meldt de controle dat wissen nodig is',
+   ontvangers:'Beheerders van de betreffende groep'}
+ ];
+}
+var REGISTERKOPPEN=[['verwerking','Verwerking'],['doel','Doel'],['grondslag','Grondslag'],
+ ['betrokkenen','Betrokkenen'],['gegevens','Soort gegevens'],['bewaartermijn','Bewaartermijn'],['ontvangers','Wie kan erbij']];
+function renderVerwerkingsregister(){
+ var doel=el('register-lijst');if(!doel)return;
+ doel.innerHTML=registerRegels().map(function(r){
+  return '<div class="msec" style="border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px">'+
+   '<b style="font-size:14px;display:block;margin-bottom:6px">'+esc(r.verwerking)+'</b>'+
+   REGISTERKOPPEN.slice(1).map(function(k){
+    return '<div style="display:flex;gap:10px;padding:3px 0;font-size:13px">'+
+     '<span style="flex:0 0 130px;color:var(--ink-soft)">'+esc(k[1])+'</span>'+
+     '<span style="flex:1;min-width:0;overflow-wrap:break-word">'+esc(r[k[0]])+'</span></div>';
+   }).join('')+'</div>';
+ }).join('');
+}
+el('register-export').addEventListener('click',function(){
+ bevestigExport('register','het verwerkingsregister met de aantallen betrokkenen per verwerking',function(){
+  var regels=[REGISTERKOPPEN.map(function(k){return k[1];}).map(csvVeld).join(';')];
+  registerRegels().forEach(function(r){
+   regels.push(REGISTERKOPPEN.map(function(k){return r[k[0]];}).map(csvVeld).join(';'));
+  });
+  downloadCsv(regels,'mywepp-verwerkingsregister');
+  logActie('Verwerkingsregister geëxporteerd');
+ });
+});
+
 el('zoek-alles').addEventListener('input',function(){zoekAllesTerm=this.value;renderZoeken();});
 el('zoek-archief').addEventListener('change',function(){zoekAllesArchief=this.checked;renderZoeken();});
 
@@ -3417,8 +3555,8 @@ async function syncOrganisatieData(){
    {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen},
    {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER}
   ],{onConflict:'sleutel'});
-  return !res.error;
- }catch(e){return false;}
+  return registreerOpslag('organisatie',!res.error);
+ }catch(e){return registreerOpslag('organisatie',false);}
 }
 
 function updateTally(){
@@ -3560,8 +3698,12 @@ function logActie(tekst){
  LOGBOEK.unshift(regel);
  if(LOGBOEK.length>200)LOGBOEK.length=200;
  if(sb){
-  try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst}]).then(function(){},function(){});}
-  catch(e){/* logboek mag het opslaan van de wijziging zelf nooit blokkeren */}
+  /* Het logboek mag het opslaan van de wijziging zelf nooit blokkeren, maar
+     stilzwijgend verdwijnen mag het ook niet: het is de verantwoording. */
+  try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst}]).then(
+   function(res){registreerOpslag('logboek',!(res&&res.error));},
+   function(){registreerOpslag('logboek',false);});}
+  catch(e){registreerOpslag('logboek',false);}
  }
 }
 async function laadLogboek(){
@@ -4143,27 +4285,35 @@ function bewaarStraks(sleutel,fn){
  clearTimeout(bewaarTimers[sleutel]);
  bewaarTimers[sleutel]=setTimeout(fn,600);
 }
+function bewaarClientDataNu(clientId){
+ if(!sb||!clientId)return;
+ try{
+  sb.from('client_data').upsert([{
+   client_id:clientId,
+   dossier:CLIENTDATA[clientId]||{},
+   geheugen:GEHEUGEN[clientId]||{},
+   instellingen:CA_INSTELLINGEN[clientId]||{},
+   bijgewerkt:new Date().toISOString()
+  }],{onConflict:'client_id'}).then(
+   function(res){registreerOpslag('clientdata',!(res&&res.error));},
+   function(){registreerOpslag('clientdata',false);});
+ }catch(e){registreerOpslag('clientdata',false);}
+}
 function bewaarClientData(clientId){
  if(!sb||!clientId)return;
- bewaarStraks('client-'+clientId,function(){
-  try{
-   sb.from('client_data').upsert([{
-    client_id:clientId,
-    dossier:CLIENTDATA[clientId]||{},
-    geheugen:GEHEUGEN[clientId]||{},
-    instellingen:CA_INSTELLINGEN[clientId]||{},
-    bijgewerkt:new Date().toISOString()
-   }],{onConflict:'client_id'}).then(function(){},function(){});
-  }catch(e){/* opslaan mag de app nooit tegenhouden */}
- });
+ bewaarStraks('client-'+clientId,function(){bewaarClientDataNu(clientId);});
+}
+function bewaarChatThreadNu(sleutel){
+ if(!sb||!sleutel||!CHATSTORE[sleutel])return;
+ try{
+  sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'}).then(
+   function(res){registreerOpslag('chat',!(res&&res.error));},
+   function(){registreerOpslag('chat',false);});
+ }catch(e){registreerOpslag('chat',false);}
 }
 function bewaarChatThread(sleutel){
  if(!sb||!sleutel||!CHATSTORE[sleutel])return;
- bewaarStraks('chat-'+sleutel,function(){
-  try{
-   sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'}).then(function(){},function(){});
-  }catch(e){/* idem */}
- });
+ bewaarStraks('chat-'+sleutel,function(){bewaarChatThreadNu(sleutel);});
 }
 async function laadClientData(){
  if(!sb)return;
