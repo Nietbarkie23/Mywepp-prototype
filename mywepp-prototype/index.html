@@ -876,6 +876,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Wijzigingen controleren</h1><p>Controleer of onderstaande wijzigingen kloppen. Na doorvoeren zijn ze direct actief en kun je ze hier niet meer aanpassen.</p></div>
+    <div class="panel" id="vertrek-gevolgen" style="padding:16px 22px;border-color:var(--amber-line);background:var(--amber-bg)" hidden></div>
     <div class="panel" id="controleren-lijst" style="padding:0"></div>
     <div class="actions"><button type="button" data-back="pp-formulier">Terug naar formulier</button><button type="button" class="primary" id="naar-versturen">Wijzigingen doorvoeren</button></div>
   </div>
@@ -975,6 +976,13 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label for="pc-mail">E-mailadres</label><input id="pc-mail" maxlength="120" placeholder="Leeg = automatisch gegenereerd"><p class="mini" id="pc-mail-fout" style="color:var(--brick)" hidden></p></div>
         <div class="field"><label for="pc-tel">Telefoonnummer</label><input id="pc-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
+      <div class="sublistlabel" style="margin-top:20px">Toestemming</div>
+      <p class="note">Een foto van iemand gebruiken mag niet zomaar: daar is toestemming voor nodig, en je moet kunnen aantonen dát die er is. Zonder vinkje toont MyWepp alleen de initialen.</p>
+      <label class="chip" style="margin:0 6px 8px 0"><input type="checkbox" id="pc-toestemming-foto"> Profielfoto mag getoond worden</label>
+      <label class="chip" style="margin:0 6px 8px 0"><input type="checkbox" id="pc-toestemming-media"> Foto's en video's in het dossier</label>
+      <label class="chip" style="margin:0 0 8px"><input type="checkbox" id="pc-toestemming-chat"> Deelname aan de groepschat</label>
+      <p class="mini" id="pc-toestemming-info" style="margin:0 0 4px"></p>
+
       <div id="pc-groepen-blok">
         <div class="sublistlabel" style="margin-top:20px">Gekoppelde groepen</div>
         <div id="pc-groepen-keuze" class="groepkeuze"></div>
@@ -1138,6 +1146,17 @@ function avatarHash(naam){var h=0;for(var i=0;i<naam.length;i++)h=naam.charCodeA
 function avatarColor(naam){return AVCOLORS[avatarHash(naam)%AVCOLORS.length];}
 function avatarGradient(naam){var h=avatarHash(naam);var c1=AVCOLORS[h%AVCOLORS.length],c2=AVCOLORS[(h+3)%AVCOLORS.length];return 'linear-gradient(135deg,'+c1+','+c2+')';}
 function initials(v,a){return ((v[0]||'')+(a[0]||'')).toUpperCase();}
+/* ---- Toestemming (AVG art. 6 lid 1 sub a en art. 7) ----
+   Een foto van iemand tonen mag alleen met toestemming, en je moet kunnen
+   aantonen dat die er is. Een vinkje dat nergens op ingrijpt is schijnzekerheid,
+   dus zonder toestemming laat de app de foto ook echt niet zien. */
+function toestemmingVan(p){return (p&&p.toestemming)||{};}
+function magFotoTonen(p){
+ if(!p)return false;
+ if(p.type!=='client')return true;          /* medewerkers en naasten regelen dit bij hun eigen account */
+ return !!toestemmingVan(p).foto;
+}
+function fotoVan(p){return magFotoTonen(p)?p.foto:null;}
 function avatarHtmlSized(naam,px,foto){
  if(veiligeFotoUrl(foto))return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;flex:0 0 '+px+'px;background-image:'+cssUrl(foto)+';background-size:cover;background-position:center"></div>';
  return '<div class="avatar" style="width:'+px+'px;height:'+px+'px;font-size:'+Math.round(px*0.36)+'px;flex:0 0 '+px+'px;background:'+avatarGradient(naam)+'">'+esc(initials.apply(null,naam.split(' ').length>1?[naam.split(' ')[0],naam.split(' ').slice(-1)[0]]:[naam,'']))+'</div>';
@@ -1145,7 +1164,7 @@ function avatarHtmlSized(naam,px,foto){
 function avatarHtml(naam,foto){return avatarHtmlSized(naam,36,foto);}
 function setGrootAvatar(elId,p){
  var e=el(elId);
- if(veiligeFotoUrl(p.foto)){zetFotoAchtergrond(e,p.foto);}
+ if(veiligeFotoUrl(fotoVan(p))){zetFotoAchtergrond(e,p.foto);}
  else{e.style.backgroundImage='';e.style.background=avatarGradient(naam(p));}
 }
 
@@ -1492,6 +1511,7 @@ function personRowToDb(p){
   toegang_tot:geldigeDatum(p.toegangTot)?p.toegangTot:null,
   gearchiveerd_op:geldigeDatum(p.gearchiveerdOp)?p.gearchiveerdOp:null,
   geblokkeerd:!!p.geblokkeerd,geblokkeerd_reden:p.geblokkeerdReden||null,
+  toestemming:p.toestemming||{},
   laatste_login:geldigeDatum(p.laatsteLogin)?p.laatsteLogin:null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
   medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
@@ -1507,6 +1527,7 @@ function dbRowToPerson(r){
  if(r.foto)p.foto=r.foto;
  if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
  if(r.gearchiveerd_op)p.gearchiveerdOp=String(r.gearchiveerd_op).slice(0,10);
+ if(r.toestemming&&typeof r.toestemming==='object')p.toestemming=r.toestemming;
  if(r.geblokkeerd)p.geblokkeerd=true;
  if(r.geblokkeerd_reden)p.geblokkeerdReden=r.geblokkeerd_reden;
  if(r.laatste_login)p.laatsteLogin=String(r.laatste_login).slice(0,10);
@@ -1621,7 +1642,7 @@ function clientRechtenRow(p,t){
  var rollen=ROLLEN[t].clienten.filter(function(r){return r!=='Geen';});
  return clients.map(function(c){
   var huidig=(p.clientRechten||{})[c.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c),c.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(c))+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c),fotoVan(c))+'<div class="pinfo"><div class="naam">'+esc(naam(c))+'</div></div>'+
    '<select data-clientrol="'+c.id+'" data-id="'+p.id+'" aria-label="Rol van '+esc(naam(p))+' op '+esc(naam(c))+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1648,7 +1669,7 @@ function naasteRechtenRow(p){
  var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return naasten.map(function(n){
   var huidig=(p.naasteRechten||{})[n.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n),n.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(n))+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n),fotoVan(n))+'<div class="pinfo"><div class="naam">'+esc(naam(n))+'</div></div>'+
    '<select data-naasterol="'+n.id+'" data-id="'+p.id+'" aria-label="Rol van '+esc(naam(p))+' op '+esc(naam(n))+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1670,7 +1691,7 @@ function medewerkerRechtenRow(naasteId){
  var rollen=ROLLEN.naaste.groep.filter(function(r){return r!=='Geen';});
  return medewerkers.map(function(m){
   var huidig=rolOpNaaste(m,naasteId)||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),fotoVan(m))+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
    '<select data-medewerkerrol="'+m.id+'" data-naasteid="'+naasteId+'" aria-label="Rol van '+esc(naam(m))+' op deze naaste" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1693,7 +1714,7 @@ function medewerkerPeerRow(p){
  var rollen=ROLLEN.medewerker.medewerkers.filter(function(r){return r!=='Geen';});
  return peers.map(function(m){
   var huidig=(p.medewerkerRechten||{})[m.id]||'';
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),fotoVan(m))+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
    '<select data-medewerkerpeerrol="'+m.id+'" data-id="'+p.id+'" aria-label="Rol van '+esc(naam(p))+' op '+esc(naam(m))+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
@@ -1727,7 +1748,7 @@ function rowHtml(p,t){
  var gekozen=selectie[t]&&selectie[t][p.id];
  var head='<div class="uhead">'+
   '<input type="checkbox" class="rowkies" data-kies="'+p.id+'" '+(gekozen?'checked':'')+' aria-label="Selecteer '+esc(naam(p))+'">'+
-  avatarHtml(naam(p),p.foto)+
+  avatarHtml(naam(p),fotoVan(p))+
   '<div class="pinfo"><div class="naam">'+esc(naam(p))+contactBadge+toegangBadge+stateTag+'</div><div class="mail">'+esc(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
   '<div class="rowbtns">'+
    '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
@@ -1929,7 +1950,7 @@ var huidigProfielId=null;
 function persoonRechtRij(b,clientId){
  var huidig=rolOpClient(b,clientId)||'';
  var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
- return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(b))+'</div><div class="mail">'+esc(b.mail||'')+'</div></div>'+
+ return '<div class="personrow">'+avatarHtml(naam(b),fotoVan(b))+'<div class="pinfo"><div class="naam">'+esc(naam(b))+'</div><div class="mail">'+esc(b.mail||'')+'</div></div>'+
   '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" aria-label="Rol van '+esc(naam(b))+' op deze cliënt" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
 }
@@ -1960,6 +1981,25 @@ function vertegenwoordigerOpties(client){
  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
  return '<option value="">Geen</option>'+betrokkenen.map(function(b){return '<option value="'+b.id+'"'+(client.wettelijkeVertegenwoordiger===b.id?' selected':'')+'>'+esc(naam(b))+'</option>';}).join('');
 }
+/* De vinkjes vullen en vertellen wanneer en door wie de toestemming is
+   vastgelegd: zonder dat kun je niet aantonen dát er toestemming was. */
+function toonToestemming(p){
+ var t=toestemmingVan(p);
+ el('pc-toestemming-foto').checked=!!t.foto;
+ el('pc-toestemming-media').checked=!!t.media;
+ el('pc-toestemming-chat').checked=!!t.chat;
+ var info=el('pc-toestemming-info');
+ if(t.vastgelegdOp){
+  info.textContent='Laatst vastgelegd op '+datumNL(t.vastgelegdOp)+(t.door?' door '+t.door:'')+'.';
+  info.style.color='';
+ }else{
+  info.textContent='Nog niet vastgelegd. Leg vast wat er is afgesproken met de cliënt of zijn vertegenwoordiger.';
+  info.style.color='var(--amber)';
+ }
+ if(p.foto&&!t.foto){
+  info.textContent+=' Er staat een foto klaar, maar die wordt niet getoond zolang er geen toestemming is.';
+ }
+}
 function openProfielClient(id){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
@@ -1969,6 +2009,7 @@ function openProfielClient(id){
  el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
  toonMailFout('pc-mail','pc-mail-fout','');
  mailAuto.pc=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
+ toonToestemming(p);
  renderGroepenKeuze(p,'pc-groepen-keuze','pc-groepen-hint');
  el('pc-vertegenwoordiger').innerHTML=vertegenwoordigerOpties(p);
  el('pc-rechten').innerHTML=personRechtenRow(id);
@@ -1990,6 +2031,18 @@ el('pc-opslaan').addEventListener('click',function(){
  p.voor=kap(cap(voor),MAXLEN.naam);p.achter=kap(cap(achter),MAXLEN.naam);
  p.mail=kap(ingevuldeMail||genereerEmail(p.voor,p.achter),MAXLEN.mail);
  p.tel=kap(el('pc-tel').value.trim(),MAXLEN.tel);
+ var oudT=toestemmingVan(p);
+ var nieuwT={foto:el('pc-toestemming-foto').checked,media:el('pc-toestemming-media').checked,chat:el('pc-toestemming-chat').checked};
+ var veranderd=['foto','media','chat'].some(function(k){return !!oudT[k]!==nieuwT[k];});
+ if(veranderd){
+  nieuwT.vastgelegdOp=vandaagISO();
+  nieuwT.door=wieBenIk();
+  p.toestemming=nieuwT;
+  var aan=['foto','media','chat'].filter(function(k){return nieuwT[k];});
+  logActie('Toestemming van '+naam(p)+' vastgelegd: '+(aan.length?aan.join(', '):'niets toegestaan'));
+ }else if(p.toestemming){
+  p.toestemming.foto=nieuwT.foto;p.toestemming.media=nieuwT.media;p.toestemming.chat=nieuwT.chat;
+ }
  if(magContactWijzigen()){
   var nieuweVert=el('pc-vertegenwoordiger').value?+el('pc-vertegenwoordiger').value:null;
   if(nieuweVert!==(p.wettelijkeVertegenwoordiger||null)){
@@ -2445,7 +2498,7 @@ function trashRow(id,t){
 function renderContactpersonen(){
  var lijst=contactpersonenVanGroep();
  el('contactpersonen-lijst').innerHTML=lijst.length? lijst.map(function(m){
-  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+' <span class="mini">(contactpersoon '+m.contactVolgorde+')</span></div><div class="mail">'+esc(m.mail||'—')+'</div></div></div>';
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),fotoVan(m))+'<div class="pinfo"><div class="naam">'+esc(naam(m))+' <span class="mini">(contactpersoon '+m.contactVolgorde+')</span></div><div class="mail">'+esc(m.mail||'—')+'</div></div></div>';
  }).join('') : '<p class="empty-msg">Nog geen medewerkers gemarkeerd als contactpersoon.</p>';
 }
 function renderContactBanner(){
@@ -2487,9 +2540,13 @@ function accountsInGroep(){
    iemand die in deze groep niet bestaat. */
 function borgGeldigeGebruiker(){
  if(isSysteembeheerder)return;
- var ik=findPerson(huidigeGebruikerId);
- if(ik&&!ik.archived&&ik.groepen.indexOf(huidigeGroep)>-1)return;
- var vervanger=accountsInGroep()[0];
+ /* Precies dezelfde voorwaarde als de lijst zelf. Stonden ze uit elkaar, dan
+    verdween je uit de keuzelijst zonder dat hier iets gebeurde: de balk toonde
+    dan de eerste optie ("Systeembeheerder") terwijl je dat niet was, en het
+    logboek schreef je handelingen nog op de oude naam. */
+ var toegestaan=accountsInGroep();
+ if(toegestaan.some(function(x){return x.id===huidigeGebruikerId;}))return;
+ var vervanger=toegestaan[0];
  if(!vervanger)return;
  huidigeGebruikerId=vervanger.id;
  MIJN_PROFIEL.voor=vervanger.voor;MIJN_PROFIEL.achter=vervanger.achter;
@@ -2736,7 +2793,17 @@ function controleSignalen(){
    tekst:naam(pp)+' heeft het account '+m+' maanden niet gebruikt, maar heeft nog wel toegang.',
    actie:{soort:'persoon',id:pp.id,type:pp.type,groep:(pp.groepen||[])[0]||huidigeGroep,label:'Profiel openen'}});
  });
- /* 11. Groep zonder mensen. */
+ /* 11. Cliënten zonder vastgelegde toestemming. Zolang dat ontbreekt toont de
+        app geen foto, maar het hoort gewoon geregeld te zijn. */
+ GROEPEN.forEach(function(g){
+  actieveIn(g,'client').forEach(function(c){
+   if(toestemmingVan(c).vastgelegdOp)return;
+   signalen.push({ernst:'laag',groep:g,
+    tekst:'Van '+naam(c)+' is geen toestemming vastgelegd voor foto\'s en groepschat.',
+    actie:{soort:'client',id:c.id,groep:g,label:'Profiel openen'}});
+  });
+ });
+ /* 12. Groep zonder mensen. */
  GROEPEN.forEach(function(g){
   if(!actieveIn(g,'client').length&&!actieveIn(g,'medewerker').length&&!actieveIn(g,'naaste').length){
    signalen.push({ernst:'laag',groep:g,tekst:'Deze groep is helemaal leeg.',actie:{soort:'groep',groep:g,label:'Groep openen'}});
@@ -2809,7 +2876,7 @@ function renderZoeken(){
   var chips=(p.archived?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">Gearchiveerd</span>':'')+
    toegangChip(p)+
    (p.contactVolgorde?' <span class="countchip" style="color:var(--accent)">Contactpersoon '+p.contactVolgorde+'</span>':'');
-  return '<div class="personrow">'+avatarHtml(naam(p),p.foto)+
+  return '<div class="personrow">'+avatarHtml(naam(p),fotoVan(p))+
    '<div class="pinfo"><div class="naam">'+esc(naam(p))+chips+'</div>'+
    '<div class="mail">'+esc(TYPELABEL[p.type])+' · '+groepen+(p.mail?' · '+esc(p.mail):'')+'</div></div>'+
    (p.archived?'':'<button type="button" class="small" data-zoekga="'+i+'">Openen</button>')+
@@ -3698,7 +3765,14 @@ function avgDossier(p){
  voeg('Toegang geblokkeerd',p.geblokkeerd?('ja'+(p.geblokkeerdReden?' — '+p.geblokkeerdReden:'')):'nee');
  voeg('Laatst gebruikt',geldigeDatum(p.laatsteLogin)?datumNL(p.laatsteLogin):'niet geregistreerd');
  voeg('Toegang tot en met',geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'geen einddatum');
- voeg('Profielfoto',p.foto?'ja, opgeslagen':'nee');
+ voeg('Profielfoto',p.foto?('ja, opgeslagen'+(magFotoTonen(p)?'':' — wordt niet getoond, geen toestemming')):'nee');
+ if(p.type==='client'){
+  var t=toestemmingVan(p);
+  voeg('Toestemming profielfoto',t.foto?'ja':'nee');
+  voeg('Toestemming beeld in dossier',t.media?'ja':'nee');
+  voeg('Toestemming groepschat',t.chat?'ja':'nee');
+  voeg('Toestemming vastgelegd op',t.vastgelegdOp?(datumNL(t.vastgelegdOp)+(t.door?' door '+t.door:'')):'niet vastgelegd');
+ }
  voeg('Gearchiveerd',p.archived?('ja'+(p.gearchiveerdOp?', op '+datumNL(p.gearchiveerdOp):'')):'nee');
  if(p.wettelijkeVertegenwoordiger){
   var wv=findPerson(p.wettelijkeVertegenwoordiger);
@@ -3767,7 +3841,107 @@ function wijzigingLabel(p){
  if(p._state==='verwijderd'&&blijftElders(p))return 'alleen uit '+huidigeGroep;
  return STATE_LABEL[p._state];
 }
+/* ---- Wat laat iemand achter die vertrekt? ----
+   Archiveren haalde iemand weg zonder te kijken wat er van hem afhing. De groep
+   raakte zo zijn enige contactpersoon kwijt en een cliënt zijn enige
+   medewerker, en dat merkte je pas achteraf in de controle. Dat hoort vóór het
+   doorvoeren te blijken, want daarna is het niet meer terug te draaien. */
+function vertrektEcht(p){
+ return p._state==='verwijderd'&&!blijftElders(p);
+}
+function blijftNaVertrek(x){
+ return x&&!x.archived&&!vertrektEcht(x)&&heeftToegang(x);
+}
+function vertrekGevolgen(){
+ var gevolgen=[];
+ people.filter(vertrektEcht).forEach(function(p){
+  if(p.groepen.indexOf(huidigeGroep)<0)return;
+  if(p.contactVolgorde){
+   var andere=contactpersonenVanGroep().filter(function(x){return x.id!==p.id&&blijftNaVertrek(x);});
+   if(!andere.length){
+    gevolgen.push({soort:'contact',persoon:p,
+     tekst:naam(p)+' is contactpersoon '+p.contactVolgorde+'. Daarna heeft deze groep geen aanspreekpunt meer.'});
+   }
+  }
+  personenVanType('client').forEach(function(c){
+   if(!rolOpClient(p,c.id))return;
+   var anderen=personenVanType('medewerker').filter(function(m){
+    return m.id!==p.id&&rolOpClient(m,c.id)&&blijftNaVertrek(m);
+   });
+   if(!anderen.length){
+    gevolgen.push({soort:'client',persoon:p,client:c,
+     tekst:naam(p)+' is de enige medewerker met toegang tot '+naam(c)+'.'});
+   }
+  });
+ });
+ return gevolgen;
+}
+/* Mogelijke opvolgers: medewerkers in deze groep die blijven. */
+function mogelijkeOpvolgers(behalve){
+ return personenVanType('medewerker').filter(function(m){
+  return m.id!==behalve.id&&blijftNaVertrek(m);
+ });
+}
+function openOverdracht(){
+ var gevolgen=vertrekGevolgen();
+ if(!gevolgen.length)return;
+ var vertrekker=gevolgen[0].persoon;
+ var opvolgers=mogelijkeOpvolgers(vertrekker);
+ if(!opvolgers.length){
+  openMelding('Geen opvolger beschikbaar',
+   'Er is in '+huidigeGroep+' geen andere medewerker die kan overnemen. Voeg eerst iemand toe, of laat '+naam(vertrekker)+' voorlopig staan.');
+  return;
+ }
+ openModal('<h3>Taken overdragen</h3><div class="msec">'+
+  '<p>De gekozen collega neemt over wat '+esc(naam(vertrekker))+' achterlaat:</p>'+
+  '<p>'+gevolgen.map(function(g){return esc(g.tekst);}).join('<br>')+'</p></div>'+
+  '<div class="field"><label for="modal-opvolger">Overdragen aan</label><select id="modal-opvolger">'+
+  opvolgers.map(function(m){return '<option value="'+m.id+'">'+esc(naam(m))+'</option>';}).join('')+
+  '</select></div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="primary" id="modal-opslaan">Overdragen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var opvolger=findPerson(+el('modal-opvolger').value);
+  if(!opvolger)return;
+  var gedaan=draagOver(gevolgen,opvolger);
+  closeModal();
+  renderAll();renderControleren();
+  openMelding('Overgedragen',
+   naam(opvolger)+' neemt '+gedaan+' ding'+(gedaan===1?'':'en')+' over van '+naam(gevolgen[0].persoon)+'. Controleer of de rollen kloppen voordat je doorvoert.');
+ });
+}
+function draagOver(gevolgen,opvolger){
+ var aantal=0;
+ gevolgen.forEach(function(g){
+  if(g.soort==='client'){
+   opvolger.clientRechten=opvolger.clientRechten||{};
+   if(!opvolger.clientRechten[g.client.id]){
+    opvolger.clientRechten[g.client.id]=rolOpClient(g.persoon,g.client.id);
+    aantal++;
+   }
+  }else if(g.soort==='contact'){
+   if(!opvolger.contactVolgorde&&pasContactpersoonToe(opvolger,true))aantal++;
+  }
+ });
+ if(aantal&&opvolger._state!=='nieuw')opvolger._state='gewijzigd';
+ if(aantal)logActie(naam(opvolger)+' neemt '+aantal+' taa'+(aantal===1?'k':'ken')+' over van '+naam(gevolgen[0].persoon));
+ return aantal;
+}
+function renderVertrekGevolgen(){
+ var blok=el('vertrek-gevolgen');if(!blok)return;
+ var gevolgen=vertrekGevolgen();
+ blok.hidden=!gevolgen.length;
+ if(!gevolgen.length)return;
+ blok.innerHTML='<b style="font-size:14px;color:var(--amber)">Let op: er blijft werk liggen</b>'+
+  '<ul style="margin:8px 0 10px 18px;padding:0;font-size:13.5px;color:var(--ink)">'+
+  gevolgen.map(function(g){return '<li style="margin-bottom:4px">'+esc(g.tekst)+'</li>';}).join('')+'</ul>'+
+  '<p class="mini" style="margin:0 0 10px">Je kunt toch doorvoeren, maar dan moet iemand dit later alsnog regelen.</p>'+
+  '<button type="button" class="primary" id="vertrek-overdragen">Taken overdragen…</button>';
+ el('vertrek-overdragen').addEventListener('click',openOverdracht);
+}
 function renderControleren(){
+ renderVertrekGevolgen();
  var wijzigingen=people.filter(function(p){return p._state;});
  el('controleren-lijst').innerHTML=wijzigingen.length? wijzigingen.map(function(p){
   /* Alle openstaande wijzigingen worden straks doorgevoerd, ook die van iemand
@@ -4156,7 +4330,7 @@ function renderCaToegang(){
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-toegang-terug">← Terug</button><b style="font-size:15px">Wie kan bij mijn gegevens</b></div>';
  html+='<p class="mini" style="margin:0 0 12px">Deze mensen kunnen het dossier van '+esc(naam(c))+' inzien, en met welke rol. Klopt er iets niet, of wil je dat iemand geen toegang meer heeft? Neem contact op met de contactpersoon van de groep.</p>';
  var regel=function(x,grijs){
-  return '<div class="personrow"'+(grijs?' style="opacity:.6"':'')+'>'+avatarHtml(naam(x.persoon),x.persoon.foto)+
+  return '<div class="personrow"'+(grijs?' style="opacity:.6"':'')+'>'+avatarHtml(naam(x.persoon),fotoVan(x.persoon))+
    '<div class="pinfo"><div class="naam">'+esc(naam(x.persoon))+
     (x.persoon.contactVolgorde?' <span class="countchip" style="color:var(--accent)">Contactpersoon '+x.persoon.contactVolgorde+'</span>':'')+'</div>'+
    '<div class="mail">'+esc(TYPELABEL[x.persoon.type])+' · '+esc(x.rol)+'</div></div></div>';
@@ -4171,7 +4345,7 @@ function renderCaToegang(){
  }
  if(c.wettelijkeVertegenwoordiger){
   var wv=findPerson(c.wettelijkeVertegenwoordiger);
-  if(wv)html+='<div class="sublistlabel">Wettelijk vertegenwoordiger</div><div class="personrow">'+avatarHtml(naam(wv),wv.foto)+
+  if(wv)html+='<div class="sublistlabel">Wettelijk vertegenwoordiger</div><div class="personrow">'+avatarHtml(naam(wv),fotoVan(wv))+
    '<div class="pinfo"><div class="naam">'+esc(naam(wv))+'</div><div class="mail">'+esc(TYPELABEL[wv.type])+'</div></div></div>';
  }
  if(SYSTEEMBEHEER.tel){
