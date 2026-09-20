@@ -107,7 +107,12 @@ header.top{border-bottom:1px solid var(--line);background:var(--paper)}
 .intro h1{font-size:22px;margin:0 0 6px;max-width:32ch}
 .intro p{margin:0;color:var(--ink-soft);max-width:70ch;font-size:13.5px}
 
-.tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:20px}
+/* Zeven tabbladen met lange namen passen niet op een telefoon. Liever de balk
+   zelf laten schuiven dan de hele pagina zijwaarts laten meebewegen: dan
+   verspringt de inhoud eronder bij elke veeg. */
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:20px;
+ overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.tabs .tab{flex:0 0 auto;white-space:nowrap}
 .tabs .tab{background:transparent;border:0;border-bottom:2px solid transparent;padding:10px 4px;margin-right:20px;font:inherit;font-size:14.5px;font-weight:500;color:var(--ink-soft);cursor:pointer}
 .tabs .tab.on{color:var(--ink);border-bottom-color:var(--accent)}
 
@@ -147,7 +152,7 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .tekstknop{font-size:12.5px;padding:5px 9px;border-radius:8px;font-weight:600}
 .tekstknop.aan{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-.matrixwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-sm)}
+.matrixwrap{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:var(--radius-sm)}
 .matrix{border-collapse:collapse;width:100%;font-size:13px}
 .matrix th,.matrix td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:7px 9px;text-align:left;white-space:nowrap}
 .matrix thead th{background:var(--paper);position:sticky;top:0;font-weight:600}
@@ -754,7 +759,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="hubcard" style="display:block;border-top:1px solid var(--line)">
         <b style="display:block;margin-bottom:6px;font-size:13.5px">Opmerking</b>
         <p class="mini" style="margin:0 0 8px">Dit overleggen met het beheerteam voordat je het formulier update.</p>
-        <textarea id="hub-opmerking" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>
+        <textarea id="hub-opmerking" aria-label="Opmerking bij dit groepsprofiel" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>
         <p class="mini" id="hub-bevestiging" style="color:var(--moss);min-height:16px;margin:6px 0 0"></p>
       </div>
     </div>
@@ -916,8 +921,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Statistieken</h1><p>Klik op een datum in het overzicht voor de dagdetails.</p></div>
     <div class="panel"><div class="body" style="display:flex;gap:12px;flex-wrap:wrap">
-      <div class="field" style="max-width:160px"><label>Maand</label><select id="stat-maand"></select></div>
-      <div class="field" style="max-width:120px"><label>Jaar</label><select id="stat-jaar"><option>2026</option><option>2025</option></select></div>
+      <div class="field" style="max-width:160px"><label for="stat-maand">Maand</label><select id="stat-maand"></select></div>
+      <div class="field" style="max-width:120px"><label for="stat-jaar">Jaar</label><select id="stat-jaar"><option>2026</option><option>2025</option></select></div>
     </div></div>
     <div class="panel" style="overflow-x:auto"><table id="stat-table" style="border:0;box-shadow:none"></table></div>
     <div class="panel"><div class="body" id="stat-kalender"></div></div>
@@ -936,7 +941,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel">
       <div class="togglerow" style="padding:16px 18px 0"><span>Reserveringsformulier actief</span><label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
       <div style="padding:16px 18px 0;display:flex;gap:12px;flex-wrap:wrap">
-        <div class="field" style="max-width:200px"><label>Cliënt</label><select id="maaltijd-client"></select></div>
+        <div class="field" style="max-width:200px"><label for="maaltijd-client">Cliënt</label><select id="maaltijd-client"></select></div>
       </div>
       <p class="mini" style="padding:0 18px">Groen — maaltijd gereserveerd. Rood — geen reservering. Klik een dag om te wisselen.</p>
       <div style="padding:8px 18px 18px" id="maaltijd-kalender"></div>
@@ -956,12 +961,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" class="small" id="pc-foto-wijzigen">Profielfoto wijzigen</button>
       </div>
       <div class="row">
-        <div class="field"><label>Voornaam</label><input id="pc-voornaam" maxlength="60"></div>
-        <div class="field"><label>Achternaam</label><input id="pc-achternaam" maxlength="60"></div>
+        <div class="field"><label for="pc-voornaam">Voornaam</label><input id="pc-voornaam" maxlength="60"></div>
+        <div class="field"><label for="pc-achternaam">Achternaam</label><input id="pc-achternaam" maxlength="60"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pc-mail" maxlength="120" placeholder="Leeg = automatisch gegenereerd"><p class="mini" id="pc-mail-fout" style="color:var(--brick)" hidden></p></div>
-        <div class="field"><label>Telefoonnummer</label><input id="pc-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
+        <div class="field"><label for="pc-mail">E-mailadres</label><input id="pc-mail" maxlength="120" placeholder="Leeg = automatisch gegenereerd"><p class="mini" id="pc-mail-fout" style="color:var(--brick)" hidden></p></div>
+        <div class="field"><label for="pc-tel">Telefoonnummer</label><input id="pc-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div id="pc-groepen-blok">
         <div class="sublistlabel" style="margin-top:20px">Gekoppelde groepen</div>
@@ -990,12 +995,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" class="small" id="pp-foto-wijzigen">Profielfoto wijzigen</button>
       </div>
       <div class="row">
-        <div class="field"><label>Voornaam</label><input id="pp-voornaam" maxlength="60"></div>
-        <div class="field"><label>Achternaam</label><input id="pp-achternaam" maxlength="60"></div>
+        <div class="field"><label for="pp-voornaam">Voornaam</label><input id="pp-voornaam" maxlength="60"></div>
+        <div class="field"><label for="pp-achternaam">Achternaam</label><input id="pp-achternaam" maxlength="60"></div>
       </div>
       <div class="row">
-        <div class="field"><label>E-mailadres</label><input id="pp-mail" maxlength="120" placeholder="naam@voorbeeld.nl"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
-        <div class="field"><label>Telefoonnummer</label><input id="pp-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
+        <div class="field"><label for="pp-mail">E-mailadres</label><input id="pp-mail" maxlength="120" placeholder="naam@voorbeeld.nl"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
+        <div class="field"><label for="pp-tel">Telefoonnummer</label><input id="pp-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
         <div class="field"><label for="pp-toegang-tot">Toegang tot en met</label><input id="pp-toegang-tot" type="date">
@@ -1050,7 +1055,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <p>Zoals een medewerker die voor één cliënt gebruikt, op de telefoon.</p>
     <a class="appswitch" id="ca-open-op-telefoon" href="?app=client" target="_blank" rel="noopener">📱 Open als app op je telefoon<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
   </div>
-  <div class="ctxbar">Cliënt <select id="ca-client-select"></select></div>
+  <div class="ctxbar"><label for="ca-client-select">Cliënt</label> <select id="ca-client-select"></select></div>
 
   <div class="phoneframe">
     <div class="phonetop">
@@ -1610,7 +1615,7 @@ function clientRechtenRow(p,t){
  return clients.map(function(c){
   var huidig=(p.clientRechten||{})[c.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(c),c.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(c))+'</div></div>'+
-   '<select data-clientrol="'+c.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   '<select data-clientrol="'+c.id+'" data-id="'+p.id+'" aria-label="Rol van '+esc(naam(p))+' op '+esc(naam(c))+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
 }
@@ -1637,7 +1642,7 @@ function naasteRechtenRow(p){
  return naasten.map(function(n){
   var huidig=(p.naasteRechten||{})[n.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(n),n.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(n))+'</div></div>'+
-   '<select data-naasterol="'+n.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   '<select data-naasterol="'+n.id+'" data-id="'+p.id+'" aria-label="Rol van '+esc(naam(p))+' op '+esc(naam(n))+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
 }
@@ -1659,7 +1664,7 @@ function medewerkerRechtenRow(naasteId){
  return medewerkers.map(function(m){
   var huidig=rolOpNaaste(m,naasteId)||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
-   '<select data-medewerkerrol="'+m.id+'" data-naasteid="'+naasteId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   '<select data-medewerkerrol="'+m.id+'" data-naasteid="'+naasteId+'" aria-label="Rol van '+esc(naam(m))+' op deze naaste" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
 }
@@ -1682,7 +1687,7 @@ function medewerkerPeerRow(p){
  return peers.map(function(m){
   var huidig=(p.medewerkerRechten||{})[m.id]||'';
   return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(m),m.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(m))+'</div></div>'+
-   '<select data-medewerkerpeerrol="'+m.id+'" data-id="'+p.id+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+   '<select data-medewerkerpeerrol="'+m.id+'" data-id="'+p.id+'" aria-label="Rol van '+esc(naam(p))+' op '+esc(naam(m))+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
    rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
  }).join('');
 }
@@ -1918,7 +1923,7 @@ function persoonRechtRij(b,clientId){
  var huidig=rolOpClient(b,clientId)||'';
  var rollen=ROLLEN[b.type].clienten.filter(function(r){return r!=='Geen';});
  return '<div class="personrow">'+avatarHtml(naam(b),b.foto)+'<div class="pinfo"><div class="naam">'+esc(naam(b))+'</div><div class="mail">'+esc(b.mail||'')+'</div></div>'+
-  '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
+  '<select data-persoonrol="'+b.id+'" data-clientid="'+clientId+'" aria-label="Rol van '+esc(naam(b))+' op deze cliënt" style="width:auto;min-width:150px"><option value="">Geen toegang</option>'+
   rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>';
 }
 function personRechtenRow(clientId){
@@ -2961,7 +2966,7 @@ function renderMatrix(){
  medewerkers.forEach(function(m){
   html+='<tr><th>'+esc(naam(m))+'</th>'+clienten.map(function(c){
    var huidig=rolOpClient(m,c.id)||'';
-   return '<td><select data-mx="'+m.id+'|'+c.id+'" class="'+(huidig?'':'geen')+'">'+
+   return '<td><select data-mx="'+m.id+'|'+c.id+'" aria-label="Rol van '+esc(naam(m))+' op '+esc(naam(c))+'" class="'+(huidig?'':'geen')+'">'+
     '<option value="">Geen toegang</option>'+
     rollen.map(function(r){return '<option'+(r===huidig?' selected':'')+'>'+esc(r)+'</option>';}).join('')+
     '</select></td>';
