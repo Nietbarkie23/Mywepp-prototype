@@ -593,6 +593,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <button type="button" class="tab" data-admintab="groepen">3 — Groepen beheren</button>
     <button type="button" class="tab" data-admintab="controle">4 — Controle <span class="countchip" id="controle-teller"></span></button>
     <button type="button" class="tab" data-admintab="matrix">5 — Wie ziet wie</button>
+    <button type="button" class="tab" data-admintab="zoeken">6 — Zoeken</button>
   </div>
 
   <section id="admintab-bulk">
@@ -675,6 +676,27 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="note">Deze lijst kijkt over alle groepen heen naar situaties die in de zorg problemen geven — bijvoorbeeld een cliënt waar niemand toegang toe heeft, of een groep zonder aanspreekpunt.</p>
         <div id="controle-lijst"></div>
         <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admintab-zoeken" hidden>
+    <div class="panel">
+      <div class="head"><h2>Zoeken</h2><span class="sub" id="zoek-sub">Over alle groepen heen</span></div>
+      <div class="body">
+        <p class="note">Binnen een groep zoek je alleen in die groep. Hier zoek je door de hele organisatie: handig als iemand belt en je niet weet in welke groep diegene zit, of om te controleren of iemand ergens nog toegang heeft.</p>
+        <div class="row">
+          <div class="field"><label for="zoek-alles">Naam of e-mailadres</label><input id="zoek-alles" maxlength="60" placeholder="Bijvoorbeeld: Sofie, of @zorggroep"></div>
+        </div>
+        <label class="chip" style="margin-bottom:10px"><input type="checkbox" id="zoek-archief"> Ook gearchiveerde mensen tonen</label>
+        <div id="zoek-resultaat"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="head"><h2>Export</h2><span class="sub">Volledige gebruikersadministratie</span></div>
+      <div class="body">
+        <p class="note">Eén bestand met iedereen in de organisatie: type, groepen, rol, e-mailadres, contactpersoonrol, einddatum van de toegang en het aantal rechten. Handig bij een audit of een AVG-vraag, en als bewijs van wie er op welk moment toegang had.</p>
+        <div class="actions end"><button type="button" class="primary" id="export-iedereen">Exporteren (CSV)</button></div>
       </div>
     </div>
   </section>
@@ -968,6 +990,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Telefoonnummer</label><input id="pp-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
+        <div class="field"><label for="pp-toegang-tot">Toegang tot en met</label><input id="pp-toegang-tot" type="date">
+          <div class="mini" id="pp-toegang-hint">Leeg laten voor vaste medewerkers. Vul een datum in bij een invaller, stagiair of uitzendkracht; daarna vervalt de toegang vanzelf.</div>
+        </div>
         <div class="field"><label>Type rol</label><div class="lockedfield" id="pp-typerol-display"></div></div>
       </div>
       <div class="sublistlabel">Rollen en rechten</div>
@@ -992,6 +1017,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
+      <div class="actions" style="justify-content:flex-start;margin:0 0 10px">
+        <button type="button" id="pp-rechten-overnemen">Rechten overnemen van een collega…</button>
+      </div>
       <div id="pp-clienten"></div>
       <div class="sublistlabel" id="pp-lbl-medewerkers">Recht op medewerkers</div>
       <div id="pp-medewerkers"></div>
@@ -1292,6 +1320,7 @@ function kiesAdmintab(naamVal){
  if(naamVal==='groepen')renderSysteembeheer();
  if(naamVal==='controle')renderControle();
  if(naamVal==='matrix')renderMatrix();
+ if(naamVal==='zoeken')renderZoeken();
 }
 Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
  b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
@@ -1332,6 +1361,34 @@ var people=[
  {id:5,type:'naaste',voor:'Ingrid',achter:'Alkema',mail:'ingrid@voorbeeld.nl',tel:'06 34 56 78 90',groepen:['De Boomgaard'],rol:'Mantelzorger',clientRechten:{1:'Mantelzorger met prikbord'}}
 ];
 function rolOpClient(persoon,clientId){return (persoon.clientRechten||{})[clientId]||null;}
+/* ---- Tijdelijke toegang ----
+   Invallers, stagiairs en uitzendkrachten houden in de praktijk toegang tot
+   iemand er handmatig aan denkt. Met een einddatum vervalt die vanzelf. De
+   datum is de laatste dag dat iemand nog binnenkomt; leeg is onbeperkt. */
+function vandaagISO(){
+ var d=new Date();
+ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function geldigeDatum(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(new Date(v).getTime());}
+function toegangVerlopen(p){
+ return !!(p&&geldigeDatum(p.toegangTot)&&p.toegangTot<vandaagISO());
+}
+/* Aantal dagen tot en met de einddatum; negatief als die al voorbij is. */
+function dagenTotVerloop(p){
+ if(!p||!geldigeDatum(p.toegangTot))return null;
+ var eind=new Date(p.toegangTot+'T00:00:00'),nu=new Date(vandaagISO()+'T00:00:00');
+ return Math.round((eind-nu)/86400000);
+}
+function datumNL(iso){
+ if(!geldigeDatum(iso))return '';
+ var d=iso.split('-');
+ return d[2]+'-'+d[1]+'-'+d[0];
+}
+/* Iemand met verlopen toegang telt nergens meer als toegang: niet in de
+   controlesignalen, niet in "wie ziet wie" en niet als inlogbaar account. */
+function heeftToegang(p){
+ return !!p&&!p.archived&&!toegangVerlopen(p);
+}
 /* --- Mijn profiel (eigen account medewerker) --- */
 var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Groep admin',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
 var huidigeGebruikerId=3;
@@ -1390,6 +1447,7 @@ function personRowToDb(p){
  return {id:p.id,type:p.type,voor:p.voor,achter:p.achter,mail:p.mail||null,tel:p.tel||null,rol:p.rol||null,
   contactpersoon:!!p.contactpersoon,contact_volgorde:p.contactVolgorde||null,status:p.status||null,
   wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,foto:p.foto||null,
+  toegang_tot:geldigeDatum(p.toegangTot)?p.toegangTot:null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
   medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
 }
@@ -1402,6 +1460,7 @@ function dbRowToPerson(r){
  if(r.status)p.status=r.status;
  if(r.wettelijke_vertegenwoordiger)p.wettelijkeVertegenwoordiger=r.wettelijke_vertegenwoordiger;
  if(r.foto)p.foto=r.foto;
+ if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
  if(r.client_rechten&&Object.keys(r.client_rechten).length)p.clientRechten=r.client_rechten;
  if(r.medewerker_rechten&&Object.keys(r.medewerker_rechten).length)p.medewerkerRechten=r.medewerker_rechten;
  if(r.naaste_rechten&&Object.keys(r.naaste_rechten).length)p.naasteRechten=r.naaste_rechten;
@@ -1601,15 +1660,26 @@ function wireMedewerkerPeerRechten(container,onchange){
   });
  });
 }
+/* Verlopen toegang moet opvallen in de lijst, niet alleen in het profiel: het is
+   de reden dat iemand niet meer kan inloggen. Bijna verlopen krijgt een zachtere
+   kleur, zodat je het op tijd ziet zonder dat het als fout leest. */
+function toegangChip(p){
+ var dagen=dagenTotVerloop(p);
+ if(dagen===null)return '';
+ if(dagen<0)return ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Toegang verlopen</span>';
+ if(dagen<=14)return ' <span class="statuschip" style="background:var(--amber-bg);color:var(--amber)">Nog '+dagen+' dag'+(dagen===1?'':'en')+'</span>';
+ return ' <span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Tot '+esc(datumNL(p.toegangTot))+'</span>';
+}
 function rowHtml(p,t){
  var staged=p._state==='verwijderd';
  var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
  var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
+ var toegangBadge=toegangChip(p);
  var gekozen=selectie[t]&&selectie[t][p.id];
  var head='<div class="uhead">'+
   '<input type="checkbox" class="rowkies" data-kies="'+p.id+'" '+(gekozen?'checked':'')+' aria-label="Selecteer '+esc(naam(p))+'">'+
   avatarHtml(naam(p),p.foto)+
-  '<div class="pinfo"><div class="naam">'+esc(naam(p))+contactBadge+stateTag+'</div><div class="mail">'+esc(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
+  '<div class="pinfo"><div class="naam">'+esc(naam(p))+contactBadge+toegangBadge+stateTag+'</div><div class="mail">'+esc(p.mail||(p.type==='client'?'—':''))+'</div></div>'+
   '<div class="rowbtns">'+
    '<button type="button" class="iconbtn" data-editrow="'+p.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn danger" data-trashrow="'+p.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
@@ -2004,12 +2074,28 @@ function zetContactBlok(p,t){
   renderContactBanner();
  };
 }
+/* De hint vertelt wat de ingevulde datum betekent: al verlopen, bijna verlopen
+   of nog ruim geldig. Anders moet je zelf gaan rekenen. */
+function toonToegangHint(p){
+ var hint=el('pp-toegang-hint');if(!hint)return;
+ var standaard='Leeg laten voor vaste medewerkers. Vul een datum in bij een invaller, stagiair of uitzendkracht; daarna vervalt de toegang vanzelf.';
+ var veld=el('pp-toegang-tot');
+ var datum=veld?veld.value:'';
+ if(!geldigeDatum(datum)){hint.textContent=standaard;hint.style.color='';return;}
+ var dagen=dagenTotVerloop({toegangTot:datum});
+ if(dagen<0){hint.textContent='Deze toegang is verlopen op '+datumNL(datum)+'. '+naam(p)+' kan niet meer inloggen en telt nergens meer als toegang.';hint.style.color='var(--brick)';}
+ else if(dagen===0){hint.textContent='Vandaag is de laatste dag. Morgen vervalt de toegang.';hint.style.color='var(--amber)';}
+ else if(dagen<=14){hint.textContent='Nog '+dagen+' dag'+(dagen===1?'':'en') +' toegang, tot en met '+datumNL(datum)+'.';hint.style.color='var(--amber)';}
+ else {hint.textContent='Toegang tot en met '+datumNL(datum)+' ('+dagen+' dagen).';hint.style.color='';}
+}
 function openProfielPersoon(id,t){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
  el('pp-titel').textContent=naam(p)+' — volledig profiel';
  setGrootAvatar('pp-foto',p);
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
+ el('pp-toegang-tot').value=geldigeDatum(p.toegangTot)?p.toegangTot:'';
+ toonToegangHint(p);
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  toonMailFout('pp-mail','pp-mail-fout','');
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
@@ -2049,6 +2135,14 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  p.voor=kap(cap(voor),MAXLEN.naam);p.achter=kap(cap(achter),MAXLEN.naam);
  p.mail=kap(ingevuldeMail,MAXLEN.mail);
  p.tel=kap(el('pp-tel').value.trim(),MAXLEN.tel);
+ var datum=el('pp-toegang-tot').value;
+ var oudeDatum=p.toegangTot||'';
+ if(geldigeDatum(datum))p.toegangTot=datum; else delete p.toegangTot;
+ if((p.toegangTot||'')!==oudeDatum){
+  logActie(p.toegangTot
+   ? naam(p)+' heeft toegang tot en met '+datumNL(p.toegangTot)
+   : naam(p)+' heeft weer toegang zonder einddatum');
+ }
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();
  if(dubbelP)naamgenootMelding(dubbelP,p); else show('pp-formulier');
@@ -2061,7 +2155,8 @@ function profielGewijzigd(p,prefix){
  var v=el(prefix+'-voornaam').value.trim(),a=el(prefix+'-achternaam').value.trim();
  return cap(v)!==p.voor||cap(a)!==p.achter||
   el(prefix+'-mail').value.trim()!==(p.mail||'')||
-  el(prefix+'-tel').value.trim()!==(p.tel||'');
+  el(prefix+'-tel').value.trim()!==(p.tel||'')||
+  (el(prefix+'-toegang-tot')?el(prefix+'-toegang-tot').value!==(p.toegangTot||''):false);
 }
 function naamgenootMelding(bestaande,nieuwe){
  openModal('<h3>Let op: dezelfde naam bestaat al</h3><div class="msec"><p>Er staat al een '+
@@ -2106,6 +2201,91 @@ var mailAuto={pc:true};
  el(prefix+'-mail').addEventListener('input',function(){mailAuto[prefix]=(this.value.trim()==='');});
 });
 el('pp-foto-wijzigen').addEventListener('click',function(){openFotoModal('pp-foto');});
+/* ---- Rechten overnemen van een collega ----
+   Een nieuwe medewerker krijgt in de praktijk dezelfde toegang als iemand die
+   hetzelfde werk doet. Dat vakje voor vakje overtikken kost tijd en gaat mis;
+   dit kopieert alleen wat binnen de huidige groep geldt. */
+function rechtenBronnen(p){
+ return personenVanType(p.type).filter(function(x){
+  return x.id!==p.id&&!x.archived&&x._state!=='verwijderd';
+ });
+}
+function telRechtenInGroep(bron,type){
+ var clienten=personenVanType('client'),n=0;
+ clienten.forEach(function(c){if((bron.clientRechten||{})[c.id])n++;});
+ if(type==='medewerker'){
+  personenVanType('medewerker').forEach(function(m){if((bron.medewerkerRechten||{})[m.id])n++;});
+  personenVanType('naaste').forEach(function(x){if((bron.naasteRechten||{})[x.id])n++;});
+ }
+ return n;
+}
+/* Alleen de mensen die in deze groep zitten worden overgenomen. Rechten van de
+   bron in een andere groep gaan niet mee: daar hoort de ontvanger misschien
+   niet eens bij. */
+function neemRechtenOver(doel,bron){
+ var gewijzigd=0;
+ var kopieer=function(veld,lijst){
+  doel[veld]=doel[veld]||{};
+  lijst.forEach(function(ander){
+   if(ander.id===doel.id)return;
+   var nieuw=(bron[veld]||{})[ander.id]||null;
+   var oud=doel[veld][ander.id]||null;
+   if(nieuw===oud)return;
+   if(nieuw)doel[veld][ander.id]=nieuw; else delete doel[veld][ander.id];
+   gewijzigd++;
+  });
+ };
+ kopieer('clientRechten',personenVanType('client'));
+ if(doel.type==='medewerker'){
+  kopieer('medewerkerRechten',personenVanType('medewerker'));
+  kopieer('naasteRechten',personenVanType('naaste'));
+ }
+ if(gewijzigd&&doel._state!=='nieuw')doel._state='gewijzigd';
+ return gewijzigd;
+}
+function openRechtenOvernemen(){
+ var doel=findPerson(huidigProfielId);
+ if(!doel)return;
+ var bronnen=rechtenBronnen(doel);
+ if(!bronnen.length){
+  openMelding('Geen collega beschikbaar','Er is in deze groep niemand anders van hetzelfde type om rechten van over te nemen.');
+  return;
+ }
+ var lijst=bronnen.map(function(b){
+  return '<option value="'+b.id+'">'+esc(naam(b))+' — '+telRechtenInGroep(b,doel.type)+' recht(en) in deze groep</option>';
+ }).join('');
+ openModal('<h3>Rechten overnemen</h3><div class="msec">'+
+  '<p>'+esc(naam(doel))+' krijgt precies dezelfde rechten als de gekozen collega, binnen <b>'+esc(huidigeGroep)+'</b>.</p>'+
+  '<p>Rechten die de collega niet heeft worden ook bij '+esc(naam(doel))+' weggehaald, zodat de twee echt gelijk staan. Rechten in andere groepen blijven ongemoeid.</p></div>'+
+  '<div class="field"><label for="modal-bron">Overnemen van</label><select id="modal-bron">'+lijst+'</select></div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="primary" id="modal-opslaan">Rechten overnemen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var bron=findPerson(+el('modal-bron').value);
+  if(!bron)return;
+  var aantal=neemRechtenOver(doel,bron);
+  closeModal();
+  if(aantal){
+   logActie(naam(doel)+' nam de rechten van '+naam(bron)+' over in '+huidigeGroep+' ('+aantal+' wijziging'+(aantal===1?'':'en')+')');
+   syncToSupabase();
+  }
+  openProfielPersoon(doel.id,doel.type);
+  renderAll();
+  openMelding(aantal?'Rechten overgenomen':'Niets te wijzigen',
+   aantal? naam(doel)+' heeft nu dezelfde rechten als '+naam(bron)+' in '+huidigeGroep+'. Er zijn '+aantal+' recht(en) aangepast.'
+         : naam(doel)+' had al precies dezelfde rechten als '+naam(bron)+'.');
+ });
+}
+el('pp-rechten-overnemen').addEventListener('click',openRechtenOvernemen);
+/* De uitleg onder de datum moet meelopen terwijl je typt of kiest; anders zie je
+   pas na opslaan en heropenen wat de ingevulde datum betekent. */
+['input','change'].forEach(function(ev){
+ el('pp-toegang-tot').addEventListener(ev,function(){
+  var p=findPerson(huidigProfielId);
+  if(p)toonToegangHint(p);
+ });
+});
 /* Wie uit de groep gaat, mag nergens anders meer aan hangen: anders blijven er
    rechten en een wettelijke vertegenwoordiger staan die naar niemand meer wijzen. */
 function verwijderVerwijzingenNaar(id){
@@ -2198,7 +2378,7 @@ var SYSTEEMBEHEER={tel:'088 123 45 67'};
 function accountsInGroep(){
  return people.filter(function(p){
   return (p.type==='medewerker'||p.type==='naaste')&&!p.archived&&p._state!=='verwijderd'&&
-   p.groepen.indexOf(huidigeGroep)>-1;
+   !toegangVerlopen(p)&&p.groepen.indexOf(huidigeGroep)>-1;
  });
 }
 /* Na een groepswissel kan de "ingelogde" persoon hier niet meer werken; dan
@@ -2372,7 +2552,8 @@ function controleSignalen(){
   /* 1. Cliënt zonder enige medewerker met toegang: niemand kan iets voor
         deze persoon vastleggen of zien. */
   clienten.forEach(function(c){
-   var metToegang=medewerkers.filter(function(m){return rolOpClient(m,c.id);});
+   /* Een medewerker met verlopen toegang kan niet inloggen en telt dus niet. */
+   var metToegang=medewerkers.filter(function(m){return rolOpClient(m,c.id)&&heeftToegang(m);});
    if(!metToegang.length){
     signalen.push({ernst:'hoog',groep:g,tekst:naam(c)+' heeft geen enkele medewerker met toegang.',
      actie:{soort:'client',id:c.id,groep:g,label:'Toegang regelen'}});
@@ -2400,7 +2581,21 @@ function controleSignalen(){
    if(!p.mail)signalen.push({ernst:'laag',groep:g,tekst:naam(p)+' heeft geen e-mailadres en kan dus niet inloggen.',
     actie:{soort:'persoon',id:p.id,type:p.type,groep:g,label:'Profiel openen'}});
   });
-  /* 6. Naamgenoten in dezelfde groep: verwisselingsrisico. */
+  /* 6. Tijdelijke toegang die is verlopen of bijna verloopt. Verlopen is
+        dringend als het de enige contactpersoon of enige toegang betrof;
+        bijna verlopen is een herinnering om op tijd te verlengen. */
+  medewerkers.concat(naasten).forEach(function(pp){
+   var dagen=dagenTotVerloop(pp);
+   if(dagen===null)return;
+   if(dagen<0){
+    signalen.push({ernst:'hoog',groep:g,tekst:naam(pp)+' had toegang tot '+datumNL(pp.toegangTot)+' en kan niet meer inloggen.',
+     actie:{soort:'persoon',id:pp.id,type:pp.type,groep:g,label:'Profiel openen'}});
+   }else if(dagen<=14){
+    signalen.push({ernst:'laag',groep:g,tekst:'Toegang van '+naam(pp)+' verloopt over '+dagen+' dag'+(dagen===1?'':'en')+' ('+datumNL(pp.toegangTot)+').',
+     actie:{soort:'persoon',id:pp.id,type:pp.type,groep:g,label:'Profiel openen'}});
+   }
+  });
+  /* 7. Naamgenoten in dezelfde groep: verwisselingsrisico. */
   var gezien={};
   clienten.concat(medewerkers,naasten).forEach(function(p){
    var sleutel=naam(p).toLowerCase();
@@ -2411,7 +2606,7 @@ function controleSignalen(){
    gezien[sleutel]=true;
   });
  });
- /* 7. Groep zonder mensen. */
+ /* 8. Groep zonder mensen. */
  GROEPEN.forEach(function(g){
   if(!actieveIn(g,'client').length&&!actieveIn(g,'medewerker').length&&!actieveIn(g,'naaste').length){
    signalen.push({ernst:'laag',groep:g,tekst:'Deze groep is helemaal leeg.',actie:{soort:'groep',groep:g,label:'Groep openen'}});
@@ -2447,6 +2642,64 @@ function renderControle(){
  });
 }
 el('controle-ververs').addEventListener('click',renderControle);
+
+/* ============== ZOEKEN OVER ALLE GROEPEN ==============
+   Het zoekveld binnen een groep kijkt bewust alleen in die groep. Daardoor was
+   er geen manier om iemand terug te vinden als je niet wist waar die zat, of om
+   te zien of een vertrokken medewerker ergens nog toegang heeft. */
+var zoekAllesTerm='',zoekAllesArchief=false;
+function zoekResultaten(){
+ var term=zoekAllesTerm.trim().toLowerCase();
+ if(term.length<2)return null;
+ return people.filter(function(p){
+  if(p.archived&&!zoekAllesArchief)return false;
+  return naam(p).toLowerCase().indexOf(term)>-1||String(p.mail||'').toLowerCase().indexOf(term)>-1;
+ }).sort(function(a,b){return naam(a).localeCompare(naam(b));});
+}
+function renderZoeken(){
+ var veld=el('zoek-alles');
+ if(veld&&veld.value!==zoekAllesTerm)veld.value=zoekAllesTerm;
+ var vinkje=el('zoek-archief');
+ if(vinkje)vinkje.checked=zoekAllesArchief;
+ var res=zoekResultaten();
+ var doel=el('zoek-resultaat');
+ if(res===null){
+  el('zoek-sub').textContent='Over alle groepen heen';
+  doel.innerHTML='<p class="empty-msg">Typ minstens twee letters om te zoeken.</p>';
+  return;
+ }
+ el('zoek-sub').textContent=res.length+' resultaat'+(res.length===1?'':'en');
+ if(!res.length){
+  doel.innerHTML='<p class="empty-msg">Niemand gevonden voor "'+esc(zoekAllesTerm)+'".</p>';
+  return;
+ }
+ doel.innerHTML=res.map(function(p,i){
+  var groepen=(p.groepen||[]).length?esc(p.groepen.join(', ')):'geen groep';
+  var chips=(p.archived?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">Gearchiveerd</span>':'')+
+   toegangChip(p)+
+   (p.contactVolgorde?' <span class="countchip" style="color:var(--accent)">Contactpersoon '+p.contactVolgorde+'</span>':'');
+  return '<div class="personrow">'+avatarHtml(naam(p),p.foto)+
+   '<div class="pinfo"><div class="naam">'+esc(naam(p))+chips+'</div>'+
+   '<div class="mail">'+esc(TYPELABEL[p.type])+' · '+groepen+(p.mail?' · '+esc(p.mail):'')+'</div></div>'+
+   (p.archived?'':'<button type="button" class="small" data-zoekga="'+i+'">Openen</button>')+
+   '</div>';
+ }).join('');
+ Array.prototype.forEach.call(doel.querySelectorAll('[data-zoekga]'),function(b){
+  b.addEventListener('click',function(){
+   var p=res[+b.getAttribute('data-zoekga')];if(!p)return;
+   /* Spring naar de groep waar deze persoon in zit, anders open je een profiel
+      in een groep waar hij niet bestaat. */
+   var groep=(p.groepen||[]).indexOf(huidigeGroep)>-1?huidigeGroep:(p.groepen||[])[0];
+   if(!groep){openMelding('Geen groep',naam(p)+' zit in geen enkele groep en heeft dus geen profiel om te openen.');return;}
+   huidigeGroep=groep;
+   verversGroepReferenties();renderAll();
+   showView('personal');
+   if(p.type==='client')openProfielClient(p.id); else openProfielPersoon(p.id,p.type);
+  });
+ });
+}
+el('zoek-alles').addEventListener('input',function(){zoekAllesTerm=this.value;renderZoeken();});
+el('zoek-archief').addEventListener('change',function(){zoekAllesArchief=this.checked;renderZoeken();});
 
 /* ============== WIE ZIET WIE ==============
    "Welke medewerker kan bij welke cliënt?" is bij een overdracht of een
@@ -2511,6 +2764,37 @@ el('matrix-export').addEventListener('click',function(){
  });
  downloadCsv(regels,'mywepp-toegang-'+matrixGroep.replace(/[^a-z0-9]+/gi,'-').toLowerCase());
 });
+
+/* De hele administratie in één bestand. De matrix-export gaat per groep over
+   toegang tot cliënten; dit gaat over de mensen zelf, over alle groepen heen. */
+function telRechten(p){
+ return ['clientRechten','medewerkerRechten','naasteRechten'].reduce(function(n,veld){
+  return n+Object.keys(p[veld]||{}).length;
+ },0);
+}
+function exporteerIedereen(){
+ var kop=['Naam','Type','Groepen','Algemene rol','E-mailadres','Telefoon','Contactpersoon','Status',
+          'Toegang tot','Toegang verlopen','Aantal rechten','Gearchiveerd'];
+ var regels=[kop.map(csvVeld).join(';')];
+ people.slice().sort(function(a,b){
+  return (a.type+naam(a)).localeCompare(b.type+naam(b));
+ }).forEach(function(p){
+  regels.push([
+   naam(p),TYPELABEL[p.type],(p.groepen||[]).join(', '),
+   p.type==='client'?'':globaleRolVoor(p),
+   p.mail||'',p.tel||'',
+   p.contactVolgorde?('Contactpersoon '+p.contactVolgorde):'',
+   p.status||'',
+   geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'',
+   toegangVerlopen(p)?'ja':'nee',
+   telRechten(p),
+   p.archived?'ja':'nee'
+  ].map(csvVeld).join(';'));
+ });
+ downloadCsv(regels,'mywepp-gebruikers');
+ logActie('Volledige gebruikersexport gemaakt ('+people.length+' personen)');
+}
+el('export-iedereen').addEventListener('click',exporteerIedereen);
 
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
@@ -2980,17 +3264,50 @@ async function laadLogboek(){
  }catch(e){/* zonder verbinding blijft het logboek van deze sessie zichtbaar */}
 }
 el('tekst-groter').addEventListener('click',function(){zetGroteTekst(!groteTekstAan());});
-el('logboek-btn').addEventListener('click',function(){
- var inhoud=LOGBOEK.length
-  ? LOGBOEK.map(function(l){
+/* Het logboek loopt tot 200 regels. Zonder filter is dat bij een vraag als
+   "wat is er met deze cliënt gebeurd?" niet te doorzoeken. Het filter werkt op
+   de tekst én op de groep, en de export volgt wat je op dat moment ziet. */
+var logboekFilter={term:'',groep:''};
+function gefilterdLogboek(){
+ var term=logboekFilter.term.trim().toLowerCase();
+ return LOGBOEK.filter(function(l){
+  if(logboekFilter.groep&&(l.groep||'')!==logboekFilter.groep)return false;
+  if(!term)return true;
+  return String(l.tekst||'').toLowerCase().indexOf(term)>-1||
+         String(l.wie||'').toLowerCase().indexOf(term)>-1;
+ });
+}
+function renderLogboekLijst(){
+ var lijst=gefilterdLogboek();
+ var doel=el('logboek-lijst');if(!doel)return;
+ doel.innerHTML=lijst.length
+  ? lijst.map(function(l){
      return '<div class="msec"><b>'+esc(l.tijd)+' — '+esc(l.wie)+'</b><p>'+esc(l.tekst)+
       (l.groep?' <span class="mini">('+esc(l.groep)+')</span>':'')+'</p></div>';
     }).join('')
-  : '<div class="msec"><p>Nog geen wijzigingen vastgelegd.</p></div>';
- openModal('<h3>Logboek</h3><p class="mini" style="margin:0 0 10px">Wie heeft wanneer iets aan gebruikers of rechten gewijzigd.</p>'+inhoud
-  +'<div class="modal-actions"><button type="button" id="logboek-export"'+(LOGBOEK.length?'':' disabled')+'>Exporteren (CSV)</button><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  : '<div class="msec"><p>'+(LOGBOEK.length?'Geen regels die hierop passen.':'Nog geen wijzigingen vastgelegd.')+'</p></div>';
+ var teller=el('logboek-teller');
+ if(teller)teller.textContent=lijst.length+' van '+LOGBOEK.length+' regel'+(LOGBOEK.length===1?'':'s');
+ var knop=el('logboek-export');
+ if(knop)knop.disabled=!lijst.length;
+}
+el('logboek-btn').addEventListener('click',function(){
+ logboekFilter={term:'',groep:''};
+ var groepen=[''].concat(GROEPEN).map(function(g){
+  return '<option value="'+esc(g)+'">'+(g?esc(g):'Alle groepen')+'</option>';
+ }).join('');
+ openModal('<h3>Logboek</h3><p class="mini" style="margin:0 0 10px">Wie heeft wanneer iets aan gebruikers of rechten gewijzigd.</p>'+
+  '<div class="row"><div class="field"><label for="logboek-zoek">Zoeken</label>'+
+  '<input id="logboek-zoek" maxlength="60" placeholder="Naam, cliënt of wat er gebeurde"></div>'+
+  '<div class="field"><label for="logboek-groep">Groep</label><select id="logboek-groep">'+groepen+'</select></div></div>'+
+  '<p class="mini" id="logboek-teller" style="margin:0 0 8px"></p>'+
+  '<div id="logboek-lijst"></div>'+
+  '<div class="modal-actions"><button type="button" id="logboek-export">Exporteren (CSV)</button><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
  el('logboek-export').addEventListener('click',exporteerLogboek);
+ el('logboek-zoek').addEventListener('input',function(){logboekFilter.term=this.value;renderLogboekLijst();});
+ el('logboek-groep').addEventListener('change',function(){logboekFilter.groep=this.value;renderLogboekLijst();});
+ renderLogboekLijst();
 });
 /* Bij een audit of incident wil je het logboek buiten de app kunnen aanleveren. */
 function csvVeld(waarde){return '"'+String(waarde==null?'':waarde).replace(/"/g,'""')+'"';}
@@ -3004,9 +3321,12 @@ function downloadCsv(regels,bestandsnaam){
  setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
 function exporteerLogboek(){
- if(!LOGBOEK.length)return;
+ /* Exporteer wat je op dit moment ziet: anders lever je bij een gerichte vraag
+    alsnog het hele logboek aan. */
+ var lijst=gefilterdLogboek();
+ if(!lijst.length)return;
  var regels=[['Tijd','Wie','Groep','Wat'].map(csvVeld).join(';')];
- LOGBOEK.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
+ lijst.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
  downloadCsv(regels,'mywepp-logboek');
 }
 
@@ -3410,8 +3730,8 @@ function renderCaGeheugen(){
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-geheugen-terug">← Terug</button><b style="font-size:15px">Geheugen</b></div>';
  html+='<p class="mini" style="margin:0 0 12px">Herinneringen die deze cliënt op zijn/haar telefoon of Digibord te zien krijgt.</p>';
  html+=g.items.map(function(it){
-  return '<div class="doelcard"><div class="dtop"><b>'+it.titel+'</b><label class="toggle"><input type="checkbox" data-geh-actief="'+it.id+'" '+(it.actief?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>'+
-   '<p class="mini" style="margin:0">'+it.tijd+' · '+it.dagen+'</p>'+
+  return '<div class="doelcard"><div class="dtop"><b>'+esc(it.titel)+'</b><label class="toggle"><input type="checkbox" data-geh-actief="'+it.id+'" '+(it.actief?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>'+
+   '<p class="mini" style="margin:0">'+esc(it.tijd)+' · '+esc(it.dagen)+'</p>'+
    '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="small" data-geh-verwijder="'+it.id+'">Verwijderen</button></div></div>';
  }).join('');
  html+='<button type="button" class="addbtn-row" id="ca-geheugen-nieuw">+ Herinnering toevoegen</button>';
@@ -3529,19 +3849,19 @@ function renderMijnProfiel(){
  var p=MIJN_PROFIEL;
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="mp-terug">← Terug</button><b style="font-size:15px">Mijn profiel</b></div>';
  html+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:18px"><div class="hubavatar" id="mp-foto" style="width:64px;height:64px;flex:0 0 64px"></div><button type="button" class="small" id="mp-foto-wijzigen">Kies of maak foto</button></div>';
- html+='<div class="field"><label>Voornaam</label><input id="mp-voor" value="'+p.voor+'"></div>';
- html+='<div class="field"><label>Achternaam</label><input id="mp-achter" value="'+p.achter+'"></div>';
- html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" value="'+p.mobiel+'"></div>';
- html+='<div class="field"><label>Functie</label><input id="mp-functie" value="'+p.functie+'"></div>';
- html+='<div class="field"><label>Geboortedatum</label><input type="date" id="mp-geboortedatum" value="'+p.geboortedatum+'"></div>';
- html+='<div class="field"><label>E-mailadres</label><input id="mp-mail" value="'+p.mail+'"></div>';
+ html+='<div class="field"><label>Voornaam</label><input id="mp-voor" value="'+esc(p.voor)+'"></div>';
+ html+='<div class="field"><label>Achternaam</label><input id="mp-achter" value="'+esc(p.achter)+'"></div>';
+ html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" value="'+esc(p.mobiel)+'"></div>';
+ html+='<div class="field"><label>Functie</label><input id="mp-functie" value="'+esc(p.functie)+'"></div>';
+ html+='<div class="field"><label>Geboortedatum</label><input type="date" id="mp-geboortedatum" value="'+esc(p.geboortedatum)+'"></div>';
+ html+='<div class="field"><label>E-mailadres</label><input id="mp-mail" value="'+esc(p.mail)+'"></div>';
  html+='<div class="sublistlabel">Beveiliging</div>';
  html+='<div class="togglerow"><span>Tweestapsverificatie</span>'+(p.tweestaps?'<span class="badge" style="background:var(--moss-bg);color:var(--moss);border-color:var(--moss-line)">Actief</span>':'<span class="badge">Niet actief</span>')+'</div>';
- if(p.tweestaps)html+='<p class="mini" style="margin:-4px 0 8px">Ingesteld op '+p.tweestapsDatum+'.</p>';
+ if(p.tweestaps)html+='<p class="mini" style="margin:-4px 0 8px">Ingesteld op '+esc(p.tweestapsDatum)+'.</p>';
  html+='<button type="button" class="'+(p.tweestaps?'danger':'primary')+' small" style="width:100%;margin-bottom:14px" id="mp-tweestaps-toggle">'+(p.tweestaps?'Uitschakelen':'Aanzetten')+'</button>';
  html+='<div class="sublistlabel">Extra gegevens</div>';
  html+='<p class="mini" style="margin-top:-6px">Plaats geen gevoelige informatie in dit veld.</p>';
- html+='<textarea id="mp-opmerkingen" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:13.5px">'+p.opmerkingen+'</textarea>';
+ html+='<textarea id="mp-opmerkingen" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:13.5px">'+esc(p.opmerkingen)+'</textarea>';
  html+='<div class="actions end" style="border:0;margin-top:14px"><button type="button" class="primary" id="mp-opslaan">Opslaan</button></div>';
  html+='<div id="mp-bevestiging"></div>';
  el('ca-body').innerHTML=html;
@@ -3702,10 +4022,10 @@ function toggleReactie(item,emoji){
  }
 }
 function rapportCardHtml(doel,r){
- return '<div class="rapport"><div class="rmeta"><span>'+r.auteur+' · '+r.tijd+(r.dienst?' · '+r.dienst:'')+'</span><span style="display:flex;gap:4px">'+
+ return '<div class="rapport"><div class="rmeta"><span>'+esc(r.auteur)+' · '+esc(r.tijd)+(r.dienst?' · '+esc(r.dienst):'')+'</span><span style="display:flex;gap:4px">'+
   '<button type="button" class="iconbtn tiny" data-editrapport="'+doel.id+'|'+r.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
   '<button type="button" class="iconbtn tiny danger" data-delrapport="'+doel.id+'|'+r.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
- '</span></div>'+r.tekst+
+ '</span></div>'+esc(r.tekst)+
   (r.media?mediaThumbHtml('foto','linear-gradient(135deg,#3E7CA6,#8C6A45)',doel.titel+' — '+r.tijd):'')+
   (r.audio?audioBarHtml(doel.titel+' — '+r.tijd):'')+
   emojiRowHtml('data-react',doel.id+'|'+r.id,r)+
@@ -3719,11 +4039,11 @@ function renderCaDoelen(){
   d.doelen.forEach(function(doel){doel.rapportages.forEach(function(r){alle.push({doel:doel,r:r});});});
   alle.sort(function(a,b){return b.r.id-a.r.id;});
   html+=alle.length? alle.map(function(x){
-   return '<div class="inboxcard"><div class="idoel">'+x.doel.titel+'</div>'+rapportCardHtml(x.doel,x.r)+'</div>';
+   return '<div class="inboxcard"><div class="idoel">'+esc(x.doel.titel)+'</div>'+rapportCardHtml(x.doel,x.r)+'</div>';
   }).join('') : '<p class="empty-msg">Nog geen rapportages over alle doelen heen.</p>';
  }else{
   html+=d.doelen.map(function(doel){
-   return '<div class="doelcard"><div class="dtop"><b>'+doel.titel+'</b><div style="display:flex;gap:6px;align-items:center">'+
+   return '<div class="doelcard"><div class="dtop"><b>'+esc(doel.titel)+'</b><div style="display:flex;gap:6px;align-items:center">'+
     '<button type="button" class="iconbtn tiny" data-editdoel="'+doel.id+'" aria-label="Doel hernoemen">'+PENCIL_SVG+'</button>'+
     '<button type="button" class="iconbtn tiny danger" data-deldoel="'+doel.id+'" aria-label="Doel verwijderen">'+TRASH_SVG+'</button>'+
     '<button type="button" class="small" data-newrapport="'+doel.id+'">+ Rapportage</button></div></div>'+
@@ -3899,14 +4219,14 @@ function agendaCardHtml(a){
  var extra=[];
  if(a.herinnering&&a.herinnering!=='geen')extra.push('🔔 '+herinneringLabel(a.herinnering));
  if(a.herhaling&&a.herhaling!=='geen')extra.push('🔁 '+herhalingLabel(a.herhaling));
- if(a.locatie)extra.push('📍 '+a.locatie);
+ if(a.locatie)extra.push('📍 '+esc(a.locatie));
  if(a.herinnerdAan&&a.herinnerdAan.length){
   var voornamen=a.herinnerdAan.map(function(id){var p=findPerson(id);return p?naam(p).split(' ')[0]:null;}).filter(Boolean);
   if(voornamen.length)extra.push('👤 '+esc(voornamen.join(', ')));
  }
  return '<div class="agendacard">'+
   '<input type="checkbox" data-klaar="'+a.id+'" '+(a.klaar?'checked':'')+' style="width:auto;flex:0 0 auto" aria-label="Klaar">'+
-  '<div class="adate">'+a.datumlabel+'</div><div class="atxt"><b'+(a.klaar?' style="text-decoration:line-through;opacity:.55"':'')+'>'+a.titel+'</b><span>'+a.tijd+(a.media?' · met foto':'')+'</span>'+
+  '<div class="adate">'+esc(a.datumlabel)+'</div><div class="atxt"><b'+(a.klaar?' style="text-decoration:line-through;opacity:.55"':'')+'>'+esc(a.titel)+'</b><span>'+esc(a.tijd)+(a.media?' · met foto':'')+'</span>'+
   (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+esc(a.locatie)+'">🗺️ '+esc(a.locatie)+'</div>':'')+
   (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
 }
@@ -3992,10 +4312,10 @@ function renderCaAgenda(){
 function renderCaIkboek(){
  var d=ensureClientData(caClientId);
  var html=d.ikboek.length? d.ikboek.slice().reverse().map(function(e){
-  return '<div class="ikboekcard"><div class="imeta"><span>'+e.tijd+'</span><span style="display:flex;gap:4px">'+
+  return '<div class="ikboekcard"><div class="imeta"><span>'+esc(e.tijd)+'</span><span style="display:flex;gap:4px">'+
    '<button type="button" class="iconbtn tiny" data-editikboek="'+e.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn tiny danger" data-delikboek="'+e.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
-  '</span></div>'+e.tekst+
+  '</span></div>'+esc(e.tekst)+
    (e.mediaType?mediaThumbHtml(e.mediaType,'linear-gradient(135deg,#4A6FA5,#5A8A6E)','Ik-Boek — '+e.tijd):'')+
    emojiRowHtml('data-ikreact',e.id,e)+
   '</div>';
@@ -4161,7 +4481,7 @@ function renderCaChatThread(){
    '<button type="button" class="iconbtn tiny" data-editmsg="'+m.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn tiny danger" data-delmsg="'+m.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
   '</span>':'';
-  return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+m.van+'</b>':'')+m.tekst+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+'</div></div>';
+  return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+esc(m.van)+'</b>':'')+esc(m.tekst)+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+'</div></div>';
  }).join('')+'</div>';
  if(t.groep){
   var mediaPeriodes=[{label:'Deze maand',n:4},{label:'Vorige maand',n:3}];
