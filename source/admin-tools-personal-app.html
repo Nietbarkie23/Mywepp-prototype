@@ -837,7 +837,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Gearchiveerd</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Personen die alleen aan deze groep gekoppeld waren en via de prullenbak zijn verwijderd. Ze zijn niet echt verwijderd — je kunt ze hier terughalen.</p></div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Personen die alleen aan deze groep gekoppeld waren en via de prullenbak zijn verwijderd. Hun gegevens staan er nog, dus je kunt ze terughalen. Gearchiveerde gegevens mogen niet onbeperkt bewaard blijven: na 24 maanden wordt dat gemeld en hoor je ze te wissen, tenzij je kunt onderbouwen waarom dat niet kan. "Inzage" toont alles wat er over iemand is vastgelegd.</p></div>
     <div class="panel" id="gearchiveerd-lijst" style="padding:0"></div>
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
@@ -1010,8 +1010,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
-      <div class="actions" style="justify-content:flex-start;margin:0 0 10px">
+      <div class="actions" style="justify-content:flex-start;margin:0 0 10px;gap:8px;flex-wrap:wrap">
         <button type="button" id="pp-rechten-overnemen">Rechten overnemen van een collega…</button>
+        <button type="button" id="pp-avg-inzage">Inzage (AVG)</button>
       </div>
       <div id="pp-clienten"></div>
       <div class="sublistlabel" id="pp-lbl-medewerkers">Recht op medewerkers</div>
@@ -1441,6 +1442,7 @@ function personRowToDb(p){
   contactpersoon:!!p.contactpersoon,contact_volgorde:p.contactVolgorde||null,status:p.status||null,
   wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,foto:p.foto||null,
   toegang_tot:geldigeDatum(p.toegangTot)?p.toegangTot:null,
+  gearchiveerd_op:geldigeDatum(p.gearchiveerdOp)?p.gearchiveerdOp:null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
   medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
 }
@@ -1454,6 +1456,7 @@ function dbRowToPerson(r){
  if(r.wettelijke_vertegenwoordiger)p.wettelijkeVertegenwoordiger=r.wettelijke_vertegenwoordiger;
  if(r.foto)p.foto=r.foto;
  if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
+ if(r.gearchiveerd_op)p.gearchiveerdOp=String(r.gearchiveerd_op).slice(0,10);
  if(r.client_rechten&&Object.keys(r.client_rechten).length)p.clientRechten=r.client_rechten;
  if(r.medewerker_rechten&&Object.keys(r.medewerker_rechten).length)p.medewerkerRechten=r.medewerker_rechten;
  if(r.naaste_rechten&&Object.keys(r.naaste_rechten).length)p.naasteRechten=r.naaste_rechten;
@@ -2271,6 +2274,7 @@ function openRechtenOvernemen(){
  });
 }
 el('pp-rechten-overnemen').addEventListener('click',openRechtenOvernemen);
+el('pp-avg-inzage').addEventListener('click',function(){openAvgDossier(huidigProfielId);});
 /* De uitleg onder de datum moet meelopen terwijl je typt of kiest; anders zie je
    pas na opslaan en heropenen wat de ingevulde datum betekent. */
 ['input','change'].forEach(function(ev){
@@ -2574,21 +2578,7 @@ function controleSignalen(){
    if(!p.mail)signalen.push({ernst:'laag',groep:g,tekst:naam(p)+' heeft geen e-mailadres en kan dus niet inloggen.',
     actie:{soort:'persoon',id:p.id,type:p.type,groep:g,label:'Profiel openen'}});
   });
-  /* 6. Tijdelijke toegang die is verlopen of bijna verloopt. Verlopen is
-        dringend als het de enige contactpersoon of enige toegang betrof;
-        bijna verlopen is een herinnering om op tijd te verlengen. */
-  medewerkers.concat(naasten).forEach(function(pp){
-   var dagen=dagenTotVerloop(pp);
-   if(dagen===null)return;
-   if(dagen<0){
-    signalen.push({ernst:'hoog',groep:g,tekst:naam(pp)+' had toegang tot '+datumNL(pp.toegangTot)+' en kan niet meer inloggen.',
-     actie:{soort:'persoon',id:pp.id,type:pp.type,groep:g,label:'Profiel openen'}});
-   }else if(dagen<=14){
-    signalen.push({ernst:'laag',groep:g,tekst:'Toegang van '+naam(pp)+' verloopt over '+dagen+' dag'+(dagen===1?'':'en')+' ('+datumNL(pp.toegangTot)+').',
-     actie:{soort:'persoon',id:pp.id,type:pp.type,groep:g,label:'Profiel openen'}});
-   }
-  });
-  /* 7. Naamgenoten in dezelfde groep: verwisselingsrisico. */
+  /* 6. Naamgenoten in dezelfde groep: verwisselingsrisico. */
   var gezien={};
   clienten.concat(medewerkers,naasten).forEach(function(p){
    var sleutel=naam(p).toLowerCase();
@@ -2599,7 +2589,32 @@ function controleSignalen(){
    gezien[sleutel]=true;
   });
  });
- /* 8. Groep zonder mensen. */
+ /* 7. Tijdelijke toegang die is verlopen of bijna verloopt. Dit hangt aan de
+       persoon en niet aan een groep: wie in twee groepen zit, verloor anders
+       twee keer dezelfde toegang en stond hier dus dubbel. */
+ people.filter(function(pp){
+  return (pp.type==='medewerker'||pp.type==='naaste')&&!pp.archived&&pp._state!=='verwijderd'&&(pp.groepen||[]).length;
+ }).forEach(function(pp){
+  var dagen=dagenTotVerloop(pp);
+  if(dagen===null)return;
+  var waar=pp.groepen.join(', ');
+  if(dagen<0){
+   signalen.push({ernst:'hoog',groep:waar,tekst:naam(pp)+' had toegang tot '+datumNL(pp.toegangTot)+' en kan niet meer inloggen.',
+    actie:{soort:'persoon',id:pp.id,type:pp.type,groep:pp.groepen[0],label:'Profiel openen'}});
+  }else if(dagen<=14){
+   signalen.push({ernst:'laag',groep:waar,tekst:'Toegang van '+naam(pp)+' verloopt over '+dagen+' dag'+(dagen===1?'':'en')+' ('+datumNL(pp.toegangTot)+').',
+    actie:{soort:'persoon',id:pp.id,type:pp.type,groep:pp.groepen[0],label:'Profiel openen'}});
+  }
+ });
+ /* 8. Bewaartermijn: gearchiveerde gegevens mogen niet onbeperkt blijven staan
+       (AVG art. 5 lid 1 sub e). Zonder signaal blijft het archief eeuwig groeien. */
+ people.filter(bewaartermijnVerstreken).forEach(function(pp){
+  var maanden=maandenSinds(pp.gearchiveerdOp);
+  signalen.push({ernst:'hoog',groep:(pp.groepen||[]).join(', '),
+   tekst:naam(pp)+' staat '+maanden+' maanden in het archief. De bewaartermijn van '+BEWAARTERMIJN_MAANDEN+' maanden is verstreken; wissen of onderbouwen waarom dat niet kan.',
+   actie:{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
+ });
+ /* 9. Groep zonder mensen. */
  GROEPEN.forEach(function(g){
   if(!actieveIn(g,'client').length&&!actieveIn(g,'medewerker').length&&!actieveIn(g,'naaste').length){
    signalen.push({ernst:'laag',groep:g,tekst:'Deze groep is helemaal leeg.',actie:{soort:'groep',groep:g,label:'Groep openen'}});
@@ -2630,6 +2645,7 @@ function renderControle(){
    showView('personal');
    if(s.actie.soort==='client')openProfielClient(s.actie.id);
    else if(s.actie.soort==='persoon')openProfielPersoon(s.actie.id,s.actie.type);
+   else if(s.actie.soort==='archief'){renderGearchiveerd();show('pp-gearchiveerd');}
    else show('pp-formulier');
   });
  });
@@ -2751,12 +2767,16 @@ el('matrix-groep').addEventListener('change',function(){matrixGroep=this.value;r
 el('matrix-export').addEventListener('click',function(){
  var medewerkers=matrixPersonen(matrixGroep),clienten=matrixClienten(matrixGroep);
  if(!medewerkers.length||!clienten.length)return;
+ bevestigExport('toegang','wie toegang heeft tot welke cliënt in '+matrixGroep,function(){exporteerMatrixNu(medewerkers,clienten);});
+});
+function exporteerMatrixNu(medewerkers,clienten){
  var regels=[['Medewerker'].concat(clienten.map(naam)).map(csvVeld).join(';')];
  medewerkers.forEach(function(m){
   regels.push([naam(m)].concat(clienten.map(function(c){return rolOpClient(m,c.id)||'Geen toegang';})).map(csvVeld).join(';'));
  });
  downloadCsv(regels,'mywepp-toegang-'+matrixGroep.replace(/[^a-z0-9]+/gi,'-').toLowerCase());
-});
+ logActie('Toegangsoverzicht van '+matrixGroep+' geëxporteerd');
+}
 
 /* De hele administratie in één bestand. De matrix-export gaat per groep over
    toegang tot cliënten; dit gaat over de mensen zelf, over alle groepen heen. */
@@ -2787,7 +2807,9 @@ function exporteerIedereen(){
  downloadCsv(regels,'mywepp-gebruikers');
  logActie('Volledige gebruikersexport gemaakt ('+people.length+' personen)');
 }
-el('export-iedereen').addEventListener('click',exporteerIedereen);
+el('export-iedereen').addEventListener('click',function(){
+ bevestigExport('gebruikers','de volledige gebruikersadministratie van alle '+GROEPEN.length+' groepen ('+people.length+' personen)',exporteerIedereen);
+});
 
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
@@ -3284,8 +3306,10 @@ function renderLogboekLijst(){
  var knop=el('logboek-export');
  if(knop)knop.disabled=!lijst.length;
 }
-el('logboek-btn').addEventListener('click',function(){
- logboekFilter={term:'',groep:''};
+/* De exportbevestiging vervangt dit venster. Zonder heropenen sta je na het
+   downloaden in het niets, terwijl je in het logboek bezig was. */
+function openLogboek(behoudFilter){
+ if(!behoudFilter)logboekFilter={term:'',groep:''};
  var groepen=[''].concat(GROEPEN).map(function(g){
   return '<option value="'+esc(g)+'">'+(g?esc(g):'Alle groepen')+'</option>';
  }).join('');
@@ -3300,8 +3324,22 @@ el('logboek-btn').addEventListener('click',function(){
  el('logboek-export').addEventListener('click',exporteerLogboek);
  el('logboek-zoek').addEventListener('input',function(){logboekFilter.term=this.value;renderLogboekLijst();});
  el('logboek-groep').addEventListener('change',function(){logboekFilter.groep=this.value;renderLogboekLijst();});
+ el('logboek-zoek').value=logboekFilter.term;
+ el('logboek-groep').value=logboekFilter.groep;
  renderLogboekLijst();
-});
+}
+el('logboek-btn').addEventListener('click',function(){openLogboek(false);});
+/* Een export haalt bijzondere persoonsgegevens uit de beveiligde omgeving: dat
+   iemand cliënt is van een zorggroep zegt iets over zijn gezondheid (AVG art. 9).
+   Buiten de app gelden de beveiliging en de rechten van deze app niet meer, dus
+   dat hoort een bewuste keuze te zijn en geen losse klik. */
+function bevestigExport(wat,omschrijving,onJa){
+ bevestigModal('Export met persoonsgegevens',
+  '<p>Je maakt een bestand met <b>'+esc(omschrijving)+'</b>.</p>'+
+  '<p>Dit zijn bijzondere persoonsgegevens: uit dit bestand blijkt wie zorg ontvangt en wie daarbij betrokken is. Zodra het is gedownload gelden de rechten en de beveiliging van MyWepp er niet meer voor.</p>'+
+  '<p>Gebruik het alleen voor het doel waarvoor je het opvraagt, bewaar het niet langer dan nodig en deel het niet breder dan noodzakelijk. De download wordt vastgelegd in het logboek.</p>',
+  'Ja, exporteren',onJa);
+}
 /* Bij een audit of incident wil je het logboek buiten de app kunnen aanleveren. */
 function csvVeld(waarde){return '"'+String(waarde==null?'':waarde).replace(/"/g,'""')+'"';}
 /* BOM zodat Excel de accenten goed leest. */
@@ -3315,25 +3353,41 @@ function downloadCsv(regels,bestandsnaam){
 }
 function exporteerLogboek(){
  /* Exporteer wat je op dit moment ziet: anders lever je bij een gerichte vraag
-    alsnog het hele logboek aan. */
+    alsnog het hele logboek aan. Dataminimalisatie (AVG art. 5 lid 1 sub c). */
  var lijst=gefilterdLogboek();
  if(!lijst.length)return;
+ bevestigExport('logboek',lijst.length+' logboekregel(s) met namen van betrokkenen',function(){exporteerLogboekNu(lijst);openLogboek(true);});
+}
+function exporteerLogboekNu(lijst){
  var regels=[['Tijd','Wie','Groep','Wat'].map(csvVeld).join(';')];
  lijst.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
  downloadCsv(regels,'mywepp-logboek');
+ logActie(lijst.length+' logboekregel(s) geëxporteerd');
 }
 
 /* --- Gearchiveerd --- */
 function renderGearchiveerd(){
  var gearchiveerd=people.filter(function(p){return p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
  el('gearchiveerd-lijst').innerHTML=gearchiveerd.length? gearchiveerd.map(function(p){
-  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span></div><div class="mail">'+esc(p.mail||'—')+'</div></div>'+
-   '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button></div>';
+  var maanden=maandenSinds(p.gearchiveerdOp);
+  var termijn=bewaartermijnVerstreken(p)
+   ? ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Bewaartermijn verstreken</span>'
+   : (maanden!==null?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">'+maanden+' maand'+(maanden===1?'':'en')+' in archief</span>':'');
+  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+termijn+'</div><div class="mail">'+esc(p.mail||'—')+'</div></div>'+
+   '<button type="button" class="small" data-avg="'+p.id+'">Inzage</button>'+
+   '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button>'+
+   '<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button></div>';
  }).join('') : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>';
+ Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-avg]'),function(b){
+  b.addEventListener('click',function(){openAvgDossier(+b.getAttribute('data-avg'));});
+ });
+ Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-wis]'),function(b){
+  b.addEventListener('click',function(){wisDefinitief(+b.getAttribute('data-wis'));});
+ });
  Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-herstel]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-herstel'));
-   p.archived=false;
+   p.archived=false;delete p.gearchiveerdOp;
    logActie(naam(p)+' teruggezet uit het archief');
    renderGearchiveerd();renderAll();
    syncToSupabase();
@@ -3341,6 +3395,132 @@ function renderGearchiveerd(){
  });
 }
 el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
+
+/* Echt wissen: archiveren haalt iemand alleen uit beeld, maar de gegevens
+   blijven staan. Voor een verwijderverzoek (art. 17) en voor de bewaartermijn
+   moet het rij-en-al weg, ook uit de database. Onomkeerbaar, dus alleen na een
+   expliciete bevestiging. */
+async function wisDefinitiefUitDatabase(id){
+ if(!sb)return true;
+ try{var res=await sb.from('personen').delete().eq('id',id);return !res.error;}
+ catch(e){return false;}
+}
+function wisDefinitief(id){
+ var p=findPerson(id);if(!p)return;
+ var naamVal=naam(p);
+ var maanden=maandenSinds(p.gearchiveerdOp);
+ bevestigModal('Definitief wissen: '+naamVal,
+  '<p>Alle gegevens van <b>'+esc(naamVal)+'</b> worden verwijderd: naam, contactgegevens, profielfoto, groepskoppelingen en alle rechten van en op deze persoon. Ook uit de database.</p>'+
+  '<p>Dit kun je niet ongedaan maken en herstellen uit het archief kan daarna niet meer.'+
+  (maanden!==null?' Deze persoon staat '+maanden+' maand'+(maanden===1?'':'en')+' in het archief.':'')+'</p>'+
+  '<p>Het logboek blijft wel bestaan. Dat is de verantwoording over wat er is gebeurd en mag niet worden gewist.</p>',
+  'Ja, definitief wissen',function(){
+   verwijderVerwijzingenNaar(id);
+   people=people.filter(function(x){return x.id!==id;});
+   logActie(naamVal+' definitief gewist op verzoek of vanwege de bewaartermijn');
+   wisDefinitiefUitDatabase(id).then(function(gelukt){
+    if(!gelukt)openMelding('Let op','De gegevens zijn hier gewist, maar het verwijderen uit de database is niet gelukt. Probeer het later opnieuw, anders blijven ze daar staan.');
+   });
+   renderGearchiveerd();renderAll();
+  });
+}
+
+/* ============== AVG ==============
+   Deze app verwerkt bijzondere persoonsgegevens: dat iemand cliënt is van een
+   zorggroep zegt iets over zijn gezondheid (AVG art. 9). Dat stelt drie eisen
+   die hier eerder nergens werden ondersteund:
+   - inzage en dataportabiliteit (art. 15 en 20): iemand mag opvragen wat er
+     over hem is vastgelegd, in een leesbaar en overdraagbaar bestand;
+   - vergetelheid (art. 17): echt wissen, niet alleen uit beeld halen;
+   - opslagbeperking (art. 5 lid 1 sub e): niet langer bewaren dan nodig.
+   Het logboek zelf blijft juist staan: dat is de verantwoordingsplicht van
+   art. 5 lid 2 en mag niet door een verwijderverzoek worden uitgewist. */
+var BEWAARTERMIJN_MAANDEN=24;
+
+function maandenSinds(iso){
+ if(!geldigeDatum(iso))return null;
+ var toen=new Date(iso+'T00:00:00'),nu=new Date(vandaagISO()+'T00:00:00');
+ return (nu.getFullYear()-toen.getFullYear())*12+(nu.getMonth()-toen.getMonth())-(nu.getDate()<toen.getDate()?1:0);
+}
+function bewaartermijnVerstreken(p){
+ var m=maandenSinds(p&&p.gearchiveerdOp);
+ return m!==null&&m>=BEWAARTERMIJN_MAANDEN;
+}
+/* Alles wat er over iemand is vastgelegd, bij elkaar. Verspreid over het
+   datamodel is dat niet te overzien, en dus ook niet te overleggen. */
+function avgDossier(p){
+ var regels=[];
+ var voeg=function(kop,waarde){regels.push({kop:kop,waarde:waarde==null||waarde===''?'—':String(waarde)});};
+ voeg('Naam',naam(p));
+ voeg('Soort betrokkene',TYPELABEL[p.type]);
+ voeg('Groepen',(p.groepen||[]).join(', '));
+ if(p.type!=='client')voeg('Algemene rol',globaleRolVoor(p));
+ voeg('E-mailadres',p.mail);
+ voeg('Telefoonnummer',p.tel);
+ voeg('Contactpersoon',p.contactVolgorde?('contactpersoon '+p.contactVolgorde):'nee');
+ voeg('Status',p.status);
+ voeg('Toegang tot en met',geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'geen einddatum');
+ voeg('Profielfoto',p.foto?'ja, opgeslagen':'nee');
+ voeg('Gearchiveerd',p.archived?('ja'+(p.gearchiveerdOp?', op '+datumNL(p.gearchiveerdOp):'')):'nee');
+ if(p.wettelijkeVertegenwoordiger){
+  var wv=findPerson(p.wettelijkeVertegenwoordiger);
+  voeg('Wettelijk vertegenwoordiger',wv?naam(wv):'onbekend');
+ }
+ /* Wie kan er bij deze persoon? Dat is de kern van een inzageverzoek. */
+ var doorAnderen=[];
+ people.forEach(function(x){
+  if(x.id===p.id)return;
+  ['clientRechten','medewerkerRechten','naasteRechten'].forEach(function(veld){
+   var rol=(x[veld]||{})[p.id];
+   if(rol)doorAnderen.push(naam(x)+' ('+rol+')');
+  });
+  if(x.wettelijkeVertegenwoordiger===p.id)doorAnderen.push(naam(x)+' (is vertegenwoordigd door deze persoon)');
+ });
+ voeg('Wie heeft toegang tot deze persoon',doorAnderen.length?doorAnderen.join('; '):'niemand');
+ var eigen=[];
+ ['clientRechten','medewerkerRechten','naasteRechten'].forEach(function(veld){
+  Object.keys(p[veld]||{}).forEach(function(id){
+   var ander=findPerson(+id);
+   if(ander)eigen.push(naam(ander)+' ('+p[veld][id]+')');
+  });
+ });
+ voeg('Waar deze persoon zelf toegang toe heeft',eigen.length?eigen.join('; '):'niets');
+ return regels;
+}
+function avgLogregels(p){
+ var n=naam(p);
+ return LOGBOEK.filter(function(l){
+  return String(l.tekst||'').indexOf(n)>-1||String(l.wie||'')===n;
+ });
+}
+function openAvgDossier(id){
+ var p=findPerson(id);if(!p)return;
+ var regels=avgDossier(p),logs=avgLogregels(p);
+ openModal('<h3>Inzage: '+esc(naam(p))+'</h3>'+
+  '<p class="mini" style="margin:0 0 10px">Alles wat in MyWepp over deze persoon is vastgelegd. Bedoeld om een inzageverzoek te beantwoorden (AVG art. 15) en om de gegevens over te dragen (art. 20).</p>'+
+  '<div class="msec">'+regels.map(function(r){
+   return '<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px">'+
+    '<span style="flex:0 0 190px;color:var(--ink-soft)">'+esc(r.kop)+'</span>'+
+    '<span style="flex:1;min-width:0;overflow-wrap:break-word">'+esc(r.waarde)+'</span></div>';
+  }).join('')+'</div>'+
+  '<div class="sublistlabel">Vastgelegde handelingen ('+logs.length+')</div>'+
+  '<div class="msec" style="max-height:170px;overflow:auto">'+
+   (logs.length?logs.map(function(l){
+     return '<p style="margin:0 0 6px;font-size:12.5px"><b>'+esc(l.tijd)+'</b> — '+esc(l.wie)+': '+esc(l.tekst)+'</p>';
+    }).join(''):'<p>Geen handelingen vastgelegd.</p>')+'</div>'+
+  '<div class="modal-actions"><button type="button" id="avg-export">Downloaden (CSV)</button>'+
+  '<button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+ el('avg-export').addEventListener('click',function(){
+  var rij=[['Onderwerp','Gegeven'].map(csvVeld).join(';')];
+  regels.forEach(function(r){rij.push([r.kop,r.waarde].map(csvVeld).join(';'));});
+  rij.push('');
+  rij.push(['Tijd','Wie','Groep','Handeling'].map(csvVeld).join(';'));
+  logs.forEach(function(l){rij.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
+  downloadCsv(rij,'mywepp-inzage-'+naam(p).replace(/[^a-z0-9]+/gi,'-').toLowerCase());
+  logActie('Inzagedossier van '+naam(p)+' gedownload');
+ });
+}
 
 /* --- Wijzigingen: controleren -> bevestigen -> doorgevoerd --- */
 /* "wordt verwijderd" klopte niet voor iemand die aan meerdere groepen hangt: die
@@ -3400,7 +3580,7 @@ el('av-versturen').addEventListener('click',async function(){
    ontkoppeld++;
   }else{
    var wasContact=p.contactVolgorde;
-   p.archived=true;p.contactpersoon=false;delete p.contactVolgorde;delete p.status;gearchiveerd++;
+   p.archived=true;p.gearchiveerdOp=vandaagISO();p.contactpersoon=false;delete p.contactVolgorde;delete p.status;gearchiveerd++;
    /* Anders blijft er een "contactpersoon 2" over zonder dat er een eerste is. */
    if(wasContact===1){
     var tweede=contactpersonenVanGroep().filter(function(x){return x.contactVolgorde===2;})[0];
