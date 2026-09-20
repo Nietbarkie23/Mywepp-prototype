@@ -266,6 +266,9 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
     verticaal werd afgebroken. */
  min-width:0;overflow-wrap:break-word}
 .pinfo .mail{font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* In het transparantiescherm is juist de rol de kern van de informatie; daar
+   afkappen met puntjes zou de vraag "wie mag wat" onbeantwoord laten. */
+#ca-toegang-lijst .pinfo .mail{white-space:normal;overflow:visible;text-overflow:clip}
 .badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:2px 7px;border-radius:999px;background:var(--brick-bg);color:var(--brick);border:1px solid var(--brick-line)}
 .rowbtns{display:flex;gap:6px;flex:0 0 auto}
 .iconbtn{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:999px;border:0;background:var(--accent);color:#fff}
@@ -587,6 +590,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <button type="button" class="tab" data-admintab="controle">4 — Controle <span class="countchip" id="controle-teller"></span></button>
     <button type="button" class="tab" data-admintab="matrix">5 — Wie ziet wie</button>
     <button type="button" class="tab" data-admintab="zoeken">6 — Zoeken</button>
+    <button type="button" class="tab" data-admintab="datalek">7 — Datalekken <span class="countchip" id="datalek-teller"></span></button>
   </div>
 
   <section id="admintab-bulk">
@@ -669,6 +673,17 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="note">Deze lijst kijkt over alle groepen heen naar situaties die in de zorg problemen geven — bijvoorbeeld een cliënt waar niemand toegang toe heeft, of een groep zonder aanspreekpunt.</p>
         <div id="controle-lijst"></div>
         <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admintab-datalek" hidden>
+    <div class="panel">
+      <div class="head"><h2>Datalekken</h2><span class="sub">Register van inbreuken</span></div>
+      <div class="body">
+        <p class="note">Elke inbreuk op persoonsgegevens moet worden vastgelegd, ook als hij niet bij de Autoriteit Persoonsgegevens wordt gemeld (AVG art. 33 lid 5). Een melding aan de AP moet binnen 72 uur na ontdekking; deze lijst rekent die termijn voor je uit.</p>
+        <div id="datalek-lijst"></div>
+        <div class="actions end"><button type="button" class="primary" id="datalek-nieuw">Datalek vastleggen</button></div>
       </div>
     </div>
   </section>
@@ -1013,7 +1028,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="actions" style="justify-content:flex-start;margin:0 0 10px;gap:8px;flex-wrap:wrap">
         <button type="button" id="pp-rechten-overnemen">Rechten overnemen van een collega…</button>
         <button type="button" id="pp-avg-inzage">Inzage (AVG)</button>
+        <button type="button" id="pp-blokkeer">Toegang blokkeren</button>
       </div>
+      <div class="mini" id="pp-blokkade-uitleg" style="margin:-4px 0 10px" hidden></div>
       <div id="pp-clienten"></div>
       <div class="sublistlabel" id="pp-lbl-medewerkers">Recht op medewerkers</div>
       <div id="pp-medewerkers"></div>
@@ -1315,6 +1332,7 @@ function kiesAdmintab(naamVal){
  if(naamVal==='controle')renderControle();
  if(naamVal==='matrix')renderMatrix();
  if(naamVal==='zoeken')renderZoeken();
+ if(naamVal==='datalek')renderDatalekken();
 }
 Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
  b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
@@ -1381,7 +1399,25 @@ function datumNL(iso){
 /* Iemand met verlopen toegang telt nergens meer als toegang: niet in de
    controlesignalen, niet in "wie ziet wie" en niet als inlogbaar account. */
 function heeftToegang(p){
- return !!p&&!p.archived&&!toegangVerlopen(p);
+ return !!p&&!p.archived&&!p.geblokkeerd&&!toegangVerlopen(p);
+}
+/* Blokkeren is iets anders dan verwijderen of archiveren: bij een incident moet
+   toegang per direct weg, terwijl de gegevens moeten blijven staan om te kunnen
+   uitzoeken wat er is gebeurd (AVG art. 32, en art. 33 als er iets is gelekt). */
+function blokkadeChip(p){
+ return p&&p.geblokkeerd
+  ? ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Geblokkeerd</span>'
+  : '';
+}
+/* Een account dat lang niet is gebruikt hoort niet open te blijven staan. */
+var INACTIEF_MAANDEN=6;
+function maandenInactief(p){
+ if(!p||p.type==='client')return null;
+ return maandenSinds(p.laatsteLogin);
+}
+function langInactief(p){
+ var m=maandenInactief(p);
+ return m!==null&&m>=INACTIEF_MAANDEN&&heeftToegang(p);
 }
 /* --- Mijn profiel (eigen account medewerker) --- */
 var MIJN_PROFIEL={voor:'Marieke',achter:'de Vries',mobiel:'06 12 34 56 78',functie:'Groep admin',geboortedatum:'',mail:'m.devries@zorggroepnoord.nl',opmerkingen:'',tweestaps:false,tweestapsDatum:'',foto:null};
@@ -1443,6 +1479,8 @@ function personRowToDb(p){
   wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,foto:p.foto||null,
   toegang_tot:geldigeDatum(p.toegangTot)?p.toegangTot:null,
   gearchiveerd_op:geldigeDatum(p.gearchiveerdOp)?p.gearchiveerdOp:null,
+  geblokkeerd:!!p.geblokkeerd,geblokkeerd_reden:p.geblokkeerdReden||null,
+  laatste_login:geldigeDatum(p.laatsteLogin)?p.laatsteLogin:null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
   medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
 }
@@ -1457,6 +1495,9 @@ function dbRowToPerson(r){
  if(r.foto)p.foto=r.foto;
  if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
  if(r.gearchiveerd_op)p.gearchiveerdOp=String(r.gearchiveerd_op).slice(0,10);
+ if(r.geblokkeerd)p.geblokkeerd=true;
+ if(r.geblokkeerd_reden)p.geblokkeerdReden=r.geblokkeerd_reden;
+ if(r.laatste_login)p.laatsteLogin=String(r.laatste_login).slice(0,10);
  if(r.client_rechten&&Object.keys(r.client_rechten).length)p.clientRechten=r.client_rechten;
  if(r.medewerker_rechten&&Object.keys(r.medewerker_rechten).length)p.medewerkerRechten=r.medewerker_rechten;
  if(r.naaste_rechten&&Object.keys(r.naaste_rechten).length)p.naasteRechten=r.naaste_rechten;
@@ -1670,7 +1711,7 @@ function rowHtml(p,t){
  var staged=p._state==='verwijderd';
  var stateTag=p._state?' <span class="mini" style="color:'+STATE_COLOR[p._state]+'">— '+STATE_LABEL[p._state]+'</span>':'';
  var contactBadge=(t==='medewerker'&&p.contactpersoon)?' <span class="countchip" style="color:var(--accent)">Contactpersoon</span>':'';
- var toegangBadge=toegangChip(p);
+ var toegangBadge=blokkadeChip(p)+toegangChip(p);
  var gekozen=selectie[t]&&selectie[t][p.id];
  var head='<div class="uhead">'+
   '<input type="checkbox" class="rowkies" data-kies="'+p.id+'" '+(gekozen?'checked':'')+' aria-label="Selecteer '+esc(naam(p))+'">'+
@@ -2092,6 +2133,7 @@ function openProfielPersoon(id,t){
  el('pp-voornaam').value=p.voor;el('pp-achternaam').value=p.achter;el('pp-mail').value=p.mail||'';el('pp-tel').value=p.tel||'';
  el('pp-toegang-tot').value=geldigeDatum(p.toegangTot)?p.toegangTot:'';
  toonToegangHint(p);
+ toonBlokkadeKnop(p);
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  toonMailFout('pp-mail','pp-mail-fout','');
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
@@ -2275,6 +2317,56 @@ function openRechtenOvernemen(){
 }
 el('pp-rechten-overnemen').addEventListener('click',openRechtenOvernemen);
 el('pp-avg-inzage').addEventListener('click',function(){openAvgDossier(huidigProfielId);});
+
+/* Blokkeren trekt de toegang per direct in zonder iets te wissen. Bij een
+   vermoeden van misbruik is dat de eerste stap: gegevens moeten blijven staan
+   om te kunnen uitzoeken wat er is gebeurd. */
+function toonBlokkadeKnop(p){
+ var knop=el('pp-blokkeer'),uitleg=el('pp-blokkade-uitleg');
+ if(!knop)return;
+ knop.textContent=p.geblokkeerd?'Blokkade opheffen':'Toegang blokkeren';
+ knop.classList.toggle('danger',!p.geblokkeerd);
+ uitleg.hidden=!p.geblokkeerd;
+ if(p.geblokkeerd){
+  uitleg.style.color='var(--brick)';
+  uitleg.textContent='Geblokkeerd'+(p.geblokkeerdReden?': '+p.geblokkeerdReden:'')+'. Deze persoon kan niet inloggen en telt nergens meer als toegang. De gegevens en rechten blijven staan.';
+ }
+}
+function wisselBlokkade(){
+ var p=findPerson(huidigProfielId);if(!p)return;
+ if(p.geblokkeerd){
+  bevestigModal('Blokkade opheffen',
+   '<p><b>'+esc(naam(p))+'</b> kan daarna weer inloggen, met dezelfde rechten als voor de blokkade.</p>'+
+   (p.geblokkeerdReden?'<p>Reden van de blokkade was: '+esc(p.geblokkeerdReden)+'</p>':''),
+   'Ja, blokkade opheffen',function(){
+    p.geblokkeerd=false;delete p.geblokkeerdReden;
+    if(p._state!=='nieuw')p._state='gewijzigd';
+    logActie('Blokkade van '+naam(p)+' opgeheven');
+    syncToSupabase();
+    openProfielPersoon(p.id,p.type);renderAll();
+   });
+  return;
+ }
+ openModal('<h3>Toegang blokkeren</h3><div class="msec">'+
+  '<p><b>'+esc(naam(p))+'</b> kan daarna niet meer inloggen en telt nergens meer als toegang tot een cliënt.</p>'+
+  '<p>De gegevens, groepen en rechten blijven staan. Gebruik dit bij een vermoeden van misbruik of een verloren telefoon: verwijderen zou het onmogelijk maken om uit te zoeken wat er is gebeurd.</p></div>'+
+  '<div class="field"><label for="modal-blok-reden">Reden (komt in het logboek)</label>'+
+  '<input id="modal-blok-reden" maxlength="120" placeholder="Bijvoorbeeld: telefoon kwijt, uit dienst per direct"></div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="danger" id="modal-bevestig">Blokkeren</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){
+  var reden=kap(el('modal-blok-reden').value.trim(),120);
+  p.geblokkeerd=true;
+  if(reden)p.geblokkeerdReden=reden; else delete p.geblokkeerdReden;
+  if(p._state!=='nieuw')p._state='gewijzigd';
+  closeModal();
+  logActie('Toegang van '+naam(p)+' geblokkeerd'+(reden?' — '+reden:''));
+  syncToSupabase();
+  openProfielPersoon(p.id,p.type);renderAll();
+ });
+}
+el('pp-blokkeer').addEventListener('click',wisselBlokkade);
 /* De uitleg onder de datum moet meelopen terwijl je typt of kiest; anders zie je
    pas na opslaan en heropenen wat de ingevulde datum betekent. */
 ['input','change'].forEach(function(ev){
@@ -2375,7 +2467,7 @@ var SYSTEEMBEHEER={tel:'088 123 45 67'};
 function accountsInGroep(){
  return people.filter(function(p){
   return (p.type==='medewerker'||p.type==='naaste')&&!p.archived&&p._state!=='verwijderd'&&
-   !toegangVerlopen(p)&&p.groepen.indexOf(huidigeGroep)>-1;
+   !p.geblokkeerd&&!toegangVerlopen(p)&&p.groepen.indexOf(huidigeGroep)>-1;
  });
 }
 /* Na een groepswissel kan de "ingelogde" persoon hier niet meer werken; dan
@@ -2418,6 +2510,9 @@ el('account-select').addEventListener('change',function(){
  if(!gekozen)return;
  verlaatSysteembeheer();
  huidigeGebruikerId=gekozen.id;
+ /* In een echt systeem legt de inlog dit vast; hier is het wisselen van account
+    het dichtstbijzijnde equivalent, zodat "lang niet gebruikt" werkt. */
+ gekozen.laatsteLogin=vandaagISO();
  MIJN_PROFIEL.voor=gekozen.voor;MIJN_PROFIEL.achter=gekozen.achter;
  MIJN_PROFIEL.mail=gekozen.mail||'';MIJN_PROFIEL.mobiel=gekozen.tel||'';
  renderAll();
@@ -2614,7 +2709,22 @@ function controleSignalen(){
    tekst:naam(pp)+' staat '+maanden+' maanden in het archief. De bewaartermijn van '+BEWAARTERMIJN_MAANDEN+' maanden is verstreken; wissen of onderbouwen waarom dat niet kan.',
    actie:{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
  });
- /* 9. Groep zonder mensen. */
+ /* 9. Geblokkeerde accounts: een blokkade hoort tijdelijk te zijn. Blijft hij
+       staan, dan moet er een besluit komen (opheffen of de persoon eruit). */
+ people.filter(function(pp){return pp.geblokkeerd&&!pp.archived&&pp._state!=='verwijderd';}).forEach(function(pp){
+  signalen.push({ernst:'laag',groep:(pp.groepen||[]).join(', '),
+   tekst:naam(pp)+' is geblokkeerd'+(pp.geblokkeerdReden?' ('+pp.geblokkeerdReden+')':'')+'. Hef de blokkade op of rond het af.',
+   actie:{soort:'persoon',id:pp.id,type:pp.type,groep:(pp.groepen||[])[0]||huidigeGroep,label:'Profiel openen'}});
+ });
+ /* 10. Accounts die al lang niet zijn gebruikt: openstaande toegang die
+        niemand nodig heeft is een risico dat niemand opmerkt. */
+ people.filter(langInactief).forEach(function(pp){
+  var m=maandenInactief(pp);
+  signalen.push({ernst:'laag',groep:(pp.groepen||[]).join(', '),
+   tekst:naam(pp)+' heeft het account '+m+' maanden niet gebruikt, maar heeft nog wel toegang.',
+   actie:{soort:'persoon',id:pp.id,type:pp.type,groep:(pp.groepen||[])[0]||huidigeGroep,label:'Profiel openen'}});
+ });
+ /* 11. Groep zonder mensen. */
  GROEPEN.forEach(function(g){
   if(!actieveIn(g,'client').length&&!actieveIn(g,'medewerker').length&&!actieveIn(g,'naaste').length){
    signalen.push({ernst:'laag',groep:g,tekst:'Deze groep is helemaal leeg.',actie:{soort:'groep',groep:g,label:'Groep openen'}});
@@ -2707,6 +2817,118 @@ function renderZoeken(){
   });
  });
 }
+/* ============== DATALEKREGISTER (AVG art. 33 en 34) ==============
+   Een zorgorganisatie moet elke inbreuk vastleggen, ook als die niet wordt
+   gemeld. De 72-uurstermijn begint bij ontdekking, niet bij het incident zelf;
+   daarom rekent het scherm die termijn voor. */
+var DATALEKKEN=[];
+async function laadDatalekken(){
+ if(!sb)return;
+ try{
+  var res=await sb.from('datalekken').select('*').order('gemeld_op',{ascending:false}).limit(100);
+  if(res.error||!res.data)return;
+  DATALEKKEN=res.data.map(function(r){
+   return {id:r.id,ontdekt:String(r.ontdekt_op||'').slice(0,10),omschrijving:r.omschrijving||'',
+    betrokkenen:r.betrokkenen||'',maatregelen:r.maatregelen||'',
+    gemeldBijAp:!!r.gemeld_bij_ap,afgehandeld:!!r.afgehandeld,wie:r.wie||''};
+  });
+  if(!el('admintab-datalek').hidden)renderDatalekken();
+  zetDatalekTeller();
+ }catch(e){/* het register mag de app nooit blokkeren */}
+}
+function bewaarDatalek(lek){
+ if(!sb)return Promise.resolve(false);
+ var rij={ontdekt_op:lek.ontdekt,omschrijving:lek.omschrijving,betrokkenen:lek.betrokkenen,
+  maatregelen:lek.maatregelen,gemeld_bij_ap:lek.gemeldBijAp,afgehandeld:lek.afgehandeld,wie:lek.wie};
+ if(lek.id)rij.id=lek.id;
+ try{
+  return sb.from('datalekken').upsert([rij],{onConflict:'id'}).select('id').then(function(res){
+   if(res&&res.data&&res.data[0])lek.id=res.data[0].id;
+   return !(res&&res.error);
+  },function(){return false;});
+ }catch(e){return Promise.resolve(false);}
+}
+/* Uren sinds de ontdekking; de AP-termijn is 72 uur. De datum heeft geen tijd,
+   dus we rekenen vanaf het begin van die dag — de veilige kant. */
+function urenSindsOntdekking(lek){
+ if(!geldigeDatum(lek.ontdekt))return null;
+ return Math.floor((new Date()-new Date(lek.ontdekt+'T00:00:00'))/3600000);
+}
+function datalekOpen(lek){return !lek.afgehandeld;}
+function zetDatalekTeller(){
+ var t=el('datalek-teller');if(!t)return;
+ var n=DATALEKKEN.filter(datalekOpen).length;
+ t.textContent=n?String(n):'';
+}
+function renderDatalekken(){
+ zetDatalekTeller();
+ var doel=el('datalek-lijst');if(!doel)return;
+ if(!DATALEKKEN.length){
+  doel.innerHTML='<p class="empty-msg">Nog geen datalekken vastgelegd. Dat is goed nieuws, maar leg ook kleine incidenten vast: het register moet compleet zijn.</p>';
+  return;
+ }
+ doel.innerHTML=DATALEKKEN.map(function(lek,i){
+  var uren=urenSindsOntdekking(lek);
+  var chip='';
+  if(lek.afgehandeld){
+   chip='<span class="statuschip" style="background:var(--moss-bg);color:var(--moss)">Afgehandeld</span>';
+  }else if(lek.gemeldBijAp){
+   chip='<span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Gemeld bij de AP</span>';
+  }else if(uren!==null&&uren>72){
+   chip='<span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">72 uur verstreken</span>';
+  }else if(uren!==null){
+   chip='<span class="statuschip" style="background:var(--amber-bg);color:var(--amber)">Nog '+Math.max(0,72-uren)+' uur om te melden</span>';
+  }
+  return '<div class="personrow" style="align-items:flex-start">'+
+   '<div class="pinfo"><div class="naam">'+esc(lek.omschrijving)+' '+chip+'</div>'+
+   '<div class="mail">Ontdekt op '+esc(datumNL(lek.ontdekt))+
+    (lek.betrokkenen?' · '+esc(lek.betrokkenen):'')+
+    (lek.wie?' · vastgelegd door '+esc(lek.wie):'')+'</div>'+
+    (lek.maatregelen?'<div class="mini">Maatregelen: '+esc(lek.maatregelen)+'</div>':'')+'</div>'+
+   '<button type="button" class="small" data-lek="'+i+'">Bewerken</button></div>';
+ }).join('');
+ Array.prototype.forEach.call(doel.querySelectorAll('[data-lek]'),function(b){
+  b.addEventListener('click',function(){openDatalekVenster(DATALEKKEN[+b.getAttribute('data-lek')]);});
+ });
+}
+function openDatalekVenster(bestaand){
+ var lek=bestaand||{ontdekt:vandaagISO(),omschrijving:'',betrokkenen:'',maatregelen:'',gemeldBijAp:false,afgehandeld:false,wie:wieBenIk()};
+ var uren=urenSindsOntdekking(lek);
+ var termijn=bestaand&&uren!==null
+  ? (uren>72?'<p style="color:var(--brick)">Er zijn '+uren+' uur verstreken sinds de ontdekking. De termijn van 72 uur is voorbij; leg vast waarom er niet (op tijd) is gemeld.</p>'
+           :'<p>Er '+(uren===1?'is':'zijn')+' '+uren+' uur verstreken. Melden bij de AP kan nog '+(72-uren)+' uur.</p>')
+  : '<p>De termijn van 72 uur voor een melding bij de Autoriteit Persoonsgegevens begint op het moment dat je het lek ontdekt.</p>';
+ openModal('<h3>'+(bestaand?'Datalek bewerken':'Datalek vastleggen')+'</h3>'+
+  '<div class="msec">'+termijn+'</div>'+
+  '<div class="field"><label for="lek-ontdekt">Ontdekt op</label><input type="date" id="lek-ontdekt" value="'+esc(lek.ontdekt)+'"></div>'+
+  '<div class="field"><label for="lek-wat">Wat is er gebeurd</label><input id="lek-wat" maxlength="200" value="'+esc(lek.omschrijving)+'" placeholder="Bijvoorbeeld: e-mail met cliëntgegevens naar verkeerde ontvanger"></div>'+
+  '<div class="field"><label for="lek-wie">Wie is het betrokken</label><input id="lek-wie" maxlength="200" value="'+esc(lek.betrokkenen)+'" placeholder="Bijvoorbeeld: 3 cliënten van De Boomgaard"></div>'+
+  '<div class="field"><label for="lek-maatregelen">Genomen maatregelen</label><input id="lek-maatregelen" maxlength="200" value="'+esc(lek.maatregelen)+'" placeholder="Bijvoorbeeld: ontvanger heeft de mail verwijderd, toegang geblokkeerd"></div>'+
+  '<label class="chip" style="margin:2px 6px 8px 0"><input type="checkbox" id="lek-ap" '+(lek.gemeldBijAp?'checked':'')+'> Gemeld bij de Autoriteit Persoonsgegevens</label>'+
+  '<label class="chip" style="margin:2px 0 8px"><input type="checkbox" id="lek-klaar" '+(lek.afgehandeld?'checked':'')+'> Afgehandeld</label>'+
+  '<div id="lek-fout" class="mini" style="color:var(--brick)" hidden>Vul in wat er is gebeurd en wanneer je het hebt ontdekt.</div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var wat=kap(el('lek-wat').value.trim(),200),ontdekt=el('lek-ontdekt').value;
+  if(!wat||!geldigeDatum(ontdekt)){el('lek-fout').hidden=false;return;}
+  lek.omschrijving=wat;lek.ontdekt=ontdekt;
+  lek.betrokkenen=kap(el('lek-wie').value.trim(),200);
+  lek.maatregelen=kap(el('lek-maatregelen').value.trim(),200);
+  var wasGemeld=lek.gemeldBijAp;
+  lek.gemeldBijAp=el('lek-ap').checked;
+  lek.afgehandeld=el('lek-klaar').checked;
+  if(!bestaand){lek.wie=wieBenIk();DATALEKKEN.unshift(lek);}
+  closeModal();
+  logActie(bestaand?('Datalek bijgewerkt: '+wat):('Datalek vastgelegd: '+wat));
+  if(!wasGemeld&&lek.gemeldBijAp)logActie('Datalek gemeld bij de Autoriteit Persoonsgegevens: '+wat);
+  bewaarDatalek(lek);
+  renderDatalekken();
+ });
+}
+el('datalek-nieuw').addEventListener('click',function(){openDatalekVenster(null);});
+
 el('zoek-alles').addEventListener('input',function(){zoekAllesTerm=this.value;renderZoeken();});
 el('zoek-archief').addEventListener('change',function(){zoekAllesArchief=this.checked;renderZoeken();});
 
@@ -2787,7 +3009,7 @@ function telRechten(p){
 }
 function exporteerIedereen(){
  var kop=['Naam','Type','Groepen','Algemene rol','E-mailadres','Telefoon','Contactpersoon','Status',
-          'Toegang tot','Toegang verlopen','Aantal rechten','Gearchiveerd'];
+          'Toegang tot','Toegang verlopen','Geblokkeerd','Laatst gebruikt','Aantal rechten','Gearchiveerd'];
  var regels=[kop.map(csvVeld).join(';')];
  people.slice().sort(function(a,b){
   return (a.type+naam(a)).localeCompare(b.type+naam(b));
@@ -2800,6 +3022,8 @@ function exporteerIedereen(){
    p.status||'',
    geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'',
    toegangVerlopen(p)?'ja':'nee',
+   p.geblokkeerd?'ja':'nee',
+   geldigeDatum(p.laatsteLogin)?datumNL(p.laatsteLogin):'',
    telRechten(p),
    p.archived?'ja':'nee'
   ].map(csvVeld).join(';'));
@@ -3459,6 +3683,8 @@ function avgDossier(p){
  voeg('Telefoonnummer',p.tel);
  voeg('Contactpersoon',p.contactVolgorde?('contactpersoon '+p.contactVolgorde):'nee');
  voeg('Status',p.status);
+ voeg('Toegang geblokkeerd',p.geblokkeerd?('ja'+(p.geblokkeerdReden?' — '+p.geblokkeerdReden:'')):'nee');
+ voeg('Laatst gebruikt',geldigeDatum(p.laatsteLogin)?datumNL(p.laatsteLogin):'niet geregistreerd');
  voeg('Toegang tot en met',geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'geen einddatum');
  voeg('Profielfoto',p.foto?'ja, opgeslagen':'nee');
  voeg('Gearchiveerd',p.archived?('ja'+(p.gearchiveerdOp?', op '+datumNL(p.gearchiveerdOp):'')):'nee');
@@ -3881,11 +4107,69 @@ function renderCaInfo(){
  html+='<div id="ca-info-rechten">'+personRechtenRow(p.id)+'</div>';
  html+='<div class="sublistlabel">Beheer</div>';
  html+='<button type="button" class="addbtn-row" style="justify-content:space-between;background:var(--surface);border-style:solid;border-color:var(--line);color:var(--ink)" id="ca-naar-geheugen">Geheugen <svg class="chev-r" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>';
+ html+='<button type="button" class="addbtn-row" style="justify-content:space-between;background:var(--surface);border-style:solid;border-color:var(--line);color:var(--ink);margin-top:8px" id="ca-naar-toegang">Wie kan bij mijn gegevens <svg class="chev-r" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>';
  html+='<button type="button" class="addbtn-row" style="justify-content:space-between;background:var(--surface);border-style:solid;border-color:var(--line);color:var(--ink);margin-top:8px" id="ca-naar-instellingen">Meer instellingen <svg class="chev-r" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>';
  el('ca-body').innerHTML=html;
  wirePersoonRechten(el('ca-info-rechten'),function(){renderCaInfo();});
  el('ca-naar-geheugen').addEventListener('click',renderCaGeheugen);
+ el('ca-naar-toegang').addEventListener('click',renderCaToegang);
  el('ca-naar-instellingen').addEventListener('click',renderCaInstellingen);
+}
+
+/* ---- Wie kan bij mijn gegevens (AVG art. 12 en 15) ----
+   De beheerkant heeft "Wie ziet wie", maar de cliënt of zijn vertegenwoordiger
+   kon nergens zien wie er in zijn dossier kan. Transparantie is geen extraatje:
+   je hebt er recht op te weten wie je gegevens verwerkt. Dit scherm is bewust
+   alleen-lezen — rechten wijzig je in het beheer, met de controles die daar
+   gelden. */
+function toegangTotClient(clientId){
+ var lijst=[];
+ people.forEach(function(x){
+  if(x.id===clientId||x.archived)return;
+  var rol=(x.clientRechten||{})[clientId];
+  if(!rol)return;
+  lijst.push({persoon:x,rol:rol,actief:heeftToegang(x)});
+ });
+ lijst.sort(function(a,b){
+  if(a.actief!==b.actief)return a.actief?-1:1;
+  return naam(a.persoon).localeCompare(naam(b.persoon));
+ });
+ return lijst;
+}
+function renderCaToegang(){
+ var c=findPerson(caClientId);
+ var lijst=toegangTotClient(caClientId);
+ var actief=lijst.filter(function(x){return x.actief;});
+ var inactief=lijst.filter(function(x){return !x.actief;});
+ var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-toegang-terug">← Terug</button><b style="font-size:15px">Wie kan bij mijn gegevens</b></div>';
+ html+='<p class="mini" style="margin:0 0 12px">Deze mensen kunnen het dossier van '+esc(naam(c))+' inzien, en met welke rol. Klopt er iets niet, of wil je dat iemand geen toegang meer heeft? Neem contact op met de contactpersoon van de groep.</p>';
+ var regel=function(x,grijs){
+  return '<div class="personrow"'+(grijs?' style="opacity:.6"':'')+'>'+avatarHtml(naam(x.persoon),x.persoon.foto)+
+   '<div class="pinfo"><div class="naam">'+esc(naam(x.persoon))+
+    (x.persoon.contactVolgorde?' <span class="countchip" style="color:var(--accent)">Contactpersoon '+x.persoon.contactVolgorde+'</span>':'')+'</div>'+
+   '<div class="mail">'+esc(TYPELABEL[x.persoon.type])+' · '+esc(x.rol)+'</div></div></div>';
+ };
+ html+='<div class="sublistlabel">Heeft nu toegang ('+actief.length+')</div>';
+ html+=actief.length?actief.map(function(x){return regel(x,false);}).join('')
+  :'<p class="empty-msg">Niemand heeft op dit moment toegang.</p>';
+ if(inactief.length){
+  html+='<div class="sublistlabel">Heeft een rol, maar kan nu niet inloggen ('+inactief.length+')</div>';
+  html+='<p class="mini" style="margin:0 0 8px">Bijvoorbeeld omdat de toegang is verlopen of geblokkeerd. Zodra dat wordt opgeheven, kan deze persoon er weer bij.</p>';
+  html+=inactief.map(function(x){return regel(x,true);}).join('');
+ }
+ if(c.wettelijkeVertegenwoordiger){
+  var wv=findPerson(c.wettelijkeVertegenwoordiger);
+  if(wv)html+='<div class="sublistlabel">Wettelijk vertegenwoordiger</div><div class="personrow">'+avatarHtml(naam(wv),wv.foto)+
+   '<div class="pinfo"><div class="naam">'+esc(naam(wv))+'</div><div class="mail">'+esc(TYPELABEL[wv.type])+'</div></div></div>';
+ }
+ if(SYSTEEMBEHEER.tel){
+  html+='<p class="mini" style="margin-top:14px">Vragen over wie je gegevens mag zien? Bel systeembeheer: '+esc(SYSTEEMBEHEER.tel)+'.</p>';
+ }
+ el('ca-body').innerHTML='<div id="ca-toegang-lijst">'+html+'</div>';
+ /* Zonder dit opent het scherm op de scrollpositie van het vorige, waardoor de
+    titel en de terugknop buiten beeld staan. */
+ el('ca-body').scrollTop=0;
+ el('ca-toegang-terug').addEventListener('click',renderCaInfo);
 }
 
 /* --- Geheugen --- */
@@ -4771,5 +5055,6 @@ if(new URLSearchParams(location.search).get('app')==='client'){
 }
 
 loadFromSupabase();
+laadDatalekken();
 </script>
 
