@@ -403,12 +403,15 @@ td.dot{text-align:center}
 .modal-card .msec p+p{margin-top:8px}
 /* Een mislukte opslag mag niet stil blijven: wat je op het scherm ziet klopt
    dan niet met wat er bewaard is, en dat merk je pas als het misgaat. */
+#laad-balk,
 #opslag-balk{position:fixed;left:16px;right:16px;bottom:16px;z-index:60;max-width:560px;margin:0 auto;
  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
  padding:12px 16px;border-radius:var(--radius);font-size:13.5px;
  background:var(--brick-bg);border:1px solid var(--brick-line);color:var(--brick);
  box-shadow:0 6px 22px -8px rgba(23,35,54,.35)}
-#opslag-balk[hidden]{display:none}
+#laad-balk[hidden],#opslag-balk[hidden]{display:none}
+
+#laad-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
 #opslag-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
 #opslag-balk button{flex:0 0 auto}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
@@ -1103,6 +1106,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
   </div>
 </div>
 
+<div id="laad-balk" role="alert" hidden></div>
 <div id="opslag-balk" role="status" aria-live="polite" hidden></div>
 <div class="modal-overlay" id="modal-overlay" hidden>
   <div class="modal-card" id="modal-card" role="dialog" aria-modal="true" tabindex="-1"></div>
@@ -1551,12 +1555,15 @@ function dbRowToPerson(r){
  return p;
 }
 async function loadFromSupabase(){
- if(!sb)return;
+ if(!sb){gegevensGeladen=null;return;}
  try{
   var g=await sb.from('groepen').select('naam').order('id');
   var p=await sb.from('personen').select('*').order('id');
   var o=await sb.from('organisatie_data').select('sleutel,waarde');
-  if(g.error||p.error||!p.data||!p.data.length)return;
+  /* Een lege tabel is iets anders dan een mislukte vraag: bij leeg mag de app
+     gewoon beginnen, bij een fout juist niet. */
+  if(g.error||p.error||!p.data){gegevensGeladen=false;toonLaadStatus();return;}
+  if(!p.data.length){gegevensGeladen=true;toonLaadStatus();return;}
   if(g.data&&g.data.length){GROEPEN.splice.apply(GROEPEN,[0,GROEPEN.length].concat(g.data.map(function(x){return x.naam;})));}
   if(o&&!o.error&&o.data){
    var opgeslagen={};
@@ -1582,9 +1589,16 @@ async function loadFromSupabase(){
   synchroniseerGlobaleRollen();
   await laadLogboek();
   await laadClientData();
+  gegevensGeladen=true;
+  toonLaadStatus();
   if(typeof renderAll==='function')renderAll();
   if(!el('admintab-groepen').hidden)renderSysteembeheer();
- }catch(e){/* Supabase niet bereikbaar (bv. in preview-omgeving) — lokale demodata blijft actief */}
+ }catch(e){
+  /* Supabase niet bereikbaar. De voorbeeldgegevens blijven staan om iets te
+     kunnen laten zien, maar opslaan wordt geblokkeerd. */
+  gegevensGeladen=false;
+  toonLaadStatus();
+ }
 }
 /* ---- Zichtbaar maken of het opslaan lukt ----
    De meeste opslagaanroepen keken niet naar het resultaat. Ging het mis, dan
@@ -1592,6 +1606,28 @@ async function loadFromSupabase(){
    dat merk je pas als iemand toegang blijkt te hebben die je had ingetrokken.
    Zonder database (de demo-stand) is er niets om over te melden. */
 var opslagMislukt={};
+/* ---- Niet geladen betekent: niet opslaan ----
+   De voorbeeldgegevens hebben dezelfde id's als de eerste rijen in de database.
+   Lukte het laden niet, dan stond de app vol met die voorbeelden zonder dat
+   iets dat verried; wie dan op "doorvoeren" drukte schreef de voorbeelden over
+   de echte rijen heen. Daarom wordt opslaan geweigerd zolang er niet is
+   geladen — een waarschuwing alleen is te weinig, die klik je weg. */
+var gegevensGeladen=null;   /* null = nog bezig, true = geladen, false = mislukt */
+function laadMislukt(){return !!sb&&gegevensGeladen===false;}
+function toonLaadStatus(){
+ var balk=el('laad-balk');if(!balk)return;
+ balk.hidden=!laadMislukt();
+ if(balk.hidden)return;
+ balk.innerHTML='<span class="tekst"><b>Gegevens niet geladen.</b> Je ziet nu voorbeeldgegevens, niet de echte administratie. '+
+  'Opslaan is uitgeschakeld, anders zouden deze voorbeelden de echte gegevens overschrijven.</span>'+
+  '<button type="button" class="primary" id="laad-opnieuw">Opnieuw laden</button>';
+ el('laad-opnieuw').addEventListener('click',async function(){
+  var knop=el('laad-opnieuw');
+  knop.disabled=true;knop.textContent='Bezig…';
+  await loadFromSupabase();
+  if(laadMislukt()){knop.disabled=false;knop.textContent='Opnieuw laden';}
+ });
+}
 function registreerOpslag(soort,gelukt){
  if(!sb)return gelukt;
  if(gelukt)delete opslagMislukt[soort]; else opslagMislukt[soort]=true;
@@ -1627,6 +1663,7 @@ async function probeerOpslagOpnieuw(){
 }
 async function syncToSupabase(){
  if(!sb)return false;
+ if(laadMislukt())return false;    /* zou de voorbeeldgegevens over de echte heen schrijven */
  try{
   var res=await sb.from('personen').upsert(people.map(personRowToDb));
   return registreerOpslag('personen',!res.error);
@@ -3546,6 +3583,7 @@ async function syncGroepenToSupabase(){
    na een herlaad weg. Ze staan nu in organisatie_data (key/value). */
 async function syncOrganisatieData(){
  if(!sb)return false;
+ if(laadMislukt())return false;
  try{
   var res=await sb.from('organisatie_data').upsert([
    {sleutel:'instituten',waarde:INSTITUTEN},
@@ -4151,7 +4189,7 @@ el('av-versturen').addEventListener('click',async function(){
   if(verplaatst)delen.push(verplaatst+' verplaatst');
   logActie('Wijzigingen doorgevoerd: '+delen.join(', '));
  }
- var opgeslagen=await syncToSupabase();
+ var opgeslagen=laadMislukt()?false:await syncToSupabase();
  renderAll();
  el('av-versturen').disabled=false;
  el('av-versturen').textContent='Wijzigingen doorvoeren';
@@ -4161,7 +4199,10 @@ el('av-versturen').addEventListener('click',async function(){
  if(verplaatst)verwijderdTekst.push(verplaatst+' verplaatst naar een andere groep');
  var contactpersoon=huidigeGebruiker();
  var contactzin=contactpersoon?' Bij vragen nemen we contact op met '+esc(naam(contactpersoon))+'.':'';
- var waarschuwing=opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">Let op: het opslaan in de database is niet gelukt. De wijzigingen zijn hier wel lokaal doorgevoerd — probeer het later opnieuw zodat ze ook echt bewaard blijven.</div>';
+ var waarschuwing=opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">'+
+  (laadMislukt()
+   ? 'Let op: de gegevens waren niet geladen, dus er is bewust niets opgeslagen. Wat je hier ziet zijn voorbeeldgegevens; laad opnieuw en voer de wijziging daarna nog een keer door.'
+   : 'Let op: het opslaan in de database is niet gelukt. De wijzigingen zijn hier wel lokaal doorgevoerd — probeer het later opnieuw zodat ze ook echt bewaard blijven.')+'</div>';
  el('verzonden-tekst').innerHTML='Je wijzigingen ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin+waarschuwing;
  show('pp-verzonden');
  verzondenTimer=setTimeout(function(){show('pp-formulier');},3000);
@@ -4286,7 +4327,7 @@ function bewaarStraks(sleutel,fn){
  bewaarTimers[sleutel]=setTimeout(fn,600);
 }
 function bewaarClientDataNu(clientId){
- if(!sb||!clientId)return;
+ if(!sb||!clientId||laadMislukt())return;
  try{
   sb.from('client_data').upsert([{
    client_id:clientId,
@@ -4304,7 +4345,7 @@ function bewaarClientData(clientId){
  bewaarStraks('client-'+clientId,function(){bewaarClientDataNu(clientId);});
 }
 function bewaarChatThreadNu(sleutel){
- if(!sb||!sleutel||!CHATSTORE[sleutel])return;
+ if(!sb||!sleutel||!CHATSTORE[sleutel]||laadMislukt())return;
  try{
   sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'}).then(
    function(res){registreerOpslag('chat',!(res&&res.error));},
