@@ -372,8 +372,10 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .collapse{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
 .collapse .chead{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:var(--surface)}
 .collapse .chead b{font-size:14.5px}
-.collapse .cbody{padding:4px 16px 14px;max-height:900px;opacity:1;overflow:hidden;transition:max-height .32s ease,opacity .22s ease,padding .32s ease}
-.collapse.closed .cbody{max-height:0;opacity:0;padding-top:0;padding-bottom:0}
+.collapse .cbody{padding:4px 16px 14px;max-height:900px;opacity:1;overflow:hidden;visibility:visible;
+ transition:max-height .32s ease,opacity .22s ease,padding .32s ease,visibility 0s}
+.collapse.closed .cbody{max-height:0;opacity:0;padding-top:0;padding-bottom:0;visibility:hidden;
+ transition:max-height .32s ease,opacity .22s ease,padding .32s ease,visibility 0s linear .32s}
 .chev{transition:transform .15s}
 .collapse.closed .chev{transform:rotate(-90deg)}
 
@@ -415,8 +417,17 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .acc-head{display:flex;align-items:center;gap:10px;padding:15px 20px;cursor:pointer}
 .acc-head b{font-size:15px;flex:1}
 .acc-head .chev{color:var(--ink-faint);width:17px;height:17px}
-.acc-body{border-top:1px solid var(--line);padding:14px 20px 20px;max-height:1800px;opacity:1;overflow:hidden;transition:max-height .38s ease,opacity .25s ease,padding .38s ease}
-.acc.closed .acc-body{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-top-color:transparent}
+/* Dichtklappen gebeurde alleen visueel: de knoppen erin bleven met Tab
+   bereikbaar, dus je kon met het toetsenbord op een "Verwijderen" belanden die
+   je niet ziet staan. visibility haalt ze uit de tabvolgorde; de vertraging
+   zorgt dat de inklapanimatie eerst nog afloopt. */
+.acc-body{border-top:1px solid var(--line);padding:14px 20px 20px;max-height:1800px;opacity:1;overflow:hidden;visibility:visible;
+ transition:max-height .38s ease,opacity .25s ease,padding .38s ease,visibility 0s}
+.acc.closed .acc-body{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-top-color:transparent;visibility:hidden;
+ transition:max-height .38s ease,opacity .25s ease,padding .38s ease,visibility 0s linear .38s}
+/* De kop was een div met een klikhandler: met het toetsenbord kon je de sectie
+   helemaal niet openen. */
+.acc-head:focus-visible,.chead:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--radius)}
 .acc.closed .chev{transform:rotate(-90deg)}
 
 .urow{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:9px;background:var(--surface);overflow:hidden}
@@ -4315,7 +4326,33 @@ function pushNew(t){
  if(t==='client')openProfielClient(basis.id); else openProfielPersoon(basis.id,t);
 }
 document.querySelectorAll('[data-add]').forEach(function(b){b.addEventListener('click',function(){pushNew(b.getAttribute('data-add'));});});
-document.querySelectorAll('[data-toggle]').forEach(function(b){b.addEventListener('click',function(){el(b.getAttribute('data-toggle')).classList.toggle('closed');});});
+document.querySelectorAll('[data-toggle]').forEach(function(b){
+ var doelId=b.getAttribute('data-toggle');
+ var doel=el(doelId);
+ /* Een kop die als knop werkt, hoort zich ook als knop te gedragen: te bereiken
+    met Tab, te bedienen met Enter of spatie, en hardop te zeggen of de sectie
+    openstaat. */
+ b.setAttribute('role','button');
+ b.setAttribute('tabindex','0');
+ var lichaam=doel&&(doel.querySelector('.acc-body')||doel.querySelector('.cbody'));
+ if(lichaam){
+  if(!lichaam.id)lichaam.id=doelId+'-body';
+  b.setAttribute('aria-controls',lichaam.id);
+ }
+ var meld=function(){
+  if(doel)b.setAttribute('aria-expanded',doel.classList.contains('closed')?'false':'true');
+ };
+ meld();
+ var wissel=function(){
+  if(!doel)return;
+  doel.classList.toggle('closed');
+  meld();
+ };
+ b.addEventListener('click',wissel);
+ b.addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();wissel();}
+ });
+});
 document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){show(b.getAttribute('data-back'));});});
 document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){
  show(b.getAttribute('data-open'));
