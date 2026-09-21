@@ -1,5 +1,11 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gebruikersbeheer & Standaardrollen</title>
 <link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-512.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <meta name="theme-color" content="#2660B0">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -478,6 +484,7 @@ td.dot{text-align:center}
 #ca-sos-btn{background:var(--brick);color:#fff;border-color:var(--brick);border-radius:999px;font-size:11px;font-weight:700;padding:5px 12px;letter-spacing:.03em}
 .phonebody{padding:14px;min-height:460px;max-height:620px;overflow-y:auto}
 .bottomnav{display:flex;border-top:1px solid var(--line);background:var(--surface)}
+.bottomnav[hidden]{display:none}
 .bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;border:0;border-radius:0;background:none;font-size:10px;color:var(--ink-faint)}
 .bottomnav button.on{color:var(--accent)}
 .bottomnav button svg{width:19px;height:19px}
@@ -589,6 +596,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 .appswitch{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--accent);text-decoration:none;font-weight:600;margin-top:2px}
 .appswitch:hover{text-decoration:underline}
 </style>
+</head>
+<body>
 
 <header class="top">
   <div class="topbar">
@@ -1702,6 +1711,7 @@ async function loadFromSupabase(){
    if(opgeslagen.beoordeelde_signalen&&typeof opgeslagen.beoordeelde_signalen==='object')beoordeeldeSignalen=opgeslagen.beoordeelde_signalen;
    if(opgeslagen.support&&typeof opgeslagen.support.naam==='string'&&opgeslagen.support.naam)SUPPORT.naam=opgeslagen.support.naam;
    if(opgeslagen.digibord&&typeof opgeslagen.digibord==='object')digibordPerGroep=opgeslagen.digibord;
+   if(opgeslagen.maaltijden&&typeof opgeslagen.maaltijden==='object')MAALTIJDRESERVERINGEN=opgeslagen.maaltijden;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
@@ -3283,7 +3293,8 @@ async function laadDatalekken(){
   DATALEKKEN=res.data.map(function(r){
    return {id:r.id,ontdekt:String(r.ontdekt_op||'').slice(0,10),omschrijving:r.omschrijving||'',
     betrokkenen:r.betrokkenen||'',maatregelen:r.maatregelen||'',
-    gemeldBijAp:!!r.gemeld_bij_ap,afgehandeld:!!r.afgehandeld,wie:r.wie||''};
+    gemeldBijAp:!!r.gemeld_bij_ap,betrokkenenGeinformeerd:!!r.betrokkenen_geinformeerd,
+    afgehandeld:!!r.afgehandeld,wie:r.wie||''};
   });
   if(!el('admintab-datalek').hidden)renderDatalekken();
   zetDatalekTeller();
@@ -3292,7 +3303,8 @@ async function laadDatalekken(){
 function bewaarDatalek(lek){
  if(!sb)return Promise.resolve(false);
  var rij={ontdekt_op:lek.ontdekt,omschrijving:lek.omschrijving,betrokkenen:lek.betrokkenen,
-  maatregelen:lek.maatregelen,gemeld_bij_ap:lek.gemeldBijAp,afgehandeld:lek.afgehandeld,wie:lek.wie};
+  maatregelen:lek.maatregelen,gemeld_bij_ap:lek.gemeldBijAp,afgehandeld:lek.afgehandeld,wie:lek.wie,
+  betrokkenen_geinformeerd:!!lek.betrokkenenGeinformeerd};
  if(lek.id)rij.id=lek.id;
  try{
   return sb.from('datalekken').upsert([rij],{onConflict:'id'}).select('id').then(function(res){
@@ -3326,7 +3338,7 @@ function renderDatalekken(){
   if(lek.afgehandeld){
    chip='<span class="statuschip" style="background:var(--moss-bg);color:var(--moss)">Afgehandeld</span>';
   }else if(lek.gemeldBijAp){
-   chip='<span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Gemeld bij de AP</span>';
+   chip='<span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Gemeld bij de AP'+(lek.betrokkenenGeinformeerd?' en aan de betrokkenen':'')+'</span>';
   }else if(uren!==null&&uren>72){
    chip='<span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">72 uur verstreken</span>';
   }else if(uren!==null){
@@ -3345,7 +3357,7 @@ function renderDatalekken(){
  });
 }
 function openDatalekVenster(bestaand){
- var lek=bestaand||{ontdekt:vandaagISO(),omschrijving:'',betrokkenen:'',maatregelen:'',gemeldBijAp:false,afgehandeld:false,wie:wieBenIk()};
+ var lek=bestaand||{ontdekt:vandaagISO(),omschrijving:'',betrokkenen:'',maatregelen:'',gemeldBijAp:false,betrokkenenGeinformeerd:false,afgehandeld:false,wie:wieBenIk()};
  var uren=urenSindsOntdekking(lek);
  var termijn=bestaand&&uren!==null
   ? (uren>72?'<p style="color:var(--brick)">Er zijn '+uren+' uur verstreken sinds de ontdekking. De termijn van 72 uur is voorbij; leg vast waarom er niet (op tijd) is gemeld.</p>'
@@ -3365,25 +3377,30 @@ function openDatalekVenster(bestaand){
    '<div class="admveld"><label for="lek-maatregelen">Genomen maatregelen</label>'+
     '<input class="admin" id="lek-maatregelen" maxlength="200" value="'+esc(lek.maatregelen)+'" placeholder="Bijvoorbeeld: ontvanger heeft de mail verwijderd, toegang geblokkeerd"></div>'+
    '<label class="chip" style="margin:2px 6px 8px 0"><input type="checkbox" id="lek-ap" '+(lek.gemeldBijAp?'checked':'')+'> Gemeld bij de Autoriteit Persoonsgegevens</label>'+
+   '<label class="chip" style="margin:2px 6px 8px 0"><input type="checkbox" id="lek-betrokkenen" '+(lek.betrokkenenGeinformeerd?'checked':'')+'> Betrokkenen zelf geïnformeerd</label>'+
    '<label class="chip" style="margin:2px 0 8px"><input type="checkbox" id="lek-klaar" '+(lek.afgehandeld?'checked':'')+'> Afgehandeld</label>'+
   '</fieldset>'+
-  '<div id="lek-fout" class="mini" style="color:var(--brick)" hidden>Vul in wat er is gebeurd en wanneer je het hebt ontdekt.</div>'+
+  '<p class="mini" style="margin:0 0 8px">Bij een lek met een hoog risico voor de betrokkenen moeten zij zelf ook worden geïnformeerd (AVG art. 34), niet alleen de Autoriteit Persoonsgegevens.</p>'+
+  '<div id="lek-fout" class="mini" style="color:var(--brick)" hidden>Vul in wat er is gebeurd en wanneer je het hebt ontdekt, met een datum die niet in de toekomst ligt.</div>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
   '<button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
   var wat=kap(el('lek-wat').value.trim(),200),ontdekt=el('lek-ontdekt').value;
-  if(!wat||!geldigeDatum(ontdekt)){el('lek-fout').hidden=false;return;}
+  /* Een ontdekkingsdatum in de toekomst zou de 72-uurstermijn onzin maken. */
+  if(!wat||!geldigeDatum(ontdekt)||ontdekt>vandaagISO()){el('lek-fout').hidden=false;return;}
   lek.omschrijving=wat;lek.ontdekt=ontdekt;
   lek.betrokkenen=kap(el('lek-wie').value.trim(),200);
   lek.maatregelen=kap(el('lek-maatregelen').value.trim(),200);
-  var wasGemeld=lek.gemeldBijAp;
+  var wasGemeld=lek.gemeldBijAp,wasGeinformeerd=lek.betrokkenenGeinformeerd;
   lek.gemeldBijAp=el('lek-ap').checked;
+  lek.betrokkenenGeinformeerd=el('lek-betrokkenen').checked;
   lek.afgehandeld=el('lek-klaar').checked;
   if(!bestaand){lek.wie=wieBenIk();DATALEKKEN.unshift(lek);}
   closeModal();
   logActie(bestaand?('Datalek bijgewerkt: '+wat):('Datalek vastgelegd: '+wat));
   if(!wasGemeld&&lek.gemeldBijAp)logActie('Datalek gemeld bij de Autoriteit Persoonsgegevens: '+wat);
+  if(!wasGeinformeerd&&lek.betrokkenenGeinformeerd)logActie('Betrokkenen geïnformeerd over datalek: '+wat);
   bewaarDatalek(lek);
   renderDatalekken();
  });
@@ -3980,7 +3997,8 @@ async function syncOrganisatieData(){
    {sleutel:'groep_tweestaps',waarde:groepTweestaps},
    {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen},
    {sleutel:'support',waarde:SUPPORT},
-   {sleutel:'digibord',waarde:digibordPerGroep}
+   {sleutel:'digibord',waarde:digibordPerGroep},
+   {sleutel:'maaltijden',waarde:MAALTIJDRESERVERINGEN}
   ],{onConflict:'sleutel'});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
@@ -4338,21 +4356,58 @@ async function wisDefinitiefUitDatabase(id){
  try{var res=await sb.from('personen').delete().eq('id',id);return !res.error;}
  catch(e){return false;}
 }
+/* Vergetelheid hield op bij de persoonsrij. Het dossier zelf — doelen,
+   rapportages, agenda, Ik-Boek, geheugensteuntjes, instellingen en de
+   gesprekken — bleef staan in client_data en chat_threads, terwijl juist dat
+   gezondheidsgegevens zijn (AVG art. 9). Wissen betekent dat dat ook weggaat. */
+function chatSleutelsVanClient(id){
+ var sleutels=['group-'+id];
+ people.forEach(function(x){
+  if(x.type==='medewerker')sleutels.push(chatSleutel1op1(id,x.id));
+ });
+ var d=CLIENTDATA[id];
+ if(d&&d.customChats)d.customChats.forEach(function(c){if(c.key)sleutels.push(c.key);});
+ Object.keys(CHATSTORE).forEach(function(k){
+  if(k.indexOf('group-'+id)===0||k.indexOf('1on1-'+id+'-')===0||k.indexOf('groep-custom-'+id+'-')===0)sleutels.push(k);
+ });
+ return sleutels.filter(function(k,i,arr){return arr.indexOf(k)===i;});
+}
+function wisClientDossierLokaal(id){
+ var sleutels=chatSleutelsVanClient(id);
+ sleutels.forEach(function(k){delete CHATSTORE[k];});
+ delete CLIENTDATA[id];delete GEHEUGEN[id];delete CA_INSTELLINGEN[id];
+ return sleutels;
+}
+async function wisClientDossierUitDatabase(id,sleutels){
+ if(!sb)return true;
+ var goed=true;
+ try{
+  var a=await sb.from('client_data').delete().eq('client_id',id);
+  if(a&&a.error)goed=false;
+  if(sleutels.length){
+   var b=await sb.from('chat_threads').delete().in('sleutel',sleutels);
+   if(b&&b.error)goed=false;
+  }
+ }catch(e){goed=false;}
+ return goed;
+}
 function wisDefinitief(id){
  var p=findPerson(id);if(!p)return;
  var naamVal=naam(p);
  var maanden=maandenSinds(p.gearchiveerdOp);
  bevestigModal('Definitief wissen: '+naamVal,
   '<p>Alle gegevens van <b>'+esc(naamVal)+'</b> worden verwijderd: naam, contactgegevens, profielfoto, groepskoppelingen en alle rechten van en op deze persoon. Ook uit de database.</p>'+
+  (p.type==='client'?'<p>Daarbij hoort ook het hele dossier: doelen, rapportages, agenda, Ik-Boek, geheugensteuntjes, instellingen en alle gesprekken over '+esc(naamVal)+'.</p>':'')+
   '<p>Dit kun je niet ongedaan maken en herstellen uit het archief kan daarna niet meer.'+
   (maanden!==null?' Deze persoon staat '+maanden+' maand'+(maanden===1?'':'en')+' in het archief.':'')+'</p>'+
   '<p>Het logboek blijft wel bestaan. Dat is de verantwoording over wat er is gebeurd en mag niet worden gewist.</p>',
   'Ja, definitief wissen',function(){
    verwijderVerwijzingenNaar(id);
+   var sleutels=p.type==='client'?wisClientDossierLokaal(id):[];
    people=people.filter(function(x){return x.id!==id;});
-   logActie(naamVal+' definitief gewist op verzoek of vanwege de bewaartermijn');
-   wisDefinitiefUitDatabase(id).then(function(gelukt){
-    if(!gelukt)openMelding('Let op','De gegevens zijn hier gewist, maar het verwijderen uit de database is niet gelukt. Probeer het later opnieuw, anders blijven ze daar staan.');
+   logActie(naamVal+' definitief gewist op verzoek of vanwege de bewaartermijn'+(p.type==='client'?', inclusief het volledige dossier':''));
+   Promise.all([wisDefinitiefUitDatabase(id),p.type==='client'?wisClientDossierUitDatabase(id,sleutels):Promise.resolve(true)]).then(function(uitkomst){
+    if(uitkomst.indexOf(false)>-1)openMelding('Let op','De gegevens zijn hier gewist, maar het verwijderen uit de database is niet volledig gelukt. Probeer het later opnieuw, anders blijven ze daar staan.');
    });
    renderGearchiveerd();renderAll();
   });
@@ -4430,6 +4485,40 @@ function avgDossier(p){
  voeg('Waar deze persoon zelf toegang toe heeft',eigen.length?eigen.join('; '):'niets');
  return regels;
 }
+/* Het inzagedossier beschreef alleen het account. Maar wat er in de app over een
+   cliënt is vastgelegd — de rapportages, de agenda, het Ik-Boek, de
+   geheugensteuntjes en de gesprekken — is juist de kern van een inzageverzoek en
+   van een overdracht (AVG art. 15 en 20). Alleen voor cliënten: een medewerker
+   of naaste heeft hier geen dossier. */
+function avgDossierinhoud(p){
+ if(!p||p.type!=='client')return [];
+ var d=CLIENTDATA[p.id],rijen=[];
+ if(d&&d.doelen)d.doelen.forEach(function(doel){
+  rijen.push({kop:'Doel',waarde:doel.titel});
+  (doel.rapportages||[]).forEach(function(r){
+   rijen.push({kop:'Rapportage bij “'+doel.titel+'”',waarde:r.tijd+' — '+(r.auteur||'onbekend')+': '+r.tekst+(r.media?' (met beeld)':'')});
+  });
+ });
+ if(d&&d.agenda)d.agenda.forEach(function(a){
+  rijen.push({kop:'Afspraak',waarde:a.datumlabel+' '+a.tijd+' — '+a.titel+(a.locatie?' ('+a.locatie+')':'')});
+ });
+ if(d&&d.ikboek)d.ikboek.forEach(function(e){
+  rijen.push({kop:'Ik-Boek',waarde:e.tijd+' — '+e.tekst});
+ });
+ var g=GEHEUGEN[p.id];
+ if(g&&g.items)g.items.forEach(function(it){
+  rijen.push({kop:'Geheugensteuntje',waarde:it.titel+' — '+it.tijd+(it.actief?'':' (uit)')});
+ });
+ if(typeof chatSleutelsVanClient==='function')chatSleutelsVanClient(p.id).forEach(function(k){
+  var th=CHATSTORE[k];
+  if(!th||!th.berichten||!th.berichten.length)return;
+  rijen.push({kop:'Gesprek “'+(th.naam||k)+'”',waarde:th.berichten.length+' bericht'+(th.berichten.length===1?'':'en')+', laatste: '+th.berichten[th.berichten.length-1].tekst});
+ });
+ var w=CA_INSTELLINGEN[p.id];
+ if(w)rijen.push({kop:'Instellingen in de app',waarde:Object.keys(w).map(function(k){return k+': '+(w[k]?'aan':'uit');}).join(', ')});
+ if(!rijen.length)rijen.push({kop:'Dossier',waarde:'Er is nog niets in het dossier vastgelegd.'});
+ return rijen;
+}
 function avgLogregels(p){
  var n=naam(p);
  return LOGBOEK.filter(function(l){
@@ -4438,7 +4527,7 @@ function avgLogregels(p){
 }
 function openAvgDossier(id){
  var p=findPerson(id);if(!p)return;
- var regels=avgDossier(p),logs=avgLogregels(p);
+ var regels=avgDossier(p),logs=avgLogregels(p),inhoud=avgDossierinhoud(p);
  openModal('<h3>Inzage: '+esc(naam(p))+'</h3>'+
   '<p class="mini" style="margin:0 0 10px">Alles wat in MyWepp over deze persoon is vastgelegd. Bedoeld om een inzageverzoek te beantwoorden (AVG art. 15) en om de gegevens over te dragen (art. 20).</p>'+
   '<div class="msec">'+regels.map(function(r){
@@ -4446,6 +4535,12 @@ function openAvgDossier(id){
     '<span style="flex:0 0 190px;color:var(--ink-soft)">'+esc(r.kop)+'</span>'+
     '<span style="flex:1;min-width:0;overflow-wrap:break-word">'+esc(r.waarde)+'</span></div>';
   }).join('')+'</div>'+
+  (inhoud.length?'<div class="sublistlabel">Inhoud van het dossier ('+inhoud.length+')</div>'+
+   '<div class="msec" style="max-height:200px;overflow:auto">'+inhoud.map(function(r){
+    return '<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px">'+
+     '<span style="flex:0 0 190px;color:var(--ink-soft)">'+esc(r.kop)+'</span>'+
+     '<span style="flex:1;min-width:0;overflow-wrap:break-word">'+esc(r.waarde)+'</span></div>';
+   }).join('')+'</div>':'')+
   '<div class="sublistlabel">Vastgelegde handelingen ('+logs.length+')</div>'+
   '<div class="msec" style="max-height:170px;overflow:auto">'+
    (logs.length?logs.map(function(l){
@@ -4457,6 +4552,11 @@ function openAvgDossier(id){
  el('avg-export').addEventListener('click',function(){
   var rij=[['Onderwerp','Gegeven'].map(csvVeld).join(';')];
   regels.forEach(function(r){rij.push([r.kop,r.waarde].map(csvVeld).join(';'));});
+  if(inhoud.length){
+   rij.push('');
+   rij.push(['Onderdeel','Inhoud'].map(csvVeld).join(';'));
+   inhoud.forEach(function(r){rij.push([r.kop,r.waarde].map(csvVeld).join(';'));});
+  }
   rij.push('');
   rij.push(['Tijd','Wie','Groep','Handeling'].map(csvVeld).join(';'));
   logs.forEach(function(l){rij.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
@@ -4688,7 +4788,9 @@ function renderStatTable(){
 }
 function renderStatDigibord(){
  var vandaag=new Date(2026,8,14);
- var rows=DIGIBORD.filter(function(d){return d.on;}).map(function(d){
+ /* Volgde nog de standaardstand uit DIGIBORD en niet die van deze groep, dus
+    de statistiek toonde borden die hier helemaal niet aanstaan. */
+ var rows=DIGIBORD.filter(function(d){return digiOn(d.k);}).map(function(d){
   var daysAgo=avatarHash(d.k+huidigeGroep)%12;
   var datum=new Date(vandaag);datum.setDate(datum.getDate()-daysAgo);
   return {label:d.l,daysAgo:daysAgo,datumStr:datum.getDate()+' '+MAAND_AFK[datum.getMonth()],langGeleden:daysAgo>7};
@@ -4749,15 +4851,28 @@ function renderMaaltijdKalender(){
  ['Ma','Di','Wo','Do','Vr','Za','Zo'].forEach(function(dn){html+='<div class="calhead">'+dn+'</div>';});
  for(var i=0;i<startWeekday;i++)html+='<div class="calcell empty"></div>';
  for(var day=1;day<=daysInMonth;day++){
-  html+='<div class="calcell" data-maaltijddag="'+day+'">'+day+'<span class="dot" style="background:'+(reserveringen[day]?'var(--moss)':'var(--brick)')+'"></span></div>';
+  html+='<div class="calcell" role="button" tabindex="0" aria-pressed="'+(reserveringen[day]?'true':'false')+'" aria-label="'+day+' '+MAANDNAMEN[month]+' — '+(reserveringen[day]?'aangemeld':'afgemeld')+'" data-maaltijddag="'+day+'">'+day+'<span class="dot" style="background:'+(reserveringen[day]?'var(--moss)':'var(--brick)')+'"></span></div>';
  }
  html+='</div>';
  el('maaltijd-kalender').innerHTML=html;
+ var clientNaam=naam(findPerson(clientId))||'';
  Array.prototype.forEach.call(el('maaltijd-kalender').querySelectorAll('[data-maaltijddag]'),function(c){
   var day=+c.getAttribute('data-maaltijddag');
-  c.addEventListener('click',function(){
+  /* Een aan- of afmelding voor een maaltijd is een echte handeling: hij werd
+     alleen in het geheugen gezet, verdween bij een herlaad en stond nergens in
+     het logboek. En met alleen een muisklik was de kalender niet te bedienen. */
+  var wissel=function(){
    if(reserveringen[day])delete reserveringen[day]; else reserveringen[day]=true;
-   c.querySelector('.dot').style.background=reserveringen[day]?'var(--moss)':'var(--brick)';
+   var aan=!!reserveringen[day];
+   c.querySelector('.dot').style.background=aan?'var(--moss)':'var(--brick)';
+   c.setAttribute('aria-pressed',aan?'true':'false');
+   c.setAttribute('aria-label',day+' '+MAANDNAMEN[month]+' — '+(aan?'aangemeld':'afgemeld'));
+   logActie(clientNaam+' is '+(aan?'aangemeld':'afgemeld')+' voor de maaltijd op '+day+' '+MAANDNAMEN[month]+' '+year);
+   bewaarStraks('maaltijden',function(){syncOrganisatieData();});
+  };
+  c.addEventListener('click',wissel);
+  c.addEventListener('keydown',function(e){
+   if(e.key===' '||e.key==='Enter'){e.preventDefault();wissel();}
   });
  });
 }
@@ -4918,8 +5033,29 @@ function ensureClientData(id){
  CLIENTDATA[id]=d;
  return d;
 }
+/* Uitloggen moet ook echt afsluiten. Het loginscherm vulde alleen de body, maar
+   de onderbalk, de SOS-knop en de cliëntkiezer bleven werken: één tik op Doelen
+   en je zat weer in het dossier zonder ooit te hebben ingelogd. */
+var caUitgelogd=false;
+function caZetIngelogd(aan){
+ caUitgelogd=!aan;
+ var nav=document.querySelector('#view-clientapp .bottomnav')||document.querySelector('.bottomnav');
+ if(nav)nav.hidden=!aan;
+ var sos=el('ca-sos-btn');if(sos)sos.hidden=!aan;
+ var kies=el('ca-client-select');if(kies)kies.disabled=!aan;
+ if(aan){renderCaHeader();}
+ else{el('ca-naam').textContent='MyWepp';el('ca-avatar').innerHTML='';}
+}
+/* De clientapp is het dossier zelf, geen beheerlijst. Een cliënt die geblokkeerd
+   is, van wie de toegang is verlopen of die al gemarkeerd staat voor verwijdering
+   hoort hier niet meer te openen: blokkeren is juist het moment waarop het kijken
+   stopt (AVG art. 32 — toegang past bij de status van het account). */
+function clientenMetToegang(){
+ return personenVanType('client').filter(function(p){return p._state!=='verwijderd'&&heeftToegang(p);});
+}
 function renderClientApp(){
- var clients=personenVanType('client');
+ if(caUitgelogd){renderLoginScherm();return;}
+ var clients=clientenMetToegang();
  if(!caClientId||!clients.some(function(c){return c.id===caClientId;}))caClientId=clients[0]?clients[0].id:null;
  el('ca-client-select').innerHTML=clients.map(function(c){return '<option value="'+c.id+'"'+(c.id===caClientId?' selected':'')+'>'+esc(naam(c))+'</option>';}).join('');
  renderCaHeader();
@@ -4938,7 +5074,12 @@ document.querySelectorAll('.bottomnav button').forEach(function(b){
  });
 });
 function renderCaTab(tab){
- if(!caClientId){el('ca-body').innerHTML='<p class="empty-msg">Geen cliënten in deze groep.</p>';return;}
+ if(!caClientId){
+  var totaal=personenVanType('client').length;
+  el('ca-body').innerHTML='<p class="empty-msg">'+(totaal?'Geen cliënt in '+esc(huidigeGroep)+' met een actief account. Geblokkeerde cliënten en cliënten met een verlopen toegang zijn hier niet te openen.':'Geen cliënten in deze groep.')+'</p>';
+  el('ca-naam').textContent='—';el('ca-avatar').innerHTML='';
+  return;
+ }
  if(tab==='info')renderCaInfo();
  else if(tab==='doelen')renderCaDoelen();
  else if(tab==='agenda')renderCaAgenda();
@@ -5085,7 +5226,14 @@ function renderCaGeheugen(){
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-geh-verwijder]'),function(b){
   b.addEventListener('click',function(){
-   g.items=g.items.filter(function(x){return x.id!==+b.getAttribute('data-geh-verwijder');});bewaarClientData(caClientId);renderCaGeheugen();
+   var gid=+b.getAttribute('data-geh-verwijder');
+   var it=g.items.filter(function(x){return x.id===gid;})[0];
+   openModal('<h3>Herinnering verwijderen</h3><div class="msec"><p>Weet je zeker dat je <b>'+esc(it?it.titel:'deze herinnering')+'</b> wilt verwijderen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-bevestig').addEventListener('click',function(){
+    g.items=g.items.filter(function(x){return x.id!==gid;});bewaarClientData(caClientId);
+    closeModal();renderCaGeheugen();
+   });
   });
  });
 }
@@ -5131,7 +5279,7 @@ function renderCaInstellingen(){
  el('ca-uitloggen').addEventListener('click',function(){
   openModal('<h3>Uitloggen</h3><div class="msec"><p>Weet je zeker dat je wilt uitloggen?</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Uitloggen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
-  el('modal-bevestig').addEventListener('click',function(){closeModal();renderLoginScherm();});
+  el('modal-bevestig').addEventListener('click',function(){closeModal();logActie('Uitgelogd uit MyWepp Personal');renderLoginScherm();});
  });
  el('ca-instellingen-opslaan').addEventListener('click',function(){
   Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-inst]'),function(inp){
@@ -5176,13 +5324,24 @@ function renderMijnProfiel(){
  el('mp-terug').addEventListener('click',renderCaInstellingen);
  el('mp-foto-wijzigen').addEventListener('click',function(){openFotoModal('mp-foto',p);});
  el('mp-opslaan').addEventListener('click',function(){
+  /* De tweede stap werd al naar het account doorgezet, de rest niet: je naam
+     en e-mailadres veranderden alleen in dit scherm en stonden in het beheer
+     nog op het oude. Een ongeldig adres werd zonder meer aangenomen, terwijl
+     je daarmee inlogt. */
+  var mail=el('mp-mail').value.trim();
+  var geboorte=el('mp-geboortedatum').value;
+  var fout='';
+  if(!mailGeldig(mail))fout='Vul een geldig e-mailadres in.';
+  else if(geboorte&&(!geldigeDatum(geboorte)||geboorte>vandaagISO()))fout='Een geboortedatum in de toekomst kan niet.';
+  if(fout){el('mp-bevestiging').innerHTML='<p class="mini" style="color:var(--brick);margin-top:10px">'+esc(fout)+'</p>';return;}
   p.voor=el('mp-voor').value.trim()||p.voor;
   p.achter=el('mp-achter').value.trim()||p.achter;
   p.mobiel=el('mp-mobiel').value.trim();
   p.functie=el('mp-functie').value.trim();
-  p.geboortedatum=el('mp-geboortedatum').value;
-  p.mail=el('mp-mail').value.trim();
+  p.geboortedatum=geboorte;
+  p.mail=mail;
   p.opmerkingen=el('mp-opmerkingen').value;
+  zetProfielOpAccount();
   el('mp-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Profiel opgeslagen.</div>';
  });
  el('mp-tweestaps-toggle').addEventListener('click',function(){
@@ -5220,6 +5379,24 @@ function renderMijnProfiel(){
 /* "Mijn profiel" en het account in de beheeromgeving zijn dezelfde persoon.
    Werd dat niet doorgezet, dan zette iemand de tweede stap aan terwijl de
    controle bleef melden dat hij ontbrak. */
+/* Dezelfde doorzetting als bij de tweede stap, maar dan voor de gegevens die je
+   in Mijn profiel wijzigt. De wijziging loopt via dezelfde controle-en-doorvoeren
+   route als elke andere wijziging in het beheer. */
+function zetProfielOpAccount(){
+ var ik=huidigeGebruiker();
+ if(!ik)return;
+ var oud=naam(ik),veranderd=[];
+ if(MIJN_PROFIEL.voor&&ik.voor!==MIJN_PROFIEL.voor){ik.voor=MIJN_PROFIEL.voor;veranderd.push('voornaam');}
+ if(MIJN_PROFIEL.achter&&ik.achter!==MIJN_PROFIEL.achter){ik.achter=MIJN_PROFIEL.achter;veranderd.push('achternaam');}
+ if((ik.mail||'')!==MIJN_PROFIEL.mail){ik.mail=MIJN_PROFIEL.mail;veranderd.push('e-mailadres');}
+ if((ik.tel||'')!==MIJN_PROFIEL.mobiel){ik.tel=MIJN_PROFIEL.mobiel;veranderd.push('telefoonnummer');}
+ if(MIJN_PROFIEL.foto&&ik.foto!==MIJN_PROFIEL.foto){ik.foto=MIJN_PROFIEL.foto;veranderd.push('profielfoto');}
+ if(!veranderd.length)return;
+ if(ik._state!=='nieuw')ik._state='gewijzigd';
+ logActie(oud+' heeft het eigen profiel aangepast: '+veranderd.join(', '));
+ syncToSupabase();
+ if(typeof renderAll==='function')renderAll();
+}
 function zetTweestapsOpAccount(aan){
  var ik=huidigeGebruiker();
  if(!ik)return;
@@ -5242,17 +5419,22 @@ function openWachtwoordModal(){
   if(!huidig)fout='Vul je huidige wachtwoord in.';
   else if(nieuw.length<8)fout='Nieuw wachtwoord moet minstens 8 tekens zijn.';
   else if(nieuw!==bevestig)fout='De wachtwoorden komen niet overeen.';
+  else if(nieuw===huidig)fout='Kies een ander wachtwoord dan je huidige.';
   el('ww-fout').textContent=fout;el('ww-fout').hidden=!fout;
   if(fout)return;
+  /* Een wachtwoordwijziging is een beveiligingsgebeurtenis en hoort aantoonbaar
+     in het logboek (AVG art. 5 lid 2 en art. 32). Het wachtwoord zelf niet. */
+  logActie('Wachtwoord gewijzigd');
   openModal('<h3>Wachtwoord wijzigen</h3><div class="msec"><p>Je wachtwoord is gewijzigd.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
   el('modal-snap').addEventListener('click',closeModal);
  });
 }
 function renderLoginScherm(){
+ caZetIngelogd(false);
  var html='<div style="padding:30px 10px;text-align:center">';
  html+='<h2 style="margin:0 0 4px">Welkom!</h2>';
  html+='<p class="mini" style="margin:0 0 20px">Log in om verder te gaan.</p>';
- html+='<div class="field" style="text-align:left"><label>E-mailadres</label><input id="login-mail" placeholder="naam@voorbeeld.nl" value="'+MIJN_PROFIEL.mail+'"></div>';
+ html+='<div class="field" style="text-align:left"><label>E-mailadres</label><input id="login-mail" placeholder="naam@voorbeeld.nl" value="'+esc(MIJN_PROFIEL.mail||'')+'"></div>';
  html+='<div class="field" style="text-align:left"><label>Wachtwoord</label><input type="password" id="login-ww" placeholder="Wachtwoord"></div>';
  html+='<div class="togglerow" style="border:0;padding:6px 0"><span>Ingelogd blijven</span><label class="toggle"><input type="checkbox" id="login-blijven" checked><span class="track"></span><span class="knob"></span></label></div>';
  html+='<button type="button" class="ghost small" style="width:100%;margin:6px 0 14px" id="login-vergeten">Wachtwoord vergeten?</button>';
@@ -5268,7 +5450,8 @@ function renderLoginScherm(){
   var ok=el('login-mail').value.trim()&&el('login-ww').value;
   el('login-fout').hidden=!!ok;
   if(!ok)return;
-  if(MIJN_PROFIEL.tweestaps)renderLogin2fa(); else renderCaInfo();
+  if(MIJN_PROFIEL.tweestaps){renderLogin2fa();return;}
+  caZetIngelogd(true);renderCaInfo();
  });
 }
 function renderLogin2fa(){
@@ -5284,11 +5467,19 @@ function renderLogin2fa(){
  el('login-2fa-controleren').addEventListener('click',function(){
   var code=el('login-2fa-code').value.trim(),ok=/^\d{6}$/.test(code);
   el('login-2fa-fout').hidden=ok;
-  if(ok)renderCaInfo();
+  if(ok){caZetIngelogd(true);renderCaInfo();}
  });
 }
 
 /* --- Doelen --- */
+/* Een leesbaar tijdstempel in dezelfde vorm als de bestaande rapportages:
+   dd-mm-jjjj uu:mm. Zonder datum wordt het moment van schrijven gebruikt. */
+function rapportageTijd(datumIso){
+ var nu=new Date();
+ var d=geldigeDatum(datumIso)?new Date(datumIso+'T00:00:00'):nu;
+ return tweeCijfers(d.getDate())+'-'+tweeCijfers(d.getMonth()+1)+'-'+d.getFullYear()+' '+
+  tweeCijfers(nu.getHours())+':'+tweeCijfers(nu.getMinutes());
+}
 var caDoelenView='doelen';
 /* --- Media viewer (gedeeld) --- */
 var PLAY_SVG='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
@@ -5414,7 +5605,10 @@ function renderCaDoelen(){
     var dienst=el('rapport-dienst-'+doelId).value;
     var datum=el('rapport-datum-'+doelId).value;
     var doel=d.doelen.filter(function(x){return x.id===doelId;})[0];
-    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:'vandaag',dienst:dienst,datum:datum,auteur:'Jij',media:media,audio:audio,reacties:{}});bewaarClientData(caClientId);
+    /* Een rapportage in een zorgdossier moet laten zien wie hem schreef en
+       wanneer. 'Jij' en 'vandaag' zeggen een week later niets meer, en in het
+       inzagedossier (art. 15) stond er dan geen auteur bij. */
+    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:rapportageTijd(datum),dienst:dienst,datum:datum,auteur:wieBenIk(),media:media,audio:audio,reacties:{}});bewaarClientData(caClientId);
     renderCaDoelen();
    });
   });
@@ -5488,7 +5682,7 @@ function monthGridHtml(year,month,markedDays,selectedDay,hideTitle){
  for(var i=0;i<startWeekday;i++)html+='<div class="calcell empty"></div>';
  for(var day=1;day<=daysInMonth;day++){
   var marked=markedDays.indexOf(day)>-1;
-  html+='<div class="calcell'+(day===selectedDay?' selected':'')+'" data-calday="'+day+'">'+day+(marked?'<span class="dot" style="background:var(--accent)"></span>':'')+'</div>';
+  html+='<div class="calcell'+(day===selectedDay?' selected':'')+'" role="button" tabindex="0" aria-pressed="'+(day===selectedDay?'true':'false')+'" aria-label="'+day+' '+MAANDNAMEN[month]+(marked?', met afspraken':'')+'" data-calday="'+day+'">'+day+(marked?'<span class="dot" style="background:var(--accent)"></span>':'')+'</div>';
  }
  html+='</div>';
  return html;
@@ -5552,6 +5746,16 @@ function agendaCardHtml(a){
   (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+esc(a.locatie)+'">🗺️ '+esc(a.locatie)+'</div>':'')+
   (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
 }
+/* De datum stond vast op 20 september. Zette je een afspraak op de dag die je
+   bekeek, dan belandde hij ergens anders en leek toevoegen niet te werken. De
+   dag die in beeld staat is het logische voorstel. */
+function tweeCijfers(n){return (n<10?'0':'')+n;}
+function caAgendaZichtbareDatum(){
+ var dag=caAgendaView==='kalender'?(caAgendaDag||1):caAgendaLijstDag;
+ var dagen=new Date(caAgendaJaar,caAgendaMaand+1,0).getDate();
+ if(dag>dagen)dag=dagen;
+ return caAgendaJaar+'-'+tweeCijfers(caAgendaMaand+1)+'-'+tweeCijfers(dag);
+}
 var PIJL_L='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>';
 var PIJL_R='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 6l6 6-6 6"/></svg>';
 function renderCaAgenda(){
@@ -5585,7 +5789,9 @@ function renderCaAgenda(){
   b.addEventListener('click',function(){caAgendaView=b.getAttribute('data-agendaview');caAgendaDag=null;renderCaAgenda();});
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-calday]'),function(c){
-  c.addEventListener('click',function(){caAgendaDag=+c.getAttribute('data-calday');renderCaAgenda();});
+  var kies=function(){caAgendaDag=+c.getAttribute('data-calday');renderCaAgenda();};
+  c.addEventListener('click',kies);
+  c.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();kies();}});
  });
  var alledagenBtn=el('ca-agenda-alledagen');
  if(alledagenBtn)alledagenBtn.addEventListener('click',function(){caAgendaDag=null;renderCaAgenda();});
@@ -5601,11 +5807,14 @@ function renderCaAgenda(){
   for(var mi=0;mi<60;mi++)minOpties+='<option'+(mi===0?' selected':'')+'>'+(mi<10?'0'+mi:mi)+'</option>';
   var herinneringOpties=HERINNERING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
   var herhalingOpties=HERHALING_OPTIES.map(function(o){return '<option value="'+o.value+'">'+o.label+'</option>';}).join('');
-  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId);});
+  /* Een herinnering naar iemand die geblokkeerd is of van wie de toegang is
+     verlopen komt nergens aan en deelt de afspraak van de cliënt met iemand
+     die er niet meer bij hoort. */
+  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId)&&x._state!=='verwijderd'&&heeftToegang(x);});
   var herinnerChecklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'+avatarHtmlSized(naam(p),26)+'<input type="checkbox" value="'+p.id+'" class="afspr-herinner" style="width:auto">'+esc(naam(p))+'</label>';}).join('');
   openModal('<h3>Afspraak toevoegen</h3>'+
    '<div class="field"><label>Titel</label><input id="modal-afspr-titel" placeholder="Bijv. Fysiotherapie"></div>'+
-   '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="2026-09-20"></div>'+
+   '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="'+caAgendaZichtbareDatum()+'"></div>'+
    '<div class="field"><label>Tijd</label><div class="timerow"><select id="modal-afspr-uur">'+uurOpties+'</select><span>:</span><select id="modal-afspr-min">'+minOpties+'</select></div></div></div>'+
    '<div class="field"><label>Locatie</label><input id="modal-afspr-locatie" placeholder="Bijv. Buurtcentrum"></div>'+
    '<div class="field"><label>Herinnering</label><select id="modal-afspr-herinnering">'+herinneringOpties+'</select></div>'+
@@ -5616,15 +5825,24 @@ function renderCaAgenda(){
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
    var titel=el('modal-afspr-titel').value.trim();if(!titel){el('modal-afspr-titel').style.borderColor='var(--brick)';return;}
+   /* Zonder datum kwam de afspraak op '—' te staan en was hij daarna nergens
+      meer te vinden: de kalender en de lijst filteren allebei op datum. */
    var datumval=el('modal-afspr-datum').value;
-   var datumlabel='—';
-   if(datumval){var dt=new Date(datumval+'T00:00:00');datumlabel=dt.getDate()+' '+MAAND_AFK[dt.getMonth()];}
+   if(!datumval){el('modal-afspr-datum').style.borderColor='var(--brick)';return;}
+   var dt=new Date(datumval+'T00:00:00');
+   if(isNaN(dt.getTime())){el('modal-afspr-datum').style.borderColor='var(--brick)';return;}
+   var datumlabel=dt.getDate()+' '+MAAND_AFK[dt.getMonth()];
    var tijd=el('modal-afspr-uur').value+':'+el('modal-afspr-min').value;
    var herinnerdAan=Array.from(document.querySelectorAll('.afspr-herinner:checked')).map(function(c){return +c.value;});
    d.agenda.push({id:d._nextAgendaId++,titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
     locatie:el('modal-afspr-locatie').value.trim(),herinnerdAan:herinnerdAan,klaar:false,
     herinnering:el('modal-afspr-herinnering').value,herhaling:el('modal-afspr-herhaling').value});
    bewaarClientData(caClientId);
+   /* Spring naar de dag van de afspraak, anders voeg je iets toe dat je
+      daarna niet ziet staan. */
+   caAgendaJaar=dt.getFullYear();caAgendaMaand=dt.getMonth();
+   caAgendaLijstDag=dt.getDate();
+   if(caAgendaView==='kalender'&&caAgendaDag)caAgendaDag=dt.getDate();
    closeModal();renderCaAgenda();
   });
  });
@@ -5653,7 +5871,7 @@ function renderCaIkboek(){
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
    var tekst=el('modal-ikboek-tekst').value.trim();if(!tekst){el('modal-ikboek-tekst').style.borderColor='var(--brick)';return;}
-   d.ikboek.push({id:d._nextIkboekId++,tekst:tekst,tijd:'vandaag',mediaType:el('modal-ikboek-mediatype').value,reacties:{}});bewaarClientData(caClientId);
+   d.ikboek.push({id:d._nextIkboekId++,tekst:tekst,tijd:rapportageTijd(''),auteur:wieBenIk(),mediaType:el('modal-ikboek-mediatype').value,reacties:{}});bewaarClientData(caClientId);
    closeModal();renderCaIkboek();
   });
  });
@@ -5697,9 +5915,20 @@ var CHATSTORE={};
 function chatSleutel1op1(clientId,persoonId){return '1on1-'+clientId+'-'+persoonId;}
 function chatThreadsForClient(clientId){
  var p=findPerson(clientId);
+ /* Er werd een gesprek aangeboden met iedereen die een rol had, ook als die
+    persoon geblokkeerd is of zijn toegang is verlopen. Een nieuw gesprek met
+    zo iemand beginnen hoort niet te kunnen; een bestaand gesprek blijft wel
+    staan, want dat is vastgelegde communicatie. */
  var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,clientId);});
- var threads=[{key:'group-'+clientId,naam:'Team '+naam(p),groep:true,defaultLeden:betrokkenen}];
- betrokkenen.filter(function(b){return b.type==='medewerker';}).forEach(function(m){threads.push({key:chatSleutel1op1(clientId,m.id),naam:naam(m),groep:false,persoon:m});});
+ var actief=betrokkenen.filter(function(x){return x._state!=='verwijderd'&&heeftToegang(x);});
+ var threads=[{key:'group-'+clientId,naam:'Team '+naam(p),groep:true,defaultLeden:actief}];
+ betrokkenen.filter(function(b){
+  if(b.type!=='medewerker')return false;
+  if(b._state!=='verwijderd'&&heeftToegang(b))return true;
+  /* Wel tonen als er al berichten zijn, anders weglaten. */
+  var bestaand=CHATSTORE[chatSleutel1op1(clientId,b.id)];
+  return !!(bestaand&&bestaand.berichten&&bestaand.berichten.length);
+ }).forEach(function(m){threads.push({key:chatSleutel1op1(clientId,m.id),naam:naam(m),groep:false,persoon:m,inactief:!(m._state!=='verwijderd'&&heeftToegang(m))});});
  var d=ensureClientData(clientId);
  (d.customChats||[]).forEach(function(c){
   if(threads.some(function(th){return th.key===c.key;}))return;
@@ -5735,7 +5964,7 @@ function renderCaChatList(){
  var html=threads.map(function(t){
   var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg),last=th.berichten[th.berichten.length-1];
   return '<div class="chatlist-row" data-openchat="'+t.key+'">'+avatarHtmlSized(th.naam,38)+
-   '<div class="ctxt"><b>'+esc(th.naam)+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+esc(last?last.van+': '+last.tekst:'Nog geen berichten')+'</span></div>'+
+   '<div class="ctxt"><b>'+esc(th.naam)+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+esc(t.inactief?'Kan nu niet inloggen — alleen teruglezen':(last?last.van+': '+last.tekst:'Nog geen berichten'))+'</span></div>'+
    '<span class="ctime">'+(last?last.tijd:'')+'</span></div>';
  }).join('');
  html+='<button type="button" class="addbtn-row" id="ca-nieuw-gesprek">+ Nieuw gesprek</button>';
@@ -5744,7 +5973,7 @@ function renderCaChatList(){
   row.addEventListener('click',function(){caChatKey=row.getAttribute('data-openchat');renderCaChatThread();});
  });
  el('ca-nieuw-gesprek').addEventListener('click',function(){
-  var betrokkenen=people.filter(function(x){return x.type==='medewerker'&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId);});
+  var betrokkenen=people.filter(function(x){return x.type==='medewerker'&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId)&&x._state!=='verwijderd'&&heeftToegang(x);});
   if(!betrokkenen.length){
    openModal('<h3>Nieuw gesprek</h3><div class="msec"><p>Geen medewerkers met toegang tot deze cliënt om een gesprek mee te starten.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
    el('modal-snap').addEventListener('click',closeModal);
@@ -5785,6 +6014,8 @@ function renderCaChatList(){
     d.customChats.push({key:key,groep:true,naam:naamVal,leden:leden});
     caChatKey=key;
    }
+   /* Een nieuw gesprek stond alleen in het geheugen: na een herlaad was het weg. */
+   bewaarClientData(caClientId);
    closeModal();renderCaChatThread();
   });
  });
@@ -5811,11 +6042,13 @@ function renderCaChatThread(){
    return '<div class="sublistlabel" style="margin-top:'+(mi===0?'10px':'16px')+'">'+mp.label+'</div><div class="mediagrid">'+Array(mp.n).fill(0).map(function(_,i){return '<div class="mcell" style="background:'+AVCOLORS[(mi*4+i)%AVCOLORS.length]+'"></div>';}).join('')+'</div>';
   }).join('')+'</div>';
  }
- html+='<div class="chatinputrow"><input id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
+ html+=t.inactief
+  ?'<p class="empty-msg" style="margin-top:10px">'+esc(th.naam)+' kan op dit moment niet inloggen. Je kunt dit gesprek teruglezen, maar niets versturen.</p>'
+  :'<div class="chatinputrow"><input id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
  el('ca-body').innerHTML=html;
  wireMediaThumbs(el('ca-body'));
  el('ca-chat-terug').addEventListener('click',renderCaChatList);
- el('ca-chat-send').addEventListener('click',function(){
+ if(!t.inactief)el('ca-chat-send').addEventListener('click',function(){
   var v=el('ca-chat-input').value.trim();if(!v)return;
   th.berichten.push({id:th._nextMsgId++,van:'Jij',tekst:v,tijd:'nu'});bewaarChatThread(caChatKey);el('ca-chat-input').value='';renderCaChatThread();
  });
@@ -5836,9 +6069,15 @@ function renderCaChatThread(){
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-delmsg]'),function(b){
   b.addEventListener('click',function(){
+   /* Overal elders wordt om bevestiging gevraagd; hier verdween een bericht op
+      één tik, zonder weg terug. */
    var id=+b.getAttribute('data-delmsg');
-   th.berichten=th.berichten.filter(function(x){return x.id!==id;});bewaarChatThread(caChatKey);
-   renderCaChatThread();
+   openModal('<h3>Bericht verwijderen</h3><div class="msec"><p>Weet je zeker dat je dit bericht wilt verwijderen? Dit kan niet ongedaan gemaakt worden.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
+   el('modal-annuleer').addEventListener('click',closeModal);
+   el('modal-bevestig').addEventListener('click',function(){
+    th.berichten=th.berichten.filter(function(x){return x.id!==id;});bewaarChatThread(caChatKey);
+    closeModal();renderCaChatThread();
+   });
   });
  });
 }
@@ -5848,41 +6087,79 @@ function renderCaGroepBewerken(){
  var th=CHATSTORE[caChatKey];if(!th)return;
  var alleBetrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;});
  var leden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)>-1;});
- var nietleden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)<0;});
+ /* Je kon iedereen uit de groep in een cliëntgesprek zetten, ook wie geen enkele
+    rol op deze cliënt heeft of wiens account geblokkeerd of verlopen is. Daarmee
+    lekt een heel gesprek over de cliënt naar iemand zonder grondslag. Toevoegen
+    kan alleen wie hier al bij hoort; wie er al in zit blijft wel zichtbaar, zodat
+    je hem eruit kunt halen. */
+ function magInGesprek(x){return x._state!=='verwijderd'&&heeftToegang(x)&&!!rolOpClient(x,caClientId);}
+ var nietleden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)<0&&magInGesprek(x);});
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-groep-terug">← Terug</button><b style="font-size:15px">Chatgroep bewerken</b></div>';
  html+='<div class="field"><label>Groepsnaam</label><input id="ca-groep-naam" value="'+esc(th.naam)+'"></div>';
  html+='<div class="sublistlabel" style="margin-top:14px">Leden ('+leden.length+')</div>';
  html+=leden.length? leden.map(function(l){
-  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+esc(naam(l))+'</b><span>'+esc(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
+  return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+esc(naam(l))+'</b><span>'+esc(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+(magInGesprek(l)?'':' · hoort hier niet meer bij')+'</span></div>'+
    '<button type="button" class="iconbtn danger" data-verwijderlid="'+l.id+'" aria-label="Verwijder">'+TRASH_SVG+'</button></div>';
  }).join('') : '<p class="empty-msg">Nog geen leden.</p>';
  html+='<div class="sublistlabel">Toevoegen</div>';
  html+=nietleden.length? nietleden.map(function(l){
   return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+esc(naam(l))+'</b><span>'+esc(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+'</span></div>'+
    '<button type="button" class="small" data-toevoegenlid="'+l.id+'">+ Toevoegen</button></div>';
- }).join('') : '<p class="empty-msg">Iedereen zit al in de groep.</p>';
+ }).join('') : '<p class="empty-msg">Er is niemand meer om toe te voegen: alleen wie een rol op deze cliënt heeft en kan inloggen, kan in dit gesprek.</p>';
  el('ca-body').innerHTML=html;
  el('ca-groep-terug').addEventListener('click',renderCaChatThread);
- el('ca-groep-naam').addEventListener('blur',function(){th.naam=this.value.trim()||th.naam;});
+ /* Zonder bewaren was een hernoeming of een gewijzigd ledenlijstje na een
+    herlaad weer weg. */
+ el('ca-groep-naam').addEventListener('blur',function(){
+  var nieuw=this.value.trim();
+  if(!nieuw||nieuw===th.naam)return;
+  th.naam=nieuw;bewaarChatThread(caChatKey);
+ });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-verwijderlid]'),function(b){
   b.addEventListener('click',function(){
-   var id=+b.getAttribute('data-verwijderlid');th.leden=th.leden.filter(function(x){return x!==id;});renderCaGroepBewerken();
+   var id=+b.getAttribute('data-verwijderlid');th.leden=th.leden.filter(function(x){return x!==id;});
+   bewaarChatThread(caChatKey);renderCaGroepBewerken();
   });
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-toevoegenlid]'),function(b){
   b.addEventListener('click',function(){
-   th.leden.push(+b.getAttribute('data-toevoegenlid'));renderCaGroepBewerken();
+   th.leden.push(+b.getAttribute('data-toevoegenlid'));
+   bewaarChatThread(caChatKey);renderCaGroepBewerken();
   });
  });
 }
 
 /* --- SOS --- */
 var SOS_HOLD_MS=1400,SOS_CIRC=452,sosHoldTimer=null;
+/* Een SOS ging naar de eerste drie mensen in de groep, ongeacht of ze iets met
+   deze cliënt te maken hadden en ongeacht of hun account nog geldig was. Dat is
+   operationeel verkeerd (je belt iemand die er niet over gaat) en het deelt de
+   naam en de noodsituatie van de cliënt met iemand zonder grondslag. Alleen wie
+   een rol op deze cliënt heeft en toegang heeft, wordt gewaarschuwd —
+   contactpersonen eerst. */
+function sosOntvangers(clientId){
+ var lijst=people.filter(function(x){
+  return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&
+   x._state!=='verwijderd'&&heeftToegang(x)&&rolOpClient(x,clientId);
+ });
+ lijst.sort(function(a,b){
+  var av=a.contactVolgorde||99,bv=b.contactVolgorde||99;
+  if(av!==bv)return av-bv;
+  return naam(a).localeCompare(naam(b));
+ });
+ return lijst.slice(0,3);
+}
 function sosActivate(){
- var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1;}).slice(0,3);
- el('sos-card').innerHTML='<h3>Hulp is onderweg</h3><div class="msec"><p>De volgende personen zijn zojuist gewaarschuwd:</p></div>'+
-  betrokkenen.map(function(b){return '<div class="msec"><b>'+esc(naam(b))+'</b><p>Gewaarschuwd, wacht op reactie…</p></div>';}).join('')+
+ var c=findPerson(caClientId);
+ var betrokkenen=sosOntvangers(caClientId);
+ var deelt=!!ensureCaInstellingen(caClientId).deelLocatie;
+ var kop=betrokkenen.length?'<h3>Hulp is onderweg</h3><div class="msec"><p>De volgende personen zijn zojuist gewaarschuwd:</p></div>'
+  :'<h3>Niemand om te waarschuwen</h3><div class="msec"><p>Er is in '+esc(huidigeGroep)+' niemand met een actief account én een rol op '+esc(c?naam(c):'deze cliënt')+'. Neem direct zelf contact op met de zorgorganisatie.</p></div>';
+ el('sos-card').innerHTML=kop+
+  betrokkenen.map(function(b){return '<div class="msec"><b>'+esc(naam(b))+'</b><p>'+esc(b.contactVolgorde?'Contactpersoon '+b.contactVolgorde:rolOpClient(b,caClientId))+' · gewaarschuwd, wacht op reactie…</p></div>';}).join('')+
+  (betrokkenen.length?'<p class="mini" style="margin-top:10px">'+(deelt?'Je locatie is meegestuurd, zoals ingesteld bij Privacy.':'Je locatie is niet meegestuurd. Zet “Deel locatie bij SOS” aan bij Meer instellingen als je dat wel wilt.')+'</p>':'')+
   '<div class="modal-actions"><button type="button" class="primary" id="sos-sluiten">Sluiten</button></div>';
+ logActie('SOS gestart voor '+(c?naam(c):'onbekende cliënt')+' — gewaarschuwd: '+(betrokkenen.length?betrokkenen.map(naam).join(', '):'niemand')+(deelt?' (met locatie)':''));
  el('sos-sluiten').addEventListener('click',function(){el('sos-overlay').hidden=true;});
 }
 function sosStartHold(){
@@ -5923,3 +6200,5 @@ loadFromSupabase();
 laadDatalekken();
 </script>
 
+</body>
+</html>
