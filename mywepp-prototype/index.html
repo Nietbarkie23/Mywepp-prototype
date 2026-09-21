@@ -1589,11 +1589,15 @@ function effectieveContactpersoon(){
  if(eerste&&eerste.status==='ziek'&&tweede)return tweede;
  return eerste||tweede||null;
 }
-function huidigeGebruiker(){return isSysteembeheerder?null:findPerson(huidigeGebruikerId);}
-/* De systeembeheerder staat boven de groepen en mag dit dus altijd; daarbuiten
-   alleen de contactpersoon die op dat moment het aanspreekpunt is. */
+/* Systeembeheer en Support horen bij geen enkele groep: de een beheert de hele
+   organisatie, de ander kijkt mee namens de leverancier. Voor alles wat van
+   groepslidmaatschap afhangt gelden ze daarom als "geen van de medewerkers".
+   Zonder dat onderscheid erfde Support de rechten van de laatst gekozen
+   medewerker — inclusief diens rol als aanspreekpunt. */
+function staatBovenDeGroep(){return isSysteembeheerder||isSupport;}
+function huidigeGebruiker(){return staatBovenDeGroep()?null:findPerson(huidigeGebruikerId);}
 function magContactWijzigen(){
- if(isSysteembeheerder)return true;
+ if(staatBovenDeGroep())return true;
  var eff=effectieveContactpersoon(),ik=huidigeGebruiker();
  return !!(eff&&ik&&eff.id===ik.id);
 }
@@ -2780,7 +2784,7 @@ function accountsInGroep(){
    verder gaan als iemand die er wel bij hoort, anders blijf je hangen als
    iemand die in deze groep niet bestaat. */
 function borgGeldigeGebruiker(){
- if(isSysteembeheerder)return;
+ if(staatBovenDeGroep())return;
  /* Precies dezelfde voorwaarde als de lijst zelf. Stonden ze uit elkaar, dan
     verdween je uit de keuzelijst zonder dat hier iets gebeurde: de balk toonde
     dan de eerste optie ("Systeembeheerder") terwijl je dat niet was, en het
@@ -3856,7 +3860,7 @@ el('admin-uitloggen').addEventListener('click',function(){
    updateAdminTabZichtbaarheid();
    showView('personal');
    renderAll();
-   if(select)select.value=isSysteembeheerder?'systeembeheer':String(huidigeGebruikerId);
+   if(select)select.value=isSupport?'support':(isSysteembeheerder?'systeembeheer':String(huidigeGebruikerId));
   });
 });
 
@@ -4078,6 +4082,14 @@ function closeModal(){
  modalHerkomst=null;
 }
 function modalOpen(){return !el('modal-overlay').hidden;}
+/* De handeling staat in het scherm zelf en niet in een venster, maar Escape
+   hoort er net zo goed mee op te houden: dat is wat mensen proberen. */
+function admPaneelOpen(){var e=el('adm-scherm');return !!e&&!e.hidden;}
+document.addEventListener('keydown',function(e){
+ if(e.key!=='Escape'||modalOpen()||!admPaneelOpen())return;
+ el('modal-card').innerHTML='';
+ admPaneelUit();
+});
 el('modal-overlay').addEventListener('click',function(e){if(e.target===el('modal-overlay'))closeModal();});
 document.addEventListener('keydown',function(e){
  if(!modalOpen())return;
