@@ -636,20 +636,20 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="locatieMaken">Locatie<br>maken</button>
       <button type="button" class="abtn" data-adm="groepMaken">Groep<br>maken</button>
       <button type="button" class="abtn" data-adm="clientMaken">Cliënt<br>maken</button>
-      <button type="button" class="abtn" data-adm="persoonMaken">(Non)prof.<br>maken</button>
+      <button type="button" class="abtn" data-adm="persoonMaken">Medewerker of<br>naaste maken</button>
     </div>
     <div class="adminbar-group"><span class="adminbar-kop">Bewerken</span>
       <button type="button" class="abtn" data-adm="instituutBewerken">Instituut<br>bewerken</button>
       <button type="button" class="abtn" data-adm="groepBewerken">Groep<br>bewerken</button>
       <button type="button" class="abtn" data-adm="clientBewerken">Cliënt<br>bewerken</button>
-      <button type="button" class="abtn" data-adm="persoonBewerken">(Non)prof.<br>bewerken</button>
+      <button type="button" class="abtn" data-adm="persoonBewerken">Medewerker of<br>naaste bewerken</button>
     </div>
     <div class="adminbar-group"><span class="adminbar-kop">Verwijderen</span>
       <button type="button" class="abtn danger" data-adm="instituutVerwijderen">Instituut<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="locatieVerwijderen">Locatie<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="groepVerwijderen">Groep<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="clientVerwijderen">Cliënt<br>verwijderen</button>
-      <button type="button" class="abtn danger" data-adm="persoonVerwijderen">(Non)prof.<br>verwijderen</button>
+      <button type="button" class="abtn danger" data-adm="persoonVerwijderen">Medewerker of<br>naaste verwijderen</button>
     </div>
     <div class="adminbar-group adminbar-breed"><span class="adminbar-kop">Overzichten</span>
       <button type="button" class="abtn tab on" data-admintab="bulk">Standaard-<br>rollen</button>
@@ -666,7 +666,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="groepeer">Groepeer</button>
       <button type="button" class="abtn" data-adm="groepHerstellen">Groep<br>herstellen</button>
       <button type="button" class="abtn" data-adm="clientHerstellen">Cliënt<br>herstellen</button>
-      <button type="button" class="abtn" data-adm="persoonHerstellen">(Non)prof.<br>herstellen</button>
+      <button type="button" class="abtn" data-adm="persoonHerstellen">Medewerker of<br>naaste herstellen</button>
     </div>
   </div>
 
@@ -3618,7 +3618,7 @@ function clientMakenFlow(){
  });
 }
 function persoonTypeKeuze(titel,onType){
- kiesUitLijstModal(titel,['medewerker','naaste'],function(t){return t==='medewerker'?'Professional (medewerker)':'Non-professional (naaste)';},onType);
+ kiesUitLijstModal(titel,['medewerker','naaste'],function(t){return t==='medewerker'?'Medewerker':'Naaste';},onType);
 }
 function persoonMakenFlow(){
  persoonTypeKeuze('Welk type wil je aanmaken?',function(t){
