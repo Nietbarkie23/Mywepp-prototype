@@ -688,7 +688,11 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel">
       <div class="head"><h2>Controle</h2><span class="sub">Signalen die aandacht nodig hebben</span></div>
       <div class="body">
-        <p class="note">Deze lijst kijkt over alle groepen heen naar situaties die in de zorg problemen geven — bijvoorbeeld een cliënt waar niemand toegang toe heeft, of een groep zonder aanspreekpunt.</p>
+        <p class="note">Deze lijst kijkt over alle groepen heen naar situaties die in de zorg problemen geven — bijvoorbeeld een cliënt waar niemand toegang toe heeft, of een groep zonder aanspreekpunt. Klopt een signaal wél, dan kun je het afhandelen met een reden; het komt terug zodra de situatie verandert.</p>
+        <div class="row">
+          <div class="field" style="max-width:240px"><label for="controle-groep">Groep</label><select id="controle-groep"></select></div>
+        </div>
+        <label class="chip" style="margin-bottom:10px"><input type="checkbox" id="controle-toon-beoordeeld"> Ook afgehandelde signalen tonen</label>
         <div id="controle-lijst"></div>
         <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
       </div>
@@ -1587,6 +1591,7 @@ async function loadFromSupabase(){
    if(Array.isArray(opgeslagen.gearchiveerde_groepen))gearchiveerdeGroepen=opgeslagen.gearchiveerde_groepen;
    if(opgeslagen.systeembeheer&&typeof opgeslagen.systeembeheer.tel==='string')SYSTEEMBEHEER.tel=opgeslagen.systeembeheer.tel;
    if(opgeslagen.groep_tweestaps&&typeof opgeslagen.groep_tweestaps==='object')groepTweestaps=opgeslagen.groep_tweestaps;
+   if(opgeslagen.beoordeelde_signalen&&typeof opgeslagen.beoordeelde_signalen==='object')beoordeeldeSignalen=opgeslagen.beoordeelde_signalen;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
@@ -2961,20 +2966,91 @@ function controleSignalen(){
  var volgorde={hoog:0,laag:1};
  return signalen.sort(function(a,b){return volgorde[a.ernst]-volgorde[b.ernst];});
 }
+/* ---- Signalen afhandelen ----
+   Een lijst die alleen maar groeit wordt ruis, en dan kijkt niemand er meer
+   naar. Wie beoordeelt dat een signaal klopt (een naaste mág bij twee
+   cliënten), kan het met een reden afhandelen.
+   De vingerafdruk is de tekst van het signaal zelf. Verandert de situatie —
+   diezelfde naaste krijgt er een derde cliënt bij — dan verandert de tekst en
+   komt het signaal opnieuw. Een oordeel dat blijft plakken terwijl de wereld
+   verandert is gevaarlijker dan geen oordeel. */
+var beoordeeldeSignalen={};
+function signaalSleutel(s){return (s.actie&&s.actie.soort||'')+'|'+(s.actie&&s.actie.id||'')+'|'+s.tekst;}
+function isBeoordeeld(s){return !!beoordeeldeSignalen[signaalSleutel(s)];}
+function handelSignaalAf(s){
+ openModal('<h3>Signaal afhandelen</h3><div class="msec">'+
+  '<p>'+esc(s.tekst)+'</p>'+
+  '<p>Leg vast waarom dit geen actie nodig heeft. Het signaal verdwijnt uit de lijst, maar komt terug zodra de situatie verandert.</p></div>'+
+  '<div class="field"><label for="modal-reden">Reden</label><input id="modal-reden" maxlength="160" placeholder="Bijvoorbeeld: broer en zus, toegang is met beide families afgestemd"></div>'+
+  '<div id="modal-reden-fout" class="mini" style="color:var(--brick)" hidden>Vul een reden in; zonder onderbouwing is afhandelen niet te verantwoorden.</div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="primary" id="modal-opslaan">Afhandelen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var reden=kap(el('modal-reden').value.trim(),160);
+  if(!reden){el('modal-reden-fout').hidden=false;return;}
+  beoordeeldeSignalen[signaalSleutel(s)]={reden:reden,door:wieBenIk(),op:vandaagISO()};
+  closeModal();
+  logActie('Signaal afgehandeld: '+s.tekst+' — '+reden);
+  syncOrganisatieData();
+  renderControle();
+ });
+}
+function heropenSignaal(s){
+ delete beoordeeldeSignalen[signaalSleutel(s)];
+ logActie('Signaal weer opengezet: '+s.tekst);
+ syncOrganisatieData();
+ renderControle();
+}
+var controleGroepFilter='';
+var controleToonBeoordeeld=false;
 function renderControle(){
- var signalen=controleSignalen();
- var hoog=signalen.filter(function(s){return s.ernst==='hoog';}).length;
+ var alle=controleSignalen();
+ var open=alle.filter(function(s){return !isBeoordeeld(s);});
+ var hoog=open.filter(function(s){return s.ernst==='hoog';}).length;
  var teller=el('controle-teller');
- if(teller){teller.textContent=signalen.length?signalen.length:'';teller.style.color=hoog?'var(--brick)':'var(--ink-faint)';}
+ if(teller){teller.textContent=open.length?open.length:'';teller.style.color=hoog?'var(--brick)':'var(--ink-faint)';}
+
+ var keuze=el('controle-groep');
+ if(keuze){
+  var groepen=[''].concat(GROEPEN);
+  keuze.innerHTML=groepen.map(function(g){
+   return '<option value="'+esc(g)+'"'+(g===controleGroepFilter?' selected':'')+'>'+(g?esc(g):'Alle groepen')+'</option>';
+  }).join('');
+ }
+ var vinkje=el('controle-toon-beoordeeld');
+ if(vinkje)vinkje.checked=controleToonBeoordeeld;
+
+ var signalen=(controleToonBeoordeeld?alle:open).filter(function(s){
+  return !controleGroepFilter||String(s.groep||'').indexOf(controleGroepFilter)>-1;
+ });
+ var afgehandeld=alle.length-open.length;
  el('controle-lijst').innerHTML=signalen.length?signalen.map(function(s,i){
-  var kleur=s.ernst==='hoog'?'var(--brick)':'var(--amber)';
-  var label=s.ernst==='hoog'?'Actie nodig':'Aandachtspunt';
-  return '<div class="personrow">'+
+  var af=isBeoordeeld(s);
+  var kleur=af?'var(--ink-faint)':(s.ernst==='hoog'?'var(--brick)':'var(--amber)');
+  var label=af?'Afgehandeld':(s.ernst==='hoog'?'Actie nodig':'Aandachtspunt');
+  var oordeel=af?beoordeeldeSignalen[signaalSleutel(s)]:null;
+  return '<div class="personrow"'+(af?' style="opacity:.62"':'')+'>'+
    '<div class="pinfo"><div class="naam"><span class="statuschip" style="background:transparent;color:'+kleur+';border:1px solid '+kleur+'">'+label+'</span> '+esc(s.tekst)+'</div>'+
-   '<div class="mail">'+esc(s.groep)+'</div></div>'+
-   '<button type="button" class="small" data-ctrl="'+i+'">'+esc(s.actie.label)+'</button></div>';
+   '<div class="mail">'+esc(s.groep)+
+    (oordeel?' · '+esc(oordeel.reden)+' <span class="mini">('+esc(oordeel.door)+', '+esc(datumNL(oordeel.op))+')</span>':'')+'</div></div>'+
+   (af?'<button type="button" class="small" data-heropen="'+i+'">Weer openzetten</button>'
+      :'<button type="button" class="small" data-afhandel="'+i+'">Dit klopt</button>'+
+       '<button type="button" class="small" data-ctrl="'+i+'">'+esc(s.actie.label)+'</button>')+
+   '</div>';
  }).join('')
-  :'<p class="empty-msg">Geen signalen — alles ziet er goed uit.</p>';
+  :'<p class="empty-msg">'+(controleGroepFilter?'Geen signalen voor deze groep.':'Geen signalen — alles ziet er goed uit.')+
+   (afgehandeld&&!controleToonBeoordeeld?' <span class="mini">('+afgehandeld+' afgehandeld, zet het vinkje aan om ze te zien.)</span>':'')+'</p>';
+ if(afgehandeld&&!controleToonBeoordeeld&&signalen.length){
+  el('controle-lijst').insertAdjacentHTML('beforeend',
+   '<p class="mini" style="margin:8px 0 0">'+afgehandeld+' signaal'+(afgehandeld===1?'':'en')+' afgehandeld en daarom verborgen.</p>');
+ }
+ Array.prototype.forEach.call(el('controle-lijst').querySelectorAll('[data-afhandel]'),function(b){
+  b.addEventListener('click',function(){handelSignaalAf(signalen[+b.getAttribute('data-afhandel')]);});
+ });
+ Array.prototype.forEach.call(el('controle-lijst').querySelectorAll('[data-heropen]'),function(b){
+  b.addEventListener('click',function(){heropenSignaal(signalen[+b.getAttribute('data-heropen')]);});
+ });
  Array.prototype.forEach.call(el('controle-lijst').querySelectorAll('[data-ctrl]'),function(b){
   b.addEventListener('click',function(){
    var s=signalen[+b.getAttribute('data-ctrl')];if(!s)return;
@@ -2989,6 +3065,8 @@ function renderControle(){
  });
 }
 el('controle-ververs').addEventListener('click',renderControle);
+el('controle-groep').addEventListener('change',function(){controleGroepFilter=this.value;renderControle();});
+el('controle-toon-beoordeeld').addEventListener('change',function(){controleToonBeoordeeld=this.checked;renderControle();});
 
 /* ============== ZOEKEN OVER ALLE GROEPEN ==============
    Het zoekveld binnen een groep kijkt bewust alleen in die groep. Daardoor was
@@ -3653,7 +3731,8 @@ async function syncOrganisatieData(){
    {sleutel:'groep_locatie',waarde:groepLocatie},
    {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen},
    {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER},
-   {sleutel:'groep_tweestaps',waarde:groepTweestaps}
+   {sleutel:'groep_tweestaps',waarde:groepTweestaps},
+   {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen}
   ],{onConflict:'sleutel'});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
