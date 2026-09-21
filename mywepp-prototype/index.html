@@ -192,8 +192,9 @@ html[data-tekst="groot"] .intro p{font-size:15px}
  border-bottom:1px solid rgba(255,255,255,.1);
  background-image:radial-gradient(120% 180% at 100% 0%, rgba(150,140,215,.32) 0%, rgba(150,140,215,0) 55%)}
 .adminmerk{display:flex;align-items:center;gap:12px;min-width:0}
-.adminlogo{background:#D8232A;color:#fff;font-weight:800;font-size:12px;line-height:1.05;letter-spacing:.02em;
- padding:7px 9px;border-radius:5px;text-align:center;flex:0 0 auto}
+.wepplogo{display:block;flex:0 0 auto}
+.adminmerk .wepplogo{width:34px;height:34px}
+.mark .wepplogo{width:26px;height:26px;align-self:center}
 .adminlogo-sub{color:#E9EDF2;font-size:13.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .adminkop-rechts{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .adminwie{color:#C6CCD6;font-size:12.5px}
@@ -218,6 +219,22 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .abtn:hover{background:var(--abtn-bg-hover);border-color:var(--ink-soft)}
 .abtn.danger{border-color:var(--brick);color:var(--brick);border-width:2px}
 .abtn.danger:hover{background:var(--brick-bg)}
+/* Doorvoeren is de handeling waar alles op uitkomt; die hoort niet als
+   twintigste grijze knop in de rij te staan. Zodra er iets openstaat springt
+   hij eruit. */
+.abtn.nadruk{border-color:var(--moss);color:var(--moss);border-width:2px}
+.abtn.nadruk:hover{background:var(--moss-bg)}
+.abtn.nadruk.heeftwerk{background:var(--moss);border-color:var(--moss);color:#fff}
+.abtn.nadruk.heeftwerk:hover{background:var(--moss);filter:brightness(1.08)}
+.abtn.nadruk.heeftwerk .countchip{color:#fff}
+.admreview{border:1px solid var(--line-strong);border-radius:var(--radius-sm);margin-bottom:14px;max-height:240px;overflow-y:auto}
+.admreview .reviewrow{padding:10px 14px}
+.admwaarschuwing{background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px}
+.admwaarschuwing b{display:block;font-size:14px;color:var(--amber);margin-bottom:6px}
+.admwaarschuwing ul{margin:0 0 8px 18px;padding:0;font-size:13.5px;color:var(--ink)}
+.admwaarschuwing li{margin-bottom:4px}
+.admwaarschuwing .mini{margin:0}
+.admgelukt{background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:var(--radius-sm);padding:14px 16px;color:var(--moss);font-size:14px;line-height:1.6}
 /* In het origineel zie je niet welk scherm openstaat. Dat is juist wat je wilt
    weten als je twintig knoppen voor je hebt. */
 .abtn.on{background:#fff;border-color:#fff;color:#1D2733;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
@@ -598,10 +615,18 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 </style>
 </head>
 <body>
+<!-- Het merk van MyWepp, nagetekend naar het echte logo: rode afgeronde vierkant
+     met MY boven WEPP en de twee puntjes boven de Y. Het kleurverloop staat hier
+     een keer, zodat elk logo op de pagina er naar kan verwijzen. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+ <defs><linearGradient id="weppRood" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#EE2A31"/><stop offset="1" stop-color="#C8141B"/>
+ </linearGradient></defs>
+</svg>
 
 <header class="top">
   <div class="topbar">
-    <div class="mark"><b>MyWepp</b><span>Beheerprototype</span></div>
+    <div class="mark"><svg class="wepplogo" viewBox="0 0 64 64" role="img" aria-label="MyWepp"><rect width="64" height="64" rx="13" fill="url(#weppRood)"/><g fill="#fff" font-family="'Arial Black','Helvetica Neue',Impact,sans-serif" font-weight="900"><circle cx="36.5" cy="15" r="1.9"/><circle cx="43.5" cy="15" r="1.9"/><text x="32" y="32" text-anchor="middle" font-size="20" textLength="34" lengthAdjust="spacingAndGlyphs">MY</text><text x="32" y="50" text-anchor="middle" font-size="20" textLength="46" lengthAdjust="spacingAndGlyphs">WEPP</text></g></svg><b>MyWepp</b><span>Beheerprototype</span></div>
     <div class="rolebar">
       <label for="account-select">Ingelogd als</label>
       <select id="account-select"></select>
@@ -627,7 +652,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 <!-- ===================== ADMIN TOOLS ===================== -->
 <div id="view-admin" hidden>
   <div class="adminkop">
-    <div class="adminmerk"><span class="adminlogo">MY<br>WEPP</span><span class="adminlogo-sub">Admin Tools</span></div>
+    <div class="adminmerk"><svg class="wepplogo" viewBox="0 0 64 64" role="img" aria-label="MyWepp"><rect width="64" height="64" rx="13" fill="url(#weppRood)"/><g fill="#fff" font-family="'Arial Black','Helvetica Neue',Impact,sans-serif" font-weight="900"><circle cx="36.5" cy="15" r="1.9"/><circle cx="43.5" cy="15" r="1.9"/><text x="32" y="32" text-anchor="middle" font-size="20" textLength="34" lengthAdjust="spacingAndGlyphs">MY</text><text x="32" y="50" text-anchor="middle" font-size="20" textLength="46" lengthAdjust="spacingAndGlyphs">WEPP</text></g></svg><span class="adminlogo-sub">Admin Tools</span></div>
     <div class="adminkop-rechts">
       <span class="adminwie" id="admin-wie"></span>
       <button type="button" class="adminuit" id="admin-uitloggen">Uitloggen</button>
@@ -667,6 +692,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       avg -->
     </div>
     <div class="adminbar-group"><span class="adminbar-kop">Overig</span>
+      <button type="button" class="abtn nadruk" data-adm="doorvoeren">Wijzigingen<br>doorvoeren <span class="countchip" id="adm-wijzig-teller"></span></button>
       <button type="button" class="abtn" data-adm="rechtensets">Rechtensets</button>
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
       <button type="button" class="abtn" data-adm="groepeer">Groepeer</button>
@@ -3807,6 +3833,71 @@ function contactpersonenFlow(){
   });
  });
 }
+/* ---- Wijzigingen doorvoeren vanuit de Admin Tools ----
+   Alles wat je hier aanmaakt, bewerkt of verwijdert blijft in concept staan tot
+   iemand het doorvoert. Dat kon alleen in het groepsprofiel, dus je moest de
+   Admin Tools verlaten om je eigen werk af te maken. Dit is dezelfde handeling,
+   met dezelfde controle vooraf: je ziet eerst wat er gaat gebeuren, inclusief
+   het werk dat blijft liggen als er iemand vertrekt, en je tekent ervoor. */
+function doorvoerenWijzigingen(){return people.filter(function(p){return p._state;});}
+function doorvoerenRegelsHtml(){
+ var wijzigingen=doorvoerenWijzigingen();
+ if(!wijzigingen.length)return '<p class="empty-msg">Er staat niets open om door te voeren.</p>';
+ return '<div class="admreview">'+wijzigingen.map(function(p){
+  var elders=p.groepen&&p.groepen.indexOf(huidigeGroep)<0?(p.groepen[0]||''):'';
+  return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
+   '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+
+   (elders?' <span class="mini">· uit groep '+esc(elders)+'</span>':'')+
+   (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
+   '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+esc(wijzigingLabel(p))+'</span></div>';
+ }).join('')+'</div>';
+}
+function doorvoerenFlow(){
+ var wijzigingen=doorvoerenWijzigingen();
+ if(!wijzigingen.length){
+  openMelding('Wijzigingen doorvoeren','Er staat niets open om door te voeren. Zodra je iets aanmaakt, bewerkt of verwijdert verschijnt het hier.');
+  return;
+ }
+ var ik=huidigeGebruiker();
+ var gevolgen=vertrekGevolgen();
+ openModal('<h3>Wijzigingen doorvoeren</h3>'+
+  '<p class="mini" style="margin:0 0 12px">Dit voert alle openstaande wijzigingen door, ook die je in het groepsprofiel hebt gemaakt. Daarna is het niet meer terug te draaien.</p>'+
+  doorvoerenRegelsHtml()+
+  (gevolgen.length?'<div class="admwaarschuwing"><b>Let op: er blijft werk liggen</b><ul>'+
+    gevolgen.map(function(g){return '<li>'+esc(g.tekst)+'</li>';}).join('')+
+    '</ul><p class="mini">Je kunt toch doorvoeren, maar dan moet iemand dit later alsnog regelen. Overdragen doe je in het groepsprofiel, bij Wijzigingen controleren.</p></div>':'')+
+  '<fieldset class="admblok"><legend>Wie voert dit door</legend>'+
+   '<div class="admveld"><label>Naam</label><div class="admin lockedfield" id="adm-dv-naam">'+esc(ik?naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker'):wieBenIk())+'</div></div>'+
+   '<div class="admveld"><label for="adm-dv-tel">Telefoonnummer<span class="verplicht">*</span></label>'+
+    '<input class="admin" id="adm-dv-tel" value="'+esc(ik&&ik.tel?ik.tel:'')+'" placeholder="06 12 34 56 78"></div>'+
+   '<p class="mini" id="adm-dv-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p>'+
+   '<div class="checkline"><input type="checkbox" id="adm-dv-akkoord"><label for="adm-dv-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>'+
+  '</fieldset>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="primary" id="adm-dv-doorvoeren" disabled>Wijzigingen doorvoeren</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ var knop=el('adm-dv-doorvoeren');
+ var controleer=function(){
+  var telOk=telGeldig(el('adm-dv-tel').value);
+  el('adm-dv-tel').style.borderColor=telOk?'':'var(--brick)';
+  el('adm-dv-tel-fout').hidden=telOk;
+  knop.disabled=!(telOk&&el('adm-dv-akkoord').checked);
+ };
+ el('adm-dv-tel').addEventListener('input',controleer);
+ el('adm-dv-tel').addEventListener('blur',controleer);
+ el('adm-dv-akkoord').addEventListener('change',controleer);
+ knop.addEventListener('click',async function(){
+  knop.disabled=true;knop.textContent='Bezig met opslaan…';
+  if(ik&&telGeldig(el('adm-dv-tel').value))ik.tel=el('adm-dv-tel').value.trim();
+  var resultaat=await voerWijzigingenDoor();
+  /* renderAll() in het doorvoeren heeft de knoppenbalk al bijgewerkt; nu nog
+     het venster zelf, dat op dat moment in het Admin Tools-paneel hangt. */
+  openModal('<h3>Wijzigingen doorgevoerd</h3>'+
+   '<div class="admgelukt">'+doorvoerResultaatHtml(resultaat)+'</div>'+
+   '<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+  el('modal-snap').addEventListener('click',closeModal);
+ });
+}
 var ADMIN_TOOLBAR_ACTIES={
  instituutMaken:instituutMakenFlow,
  locatieMaken:locatieMakenFlow,
@@ -3827,7 +3918,8 @@ var ADMIN_TOOLBAR_ACTIES={
  groepeer:function(){showView('admin');kiesAdmintab('bulk');},
  groepHerstellen:groepHerstellenFlow,
  clientHerstellen:persoonHerstelFlow,
- persoonHerstellen:persoonHerstelFlow
+ persoonHerstellen:persoonHerstelFlow,
+ doorvoeren:doorvoerenFlow
 };
 /* Welke van de twintig knoppen je net hebt aangeklikt is zonder markering niet
    te zien; het venster dat opent noemt lang niet altijd de handeling. De knop
@@ -3855,7 +3947,12 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(b)
   var actie=ADMIN_TOOLBAR_ACTIES[b.getAttribute('data-adm')];
   if(!actie)return;
   zetActieveAdmKnop(b);
-  admActieNaam=(b.innerHTML||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  /* De naam van de handeling komt uit het opschrift van de knop. Een teller die
+     erin staat hoort daar niet bij: dan las de paneelkop "Wijzigingen
+     doorvoeren 2". */
+  var kopie=b.cloneNode(true);
+  Array.prototype.forEach.call(kopie.querySelectorAll('.countchip'),function(x){x.remove();});
+  admActieNaam=(kopie.innerHTML||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
   admInline=true;
   actie();
   /* Een handeling die meteen naar een ander scherm springt (bijvoorbeeld naar
@@ -4019,6 +4116,12 @@ function updateTally(){
  el('tally-verwijderd').style.width=(verwijderd/totalW*100)+'%';
  el('verzenden-btn').disabled=totaal===0;
  el('concept-badge').hidden=totaal===0;
+ /* Dezelfde telling in de Admin Tools, zodat je daar ziet dat er nog iets
+    openstaat zonder eerst naar het groepsprofiel te hoeven. */
+ var admTeller=el('adm-wijzig-teller');
+ if(admTeller)admTeller.textContent=totaal?String(totaal):'';
+ var admKnop=document.querySelector('[data-adm="doorvoeren"]');
+ if(admKnop)admKnop.classList.toggle('heeftwerk',totaal>0);
  el('formulier-tellingen').textContent='Cliënten – '+personenVanType('client').length+'  ·  Medewerkers – '+personenVanType('medewerker').length+'  ·  Naasten – '+personenVanType('naaste').length;
 }
 function heeftOnopgeslagenWijzigingen(){return people.some(function(p){return p._state;});}
@@ -4713,9 +4816,10 @@ function checkVersturenKlaar(){
 el('av-tel').addEventListener('input',checkVersturenKlaar);
 el('av-tel').addEventListener('blur',checkVersturenKlaar);
 el('av-akkoord').addEventListener('change',checkVersturenKlaar);
-el('av-versturen').addEventListener('click',async function(){
- el('av-versturen').disabled=true;
- el('av-versturen').textContent='Bezig met opslaan…';
+/* Het doorvoeren zat helemaal in de klik op één knop in het groepsprofiel.
+   Wie in de Admin Tools werkt moest daarvoor de hele beheeromgeving uit. De
+   handeling staat nu op zichzelf, zodat beide ingangen precies hetzelfde doen. */
+async function voerWijzigingenDoor(){
  var nieuw=people.filter(function(p){return p._state==='nieuw';}).length;
  var gewijzigd=people.filter(function(p){return p._state==='gewijzigd';}).length;
  var ontkoppeld=0,gearchiveerd=0,verplaatst=0;
@@ -4753,19 +4857,31 @@ el('av-versturen').addEventListener('click',async function(){
  }
  var opgeslagen=laadMislukt()?false:await syncToSupabase();
  renderAll();
- el('av-versturen').disabled=false;
- el('av-versturen').textContent='Wijzigingen doorvoeren';
+ return {nieuw:nieuw,gewijzigd:gewijzigd,ontkoppeld:ontkoppeld,gearchiveerd:gearchiveerd,
+  verplaatst:verplaatst,opgeslagen:opgeslagen};
+}
+/* De regel die achteraf vertelt wat er is gebeurd; dezelfde tekst in beide
+   ingangen, zodat er geen twee versies van de waarheid ontstaan. */
+function doorvoerResultaatHtml(r){
  var verwijderdTekst=[];
- if(ontkoppeld)verwijderdTekst.push(ontkoppeld+' ontkoppeld van '+huidigeGroep);
- if(gearchiveerd)verwijderdTekst.push(gearchiveerd+' gearchiveerd');
- if(verplaatst)verwijderdTekst.push(verplaatst+' verplaatst naar een andere groep');
+ if(r.ontkoppeld)verwijderdTekst.push(r.ontkoppeld+' ontkoppeld van '+huidigeGroep);
+ if(r.gearchiveerd)verwijderdTekst.push(r.gearchiveerd+' gearchiveerd');
+ if(r.verplaatst)verwijderdTekst.push(r.verplaatst+' verplaatst naar een andere groep');
  var contactpersoon=huidigeGebruiker();
  var contactzin=contactpersoon?' Bij vragen nemen we contact op met '+esc(naam(contactpersoon))+'.':'';
- var waarschuwing=opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">'+
+ var waarschuwing=r.opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">'+
   (laadMislukt()
    ? 'Let op: de gegevens waren niet geladen, dus er is bewust niets opgeslagen. Wat je hier ziet zijn voorbeeldgegevens; laad opnieuw en voer de wijziging daarna nog een keer door.'
    : 'Let op: het opslaan in de database is niet gelukt. De wijzigingen zijn hier wel lokaal doorgevoerd — probeer het later opnieuw zodat ze ook echt bewaard blijven.')+'</div>';
- el('verzonden-tekst').innerHTML='Je wijzigingen ('+nieuw+' nieuw, '+gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin+waarschuwing;
+ return 'Je wijzigingen ('+r.nieuw+' nieuw, '+r.gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin+waarschuwing;
+}
+el('av-versturen').addEventListener('click',async function(){
+ el('av-versturen').disabled=true;
+ el('av-versturen').textContent='Bezig met opslaan…';
+ var resultaat=await voerWijzigingenDoor();
+ el('av-versturen').disabled=false;
+ el('av-versturen').textContent='Wijzigingen doorvoeren';
+ el('verzonden-tekst').innerHTML=doorvoerResultaatHtml(resultaat);
  show('pp-verzonden');
  verzondenTimer=setTimeout(function(){show('pp-formulier');},3000);
 });
