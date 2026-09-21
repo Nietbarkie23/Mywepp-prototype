@@ -180,12 +180,62 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .bulkbar b{font-size:13.5px;color:var(--accent);margin-right:4px}
 .bulkbar button{font-size:12.5px;padding:5px 10px;border-radius:8px}
 
-.adminbar-wrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px;background:var(--adminbar-bg);padding:10px;border-radius:var(--radius);margin-bottom:18px}
-.adminbar-group{display:flex;flex-wrap:wrap;gap:6px}
+/* ---- Admin Tools: de stijl van de echte beheeromgeving ----
+   Donkere band met het merk, daaronder blokjes knoppen per soort handeling en
+   een rode rand om alles wat verwijdert. Wat ik anders doe dan het origineel:
+   de groepen krijgen een kopje (je moet nu raden waar "verwijderen" begint),
+   het geopende scherm licht op in de balk, en alles blijft werken op een
+   telefoon in plaats van de pagina zijwaarts te trekken. */
+.adminkop{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+ background:var(--adminbar-bg);border-radius:var(--radius) var(--radius) 0 0;padding:10px 14px;
+ border-bottom:1px solid rgba(255,255,255,.1);
+ background-image:radial-gradient(120% 180% at 100% 0%, rgba(150,140,215,.32) 0%, rgba(150,140,215,0) 55%)}
+.adminmerk{display:flex;align-items:center;gap:12px;min-width:0}
+.adminlogo{background:#D8232A;color:#fff;font-weight:800;font-size:12px;line-height:1.05;letter-spacing:.02em;
+ padding:7px 9px;border-radius:5px;text-align:center;flex:0 0 auto}
+.adminlogo-sub{color:#E9EDF2;font-size:13.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.adminkop-rechts{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.adminwie{color:#C6CCD6;font-size:12.5px}
+.adminuit{font-family:inherit;background:#D8232A;color:#fff;border:1px solid #B51C22;border-radius:5px;
+ padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.adminuit:hover{background:#B51C22}
+.adminbar-wrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;background:var(--adminbar-bg);
+ padding:12px;border-radius:0 0 var(--radius) var(--radius);margin-bottom:18px}
+.adminbar-group{display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:8px 10px 10px;
+ border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.03);flex:1 1 auto}
+.adminbar-breed{flex:1 1 100%}
+/* Wat je in de balk aanklikt vult het scherm eronder, in plaats van een venster
+   over de pagina te leggen. Zo blijft zichtbaar wáár je bent. */
+.admscherm{margin-bottom:18px;border-color:var(--line-strong)}
+.admscherm .head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.admscherm #modal-card{animation:none;box-shadow:none;max-width:none;max-height:none;padding:0;overflow:visible;background:transparent}
+.admscherm #modal-card h3{margin-top:0}
+.adminbar-kop{flex:0 0 100%;color:#9AA3B0;font-size:10.5px;font-weight:700;letter-spacing:.09em;
+ text-transform:uppercase;margin-bottom:2px}
 .abtn{font-family:inherit;background:var(--abtn-bg);border:1px solid var(--abtn-border);color:var(--abtn-text);border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;text-transform:uppercase;text-align:center;line-height:1.25;cursor:pointer;min-width:82px;white-space:normal}
 .abtn:hover{background:var(--abtn-bg-hover);border-color:var(--ink-soft)}
-.abtn.danger{border-color:var(--brick);color:var(--brick)}
+.abtn.danger{border-color:var(--brick);color:var(--brick);border-width:2px}
 .abtn.danger:hover{background:var(--brick-bg)}
+/* In het origineel zie je niet welk scherm openstaat. Dat is juist wat je wilt
+   weten als je twintig knoppen voor je hebt. */
+.abtn.on{background:#fff;border-color:#fff;color:#1D2733;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.abtn.danger.on{background:#fff;border-color:var(--brick);color:var(--brick)}
+
+/* ---- Formulieren in de stijl van de beheeromgeving ----
+   Label links, veld rechts, in een omkaderd blok met een kopje in de rand.
+   Op een smal scherm klapt het onder elkaar; het origineel deed dat niet en
+   was op een telefoon onbruikbaar. */
+.admveld{display:flex;gap:14px;align-items:flex-start;padding:5px 0}
+.admveld>label{flex:0 0 190px;padding-top:7px;font-size:13.5px;color:var(--ink)}
+.admveld>.admin{flex:1;min-width:0;max-width:420px}
+.admveld .verplicht{color:var(--brick);margin-left:2px}
+fieldset.admblok{border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 16px 14px;margin:0 0 16px}
+fieldset.admblok>legend{padding:0 6px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+@media (max-width:640px){
+ .admveld{flex-direction:column;gap:4px}
+ .admveld>label{flex:none;padding-top:0}
+ .admveld>.admin{max-width:none}
+}
 @media (max-width:640px){.adminbar-wrap{gap:10px}}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:14px;box-shadow:var(--shadow)}
@@ -397,6 +447,7 @@ td.dot{text-align:center}
 .modal-overlay{position:fixed;inset:0;background:rgba(20,26,36,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 .modal-overlay[hidden]{display:none}
 .modal-card{background:var(--surface);border-radius:var(--radius);max-width:480px;width:100%;padding:22px 24px;box-shadow:var(--shadow);max-height:80vh;overflow-y:auto}
+.modal-card.breed{max-width:660px}
 .modal-card h3{margin:0 0 14px;font-size:17px}
 .modal-card .msec{margin-bottom:14px}
 .modal-card .msec:last-of-type{margin-bottom:0}
@@ -572,28 +623,44 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
 <!-- ===================== ADMIN TOOLS ===================== -->
 <div id="view-admin" hidden>
+  <div class="adminkop">
+    <div class="adminmerk"><span class="adminlogo">MY<br>WEPP</span><span class="adminlogo-sub">Admin Tools</span></div>
+    <div class="adminkop-rechts">
+      <span class="adminwie" id="admin-wie"></span>
+      <button type="button" class="adminuit" id="admin-uitloggen">Uitloggen</button>
+    </div>
+  </div>
   <div class="adminbar-wrap">
-    <div class="adminbar-group">
+    <div class="adminbar-group"><span class="adminbar-kop">Maken</span>
       <button type="button" class="abtn" data-adm="instituutMaken">Instituut<br>maken</button>
       <button type="button" class="abtn" data-adm="locatieMaken">Locatie<br>maken</button>
       <button type="button" class="abtn" data-adm="groepMaken">Groep<br>maken</button>
       <button type="button" class="abtn" data-adm="clientMaken">Cliënt<br>maken</button>
       <button type="button" class="abtn" data-adm="persoonMaken">(Non)prof.<br>maken</button>
     </div>
-    <div class="adminbar-group">
+    <div class="adminbar-group"><span class="adminbar-kop">Bewerken</span>
       <button type="button" class="abtn" data-adm="instituutBewerken">Instituut<br>bewerken</button>
       <button type="button" class="abtn" data-adm="groepBewerken">Groep<br>bewerken</button>
       <button type="button" class="abtn" data-adm="clientBewerken">Cliënt<br>bewerken</button>
       <button type="button" class="abtn" data-adm="persoonBewerken">(Non)prof.<br>bewerken</button>
     </div>
-    <div class="adminbar-group">
+    <div class="adminbar-group"><span class="adminbar-kop">Verwijderen</span>
       <button type="button" class="abtn danger" data-adm="instituutVerwijderen">Instituut<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="locatieVerwijderen">Locatie<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="groepVerwijderen">Groep<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="clientVerwijderen">Cliënt<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="persoonVerwijderen">(Non)prof.<br>verwijderen</button>
     </div>
-    <div class="adminbar-group">
+    <div class="adminbar-group adminbar-breed"><span class="adminbar-kop">Overzichten</span>
+      <button type="button" class="abtn tab on" data-admintab="bulk">Standaard-<br>rollen</button>
+      <button type="button" class="abtn tab" data-admintab="groep">Groep<br>bewerken</button>
+      <button type="button" class="abtn tab" data-admintab="groepen">Groepen<br>beheren</button>
+      <button type="button" class="abtn tab" data-admintab="controle">Controle <span class="countchip" id="controle-teller"></span></button>
+      <button type="button" class="abtn tab" data-admintab="matrix">Wie ziet<br>wie</button>
+      <button type="button" class="abtn tab" data-admintab="zoeken">Zoeken</button>
+      <button type="button" class="abtn tab" data-admintab="datalek">AVG <span class="countchip" id="datalek-teller"></span></button>
+    </div>
+    <div class="adminbar-group"><span class="adminbar-kop">Overig</span>
       <button type="button" class="abtn" data-adm="rechtensets">Rechtensets</button>
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
       <button type="button" class="abtn" data-adm="groepeer">Groepeer</button>
@@ -603,20 +670,17 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     </div>
   </div>
 
-  <div class="intro">
+  <section class="panel admscherm" id="adm-scherm" hidden>
+    <div class="head"><h2 id="adm-scherm-titel">Handeling</h2>
+      <button type="button" class="small" id="adm-scherm-sluiten">Sluiten</button></div>
+    <div class="body" id="adm-scherm-body"></div>
+  </section>
+
+  <div class="intro" id="admin-intro">
     <h1>Standaardrollen voor groepen</h1>
     <p>Stel organisatiebreed in welke rol iemand standaard krijgt, en welke rollen daarnaast te kiezen zijn. Werk in bulk voor meerdere groepen tegelijk, of stem één groep individueel af.</p>
   </div>
 
-  <div class="tabs">
-    <button type="button" class="tab on" data-admintab="bulk">1 — Standaardrollen in bulk instellen</button>
-    <button type="button" class="tab" data-admintab="groep">2 — Groep bewerken</button>
-    <button type="button" class="tab" data-admintab="groepen">3 — Groepen beheren</button>
-    <button type="button" class="tab" data-admintab="controle">4 — Controle <span class="countchip" id="controle-teller"></span></button>
-    <button type="button" class="tab" data-admintab="matrix">5 — Wie ziet wie</button>
-    <button type="button" class="tab" data-admintab="zoeken">6 — Zoeken</button>
-    <button type="button" class="tab" data-admintab="datalek">7 — AVG <span class="countchip" id="datalek-teller"></span></button>
-  </div>
 
   <section id="admintab-bulk">
     <div class="panel">
@@ -1384,8 +1448,13 @@ el('groep-reset').addEventListener('click',function(){
 renderGroepTab();
 
 function kiesAdmintab(naamVal){
- Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(x){x.classList.remove('on');});
- var btn=document.querySelector('.tabs .tab[data-admintab="'+naamVal+'"]');if(btn)btn.classList.add('on');
+ /* De tabbladenrij is opgegaan in de knoppenbalk: alles wat je kunt openen
+    staat nu op één plek, en wat je aanklikt vult het scherm eronder. */
+ Array.prototype.forEach.call(document.querySelectorAll('[data-admintab]'),function(x){
+  x.classList.remove('on');x.removeAttribute('aria-current');
+ });
+ var btn=document.querySelector('[data-admintab="'+naamVal+'"]');
+ if(btn){btn.classList.add('on');btn.setAttribute('aria-current','true');}
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
  if(naamVal==='groepen')renderSysteembeheer();
  if(naamVal==='controle')renderControle();
@@ -1394,13 +1463,22 @@ function kiesAdmintab(naamVal){
  if(naamVal==='datalek')renderDatalekken();
  if(naamVal==='datalek')renderVerwerkingsregister();
 }
-Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'),function(b){
- b.addEventListener('click',function(){kiesAdmintab(b.getAttribute('data-admintab'));});
+Array.prototype.forEach.call(document.querySelectorAll('[data-admintab]'),function(b){
+ b.addEventListener('click',function(){
+  if(typeof wisActieveAdmKnop==='function')wisActieveAdmKnop();
+  if(admInline){el('modal-card').innerHTML='';admPaneelUit();}
+  kiesAdmintab(b.getAttribute('data-admintab'));
+ });
+});
+el('adm-scherm-sluiten').addEventListener('click',function(){
+ el('modal-card').innerHTML='';
+ admPaneelUit();
 });
 
 /* ============== VIEW SWITCH ============== */
 var ALLVIEWS=['view-admin','view-personal','view-clientapp'];
 function showView(v){
+ if(v!=='admin'&&admInline)admInline=false;
  Array.prototype.forEach.call(document.querySelectorAll('.maintabs button'),function(x){x.classList.remove('on');});
  var btn=document.querySelector('.maintabs button[data-view="'+v+'"]');if(btn)btn.classList.add('on');
  ALLVIEWS.forEach(function(id){el(id).hidden=(id!=='view-'+v);});
@@ -2695,6 +2773,7 @@ function renderAccountSelect(){
 }
 function verlaatSysteembeheer(){
  isSysteembeheerder=false;
+ toonAdminWie();
  updateAdminTabZichtbaarheid();
  if(el('rol-select').value!=='support'&&!el('view-admin').hidden)showView('personal');
 }
@@ -2702,6 +2781,7 @@ el('account-select').addEventListener('change',function(){
  var waarde=el('account-select').value;
  if(waarde==='systeembeheer'){
   isSysteembeheerder=true;
+  toonAdminWie();
   updateAdminTabZichtbaarheid();
   showView('admin');
   kiesAdmintab('groepen');
@@ -2720,6 +2800,7 @@ el('account-select').addEventListener('change',function(){
 });
 function renderAll(){
  ['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();
+ toonAdminWie();
  if(el('admintab-controle')&&!el('admintab-controle').hidden)renderControle();
 }
 
@@ -2763,8 +2844,11 @@ function voegGroepToe(naamVal){
  return true;
 }
 function hernoemGroep(g){
- openModal('<h3>Groep bewerken</h3><div class="field"><label>Naam</label><input id="modal-groep-naam" value="'+esc(g)+'"></div>'+
-  '<div class="field"><label>Locatie</label><select id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option'+(l===groepLocatie[g]?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></div>'+
+ openModal('<h3>Groep bewerken</h3>'+
+  '<fieldset class="admblok"><legend>Groep</legend>'+
+  '<div class="admveld"><label for="modal-groep-naam">Naam<span class="verplicht">*</span></label><input class="admin" id="modal-groep-naam" value="'+esc(g)+'"></div>'+
+  '<div class="admveld"><label for="modal-groep-locatie">Locatie</label><select class="admin" id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option'+(l===groepLocatie[g]?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></div>'+
+  '</fieldset>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
@@ -3213,12 +3297,20 @@ function openDatalekVenster(bestaand){
   : '<p>De termijn van 72 uur voor een melding bij de Autoriteit Persoonsgegevens begint op het moment dat je het lek ontdekt.</p>';
  openModal('<h3>'+(bestaand?'Datalek bewerken':'Datalek vastleggen')+'</h3>'+
   '<div class="msec">'+termijn+'</div>'+
-  '<div class="field"><label for="lek-ontdekt">Ontdekt op</label><input type="date" id="lek-ontdekt" value="'+esc(lek.ontdekt)+'"></div>'+
-  '<div class="field"><label for="lek-wat">Wat is er gebeurd</label><input id="lek-wat" maxlength="200" value="'+esc(lek.omschrijving)+'" placeholder="Bijvoorbeeld: e-mail met cliëntgegevens naar verkeerde ontvanger"></div>'+
-  '<div class="field"><label for="lek-wie">Wie is het betrokken</label><input id="lek-wie" maxlength="200" value="'+esc(lek.betrokkenen)+'" placeholder="Bijvoorbeeld: 3 cliënten van De Boomgaard"></div>'+
-  '<div class="field"><label for="lek-maatregelen">Genomen maatregelen</label><input id="lek-maatregelen" maxlength="200" value="'+esc(lek.maatregelen)+'" placeholder="Bijvoorbeeld: ontvanger heeft de mail verwijderd, toegang geblokkeerd"></div>'+
-  '<label class="chip" style="margin:2px 6px 8px 0"><input type="checkbox" id="lek-ap" '+(lek.gemeldBijAp?'checked':'')+'> Gemeld bij de Autoriteit Persoonsgegevens</label>'+
-  '<label class="chip" style="margin:2px 0 8px"><input type="checkbox" id="lek-klaar" '+(lek.afgehandeld?'checked':'')+'> Afgehandeld</label>'+
+  '<fieldset class="admblok"><legend>Het incident</legend>'+
+   '<div class="admveld"><label for="lek-ontdekt">Ontdekt op<span class="verplicht">*</span></label>'+
+    '<input class="admin" type="date" id="lek-ontdekt" value="'+esc(lek.ontdekt)+'"></div>'+
+   '<div class="admveld"><label for="lek-wat">Wat is er gebeurd<span class="verplicht">*</span></label>'+
+    '<input class="admin" id="lek-wat" maxlength="200" value="'+esc(lek.omschrijving)+'" placeholder="Bijvoorbeeld: e-mail met cliëntgegevens naar verkeerde ontvanger"></div>'+
+   '<div class="admveld"><label for="lek-wie">Wie is het betrokken</label>'+
+    '<input class="admin" id="lek-wie" maxlength="200" value="'+esc(lek.betrokkenen)+'" placeholder="Bijvoorbeeld: 3 cliënten van De Boomgaard"></div>'+
+  '</fieldset>'+
+  '<fieldset class="admblok"><legend>Afhandeling</legend>'+
+   '<div class="admveld"><label for="lek-maatregelen">Genomen maatregelen</label>'+
+    '<input class="admin" id="lek-maatregelen" maxlength="200" value="'+esc(lek.maatregelen)+'" placeholder="Bijvoorbeeld: ontvanger heeft de mail verwijderd, toegang geblokkeerd"></div>'+
+   '<label class="chip" style="margin:2px 6px 8px 0"><input type="checkbox" id="lek-ap" '+(lek.gemeldBijAp?'checked':'')+'> Gemeld bij de Autoriteit Persoonsgegevens</label>'+
+   '<label class="chip" style="margin:2px 0 8px"><input type="checkbox" id="lek-klaar" '+(lek.afgehandeld?'checked':'')+'> Afgehandeld</label>'+
+  '</fieldset>'+
   '<div id="lek-fout" class="mini" style="color:var(--brick)" hidden>Vul in wat er is gebeurd en wanneer je het hebt ontdekt.</div>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
   '<button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
@@ -3639,11 +3731,64 @@ var ADMIN_TOOLBAR_ACTIES={
  clientHerstellen:persoonHerstelFlow,
  persoonHerstellen:persoonHerstelFlow
 };
+/* Welke van de twintig knoppen je net hebt aangeklikt is zonder markering niet
+   te zien; het venster dat opent noemt lang niet altijd de handeling. De knop
+   blijft oplichten zolang de flow loopt. */
+function zetActieveAdmKnop(knop){
+ Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(x){
+  x.classList.toggle('on',x===knop);
+  if(x===knop)x.setAttribute('aria-current','true'); else x.removeAttribute('aria-current');
+ });
+ /* Zolang een handeling openstaat hoort het overzicht eronder niet óók als
+    actief te lezen; twee opgelichte knoppen zeggen niet waar je bent. */
+ if(knop){
+  /* Onthouden waar je vandaan kwam, zodat je na de handeling terugkomt op het
+     overzicht waar je mee bezig was en niet op het eerste uit de rij. */
+  var open=document.querySelector('[data-admintab].on');
+  if(open)admVorigTab=open.getAttribute('data-admintab');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-admintab]'),function(x){
+   x.classList.remove('on');x.removeAttribute('aria-current');
+  });
+ }
+}
+function wisActieveAdmKnop(){zetActieveAdmKnop(null);}
 Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(b){
  b.addEventListener('click',function(){
   var actie=ADMIN_TOOLBAR_ACTIES[b.getAttribute('data-adm')];
-  if(actie)actie();
+  if(!actie)return;
+  zetActieveAdmKnop(b);
+  admInline=true;
+  actie();
+  /* Een handeling die meteen naar een ander scherm springt (bijvoorbeeld naar
+     een tabblad) heeft geen paneel nodig. */
+  if(admInline&&el('adm-scherm').hidden)admInline=false;
  });
+});
+
+/* Wie er werkt hoort in de band te staan: bij twintig knoppen die diep in de
+   administratie ingrijpen moet je kunnen zien onder wiens naam dat gebeurt. */
+function toonAdminWie(){
+ var e=el('admin-wie');if(!e)return;
+ e.textContent='Ingelogd als '+wieBenIk();
+}
+el('admin-uitloggen').addEventListener('click',function(){
+ bevestigModal('Systeembeheer verlaten',
+  '<p>Je gaat terug naar het groepsprofiel. De Admin Tools sluiten; openstaande wijzigingen blijven staan tot je ze doorvoert.</p>',
+  'Ja, verlaten',function(){
+   wisActieveAdmKnop();
+   var select=el('account-select');
+   var eerste=accountsInGroep()[0];
+   if(eerste){
+    isSysteembeheerder=false;
+    huidigeGebruikerId=eerste.id;
+    MIJN_PROFIEL.voor=eerste.voor;MIJN_PROFIEL.achter=eerste.achter;
+    MIJN_PROFIEL.mail=eerste.mail||'';MIJN_PROFIEL.mobiel=eerste.tel||'';
+   }
+   updateAdminTabZichtbaarheid();
+   showView('personal');
+   renderAll();
+   if(select)select.value=isSysteembeheerder?'systeembeheer':String(huidigeGebruikerId);
+  });
 });
 
 function renderSysteembeheer(){
@@ -3769,14 +3914,64 @@ function focusbaarIn(container){
   container.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'),
   function(e){return !e.disabled&&e.offsetParent!==null;});
 }
+/* ---- Handelingen in het scherm zelf ----
+   De twintig knoppen openden een venster over de pagina. In de echte
+   beheeromgeving vult de gekozen handeling het scherm eronder, zodat je blijft
+   zien waar je bent en wat je hebt aangeklikt.
+   In plaats van twintig flows te herschrijven verhuist hier het venster zelf:
+   hetzelfde element krijgt een andere plek op de pagina. Alle bestaande
+   stappen, velden en controles blijven daardoor ongewijzigd werken. */
+var admInline=false;
+var admVorigTab='bulk';
+function admPaneelAan(){
+ var kaart=el('modal-card'),paneel=el('adm-scherm');
+ if(!kaart||!paneel)return;
+ if(kaart.parentNode!==el('adm-scherm-body'))el('adm-scherm-body').appendChild(kaart);
+ kaart.removeAttribute('aria-modal');
+ paneel.hidden=false;
+ el('modal-overlay').hidden=true;
+ el('admin-intro').hidden=true;
+ Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=true;});
+ var titel=kaart.querySelector('h3');
+ el('adm-scherm-titel').textContent=titel?titel.textContent:'Handeling';
+ if(titel)titel.hidden=true;
+}
+function admPaneelUit(){
+ var kaart=el('modal-card'),paneel=el('adm-scherm');
+ admInline=false;
+ if(paneel)paneel.hidden=true;
+ if(kaart&&kaart.parentNode!==el('modal-overlay')){
+  el('modal-overlay').appendChild(kaart);
+  kaart.setAttribute('aria-modal','true');
+ }
+ if(el('admin-intro'))el('admin-intro').hidden=false;
+ if(typeof wisActieveAdmKnop==='function')wisActieveAdmKnop();
+ var actief=document.querySelector('[data-admintab].on');
+ kiesAdmintab(actief?actief.getAttribute('data-admintab'):admVorigTab);
+}
 function openModal(html){
  modalHerkomst=document.activeElement;
  el('modal-card').innerHTML=html;
- el('modal-overlay').hidden=false;
+ /* Een formulier met labels links heeft meer breedte nodig dan een melding;
+    anders blijft er voor het invoerveld nauwelijks ruimte over. */
+ el('modal-card').classList.toggle('breed',!!el('modal-card').querySelector('.admblok'));
+ if(admInline){admPaneelAan();}
+ else{
+  if(el('modal-card').parentNode!==el('modal-overlay'))admPaneelUit();
+  el('modal-overlay').hidden=false;
+ }
  var eerste=focusbaarIn(el('modal-card'))[0];
  (eerste||el('modal-card')).focus();
 }
 function closeModal(){
+ /* Tijdens een handeling in het scherm sluit dit alleen de huidige stap; het
+    paneel blijft staan tot de flow klaar is of je op Sluiten drukt. */
+ if(admInline&&el('modal-card').parentNode===el('adm-scherm-body')){
+  el('modal-card').innerHTML='';
+  admPaneelUit();
+  return;
+ }
+ if(typeof wisActieveAdmKnop==='function')wisActieveAdmKnop();
  el('modal-overlay').hidden=true;
  /* Terug naar de knop waarmee het venster geopend werd, zodat je niet
     bovenaan de pagina opnieuw moet zoeken waar je was. */
