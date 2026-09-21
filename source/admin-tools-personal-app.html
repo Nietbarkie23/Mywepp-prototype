@@ -2852,7 +2852,10 @@ function borgGeldigeGebruiker(){
  var toegestaan=accountsInGroep();
  if(toegestaan.some(function(x){return x.id===huidigeGebruikerId;}))return;
  var vervanger=toegestaan[0];
- if(!vervanger)return;
+ /* Is er niemand meer die hier kan werken, dan is er ook niemand ingelogd.
+    Blijven wijzen naar de vorige persoon betekende dat het logboek zijn naam
+    schreef onder handelingen terwijl zijn account geblokkeerd of verlopen was. */
+ if(!vervanger){huidigeGebruikerId=null;return;}
  huidigeGebruikerId=vervanger.id;
  MIJN_PROFIEL.voor=vervanger.voor;MIJN_PROFIEL.achter=vervanger.achter;
  MIJN_PROFIEL.mail=vervanger.mail||'';MIJN_PROFIEL.mobiel=vervanger.tel||'';
@@ -2875,6 +2878,14 @@ function renderAccountSelect(){
     binnenkwam. */
  if(isSupport){
   el('account-select').innerHTML=supportOptie;
+  return;
+ }
+ /* Zonder bruikbaar account in deze groep koos de browser vanzelf de eerste
+    optie, en dat was Systeembeheerder. De balk zei dan dat je de beheerder was
+    terwijl het logboek "Onbekend" schreef. Liever eerlijk melden dat er niets
+    te kiezen valt. */
+ if(!opties.length&&eigenGekozen){
+  el('account-select').innerHTML='<option value="" selected>Geen account in deze groep</option>'+supportOptie+systeembeheerOptie;
   return;
  }
  el('account-select').innerHTML=supportOptie+systeembeheerOptie+opties.map(function(p){
@@ -3884,6 +3895,12 @@ function doorvoerenFlow(){
   return;
  }
  var ik=huidigeGebruiker();
+ /* Ondertekenen doe je als iemand. Zonder geldig account in deze groep, en
+    zonder support of systeembeheer, is er niemand om voor te tekenen. */
+ if(!ik&&!staatBovenDeGroep()){
+  openMelding('Niemand ingelogd','Er is in '+huidigeGroep+' geen account met toegang waaronder deze wijzigingen kunnen worden doorgevoerd. Kies eerst een account bij "Ingelogd als", of ga verder als systeembeheerder.');
+  return;
+ }
  var vastNummer=nummerLigtVast(),nummer=terugbelnummer();
  var gevolgen=vertrekGevolgen();
  openModal('<h3>Wijzigingen doorvoeren</h3>'+
@@ -4867,9 +4884,13 @@ function renderControleren(){
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
 el('naar-versturen').addEventListener('click',function(){
  var ik=huidigeGebruiker();
+ if(!ik&&!staatBovenDeGroep()){
+  openMelding('Niemand ingelogd','Er is in '+huidigeGroep+' geen account met toegang waaronder deze wijzigingen kunnen worden doorgevoerd. Kies eerst een account bij "Ingelogd als", of ga verder als systeembeheerder.');
+  return;
+ }
  /* Stond hier altijd "Systeembeheerder", ook als je namens MyWepp Support
     inlogde. Nu dezelfde naam als in de balk en in het logboek. */
- el('av-naam-display').textContent=ik?(naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker')):(wieBenIk()+' — alle groepen');
+ el('av-naam-display').textContent=ik?(naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker')):(staatBovenDeGroep()?wieBenIk()+' — alle groepen':'Geen account');
  el('av-tel').value=terugbelnummer();
  /* Support en systeembeheer bellen terug op hun servicenummer; dat is niet iets
     wat je per handeling verandert. */
