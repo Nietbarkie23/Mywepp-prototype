@@ -746,6 +746,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div id="sb-tel-fout" class="mini" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minimaal 9 cijfers), of laat het veld leeg.</div>
         <div class="actions end"><button type="button" class="primary" id="sb-tel-opslaan">Nummer opslaan</button></div>
         <div id="sb-tel-bevestiging"></div>
+        <div class="row" style="margin-top:14px">
+          <div class="field"><label for="sb-support-naam">Naam van de supportmedewerker</label><input id="sb-support-naam" maxlength="60" placeholder="MyWepp Support"></div>
+        </div>
+        <p class="mini">Wie namens MyWepp meekijkt. Deze naam staat in de balk en onder alles wat Support in het logboek vastlegt, zodat achteraf te zien is wie wat heeft gedaan.</p>
+        <div class="actions end"><button type="button" class="primary" id="sb-support-opslaan">Naam opslaan</button></div>
+        <div id="sb-support-bevestiging"></div>
       </div>
     </div>
   </section>
@@ -1492,7 +1498,10 @@ function updateAdminTabZichtbaarheid(){
 }
 el('rol-select').addEventListener('change',function(){
  var support=el('rol-select').value==='support';
+ zetIdentiteit(support?'support':'');
  updateAdminTabZichtbaarheid();
+ renderAccountSelect();
+ toonAdminWie();
  showView(support?'admin':'personal');
 });
 
@@ -1676,6 +1685,7 @@ async function loadFromSupabase(){
    if(opgeslagen.systeembeheer&&typeof opgeslagen.systeembeheer.tel==='string')SYSTEEMBEHEER.tel=opgeslagen.systeembeheer.tel;
    if(opgeslagen.groep_tweestaps&&typeof opgeslagen.groep_tweestaps==='object')groepTweestaps=opgeslagen.groep_tweestaps;
    if(opgeslagen.beoordeelde_signalen&&typeof opgeslagen.beoordeelde_signalen==='object')beoordeeldeSignalen=opgeslagen.beoordeelde_signalen;
+   if(opgeslagen.support&&typeof opgeslagen.support.naam==='string'&&opgeslagen.support.naam)SUPPORT.naam=opgeslagen.support.naam;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
@@ -2737,6 +2747,19 @@ var isSysteembeheerder=false;
    Het nummer hoort bij de organisatie, niet bij een groep, en staat daarom bij
    de overige organisatiegegevens. */
 var SYSTEEMBEHEER={tel:'088 123 45 67'};
+/* MyWepp Support werkt namens de leverancier, niet namens een groep. Wie dat
+   is hoorde nergens te staan: de balk toonde gewoon de vorige medewerker, en
+   het logboek schreef diens naam onder handelingen die Support deed. */
+var SUPPORT={naam:'MyWepp Support'};
+/* Wie je bent komt uit één plek: de keuzelijst "Ingelogd als". Support en
+   systeembeheer sluiten elkaar uit — je kijkt mee namens de leverancier óf je
+   bent de beheerder van de organisatie, niet allebei tegelijk. */
+var isSupport=false;
+function inSupportweergave(){return isSupport;}
+function zetIdentiteit(wat){
+ isSupport=(wat==='support');
+ isSysteembeheerder=(wat==='systeembeheer');
+}
 /* Wie in deze groep werkt, en verder niemand: vanuit een groep hoor je niet te
    zien wie er in een andere groep zit. Iemand die aan meerdere groepen is
    gekoppeld verschijnt uiteraard in elk van die groepen. */
@@ -2767,21 +2790,35 @@ function renderAccountSelect(){
  borgGeldigeGebruiker();
  var opties=accountsInGroep();
  var systeembeheerOptie='<option value="systeembeheer"'+(isSysteembeheerder?' selected':'')+'>Systeembeheerder — alle groepen</option>';
- el('account-select').innerHTML=systeembeheerOptie+opties.map(function(p){
+ var eigenGekozen=!isSysteembeheerder&&!isSupport;
+ /* In de supportweergave is dit geen keuze maar een vaststelling: je kijkt mee
+    als Support, niet als een medewerker van de groep. */
+ var supportOptie=(isSupport||el('rol-select').value==='support')
+  ? '<option value="support"'+(isSupport?' selected':'')+'>'+esc(SUPPORT.naam)+' — meekijken</option>'
+  : '';
+ el('account-select').innerHTML=supportOptie+systeembeheerOptie+opties.map(function(p){
   var label=naam(p)+' — '+(p.type==='medewerker'?'Medewerker':'Naaste')+(p.contactVolgorde?', contactpersoon '+p.contactVolgorde:'');
-  return '<option value="'+p.id+'"'+(!isSysteembeheerder&&p.id===huidigeGebruikerId?' selected':'')+'>'+esc(label)+'</option>';
+  return '<option value="'+p.id+'"'+(eigenGekozen&&p.id===huidigeGebruikerId?' selected':'')+'>'+esc(label)+'</option>';
  }).join('');
 }
 function verlaatSysteembeheer(){
- isSysteembeheerder=false;
+ zetIdentiteit('');
  toonAdminWie();
  updateAdminTabZichtbaarheid();
  if(el('rol-select').value!=='support'&&!el('view-admin').hidden)showView('personal');
 }
 el('account-select').addEventListener('change',function(){
  var waarde=el('account-select').value;
+ if(waarde==='support'){
+  zetIdentiteit('support');
+  toonAdminWie();
+  updateAdminTabZichtbaarheid();
+  renderAccountSelect();
+  showView('admin');
+  return;
+ }
  if(waarde==='systeembeheer'){
-  isSysteembeheerder=true;
+  zetIdentiteit('systeembeheer');
   toonAdminWie();
   updateAdminTabZichtbaarheid();
   showView('admin');
@@ -3794,7 +3831,7 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(b)
    administratie ingrijpen moet je kunnen zien onder wiens naam dat gebeurt. */
 function toonAdminWie(){
  var e=el('admin-wie');if(!e)return;
- e.textContent='Ingelogd als '+wieBenIk();
+ e.textContent='Ingelogd als '+wieBenIk()+(inSupportweergave()?' (leverancier)':'');
 }
 el('admin-uitloggen').addEventListener('click',function(){
  bevestigModal('Systeembeheer verlaten',
@@ -3819,6 +3856,7 @@ el('admin-uitloggen').addEventListener('click',function(){
 function renderSysteembeheer(){
  el('sb-groepen-sub').textContent=GROEPEN.length+' groep'+(GROEPEN.length===1?'':'en')+' in deze organisatie';
  if(el('sb-tel')&&document.activeElement!==el('sb-tel'))el('sb-tel').value=SYSTEEMBEHEER.tel||'';
+ if(el('sb-support-naam')&&document.activeElement!==el('sb-support-naam'))el('sb-support-naam').value=SUPPORT.naam||'';
  el('sb-groepen-lijst').innerHTML=GROEPEN.map(function(g,i){
   var c=sbCounts(g);
   return '<div class="personrow">'+
@@ -3868,6 +3906,21 @@ function bewaarSysteembeheerTel(){
  return true;
 }
 el('sb-tel-opslaan').addEventListener('click',bewaarSysteembeheerTel);
+el('sb-support-opslaan').addEventListener('click',function(){
+ /* Leeg laten mag niet: dan zou het logboek handelingen onder een lege naam
+    vastleggen en is niet meer te achterhalen wie er heeft meegekeken. */
+ var naamVal=kap(el('sb-support-naam').value.trim(),60)||'MyWepp Support';
+ var gewijzigd=SUPPORT.naam!==naamVal;
+ SUPPORT.naam=naamVal;
+ el('sb-support-naam').value=naamVal;
+ if(gewijzigd){
+  logActie('Supportmedewerker gewijzigd naar '+naamVal);
+  syncOrganisatieData();
+ }
+ renderAccountSelect();toonAdminWie();
+ el('sb-support-bevestiging').textContent='Naam opgeslagen.';
+ setTimeout(function(){var b=el('sb-support-bevestiging');if(b)b.textContent='';},2500);
+});
 el('sb-tel').addEventListener('input',function(){
  if(!el('sb-tel-fout').hidden&&(this.value.trim()===''||telGeldig(this.value))){
   el('sb-tel-fout').hidden=true;this.style.borderColor='';
@@ -3909,7 +3962,8 @@ async function syncOrganisatieData(){
    {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen},
    {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER},
    {sleutel:'groep_tweestaps',waarde:groepTweestaps},
-   {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen}
+   {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen},
+   {sleutel:'support',waarde:SUPPORT}
   ],{onConflict:'sleutel'});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
@@ -4107,6 +4161,7 @@ function logboekTijd(d){
   ' '+tweeCijfers(d.getHours())+':'+tweeCijfers(d.getMinutes());
 }
 function wieBenIk(){
+ if(isSupport)return SUPPORT.naam;
  if(isSysteembeheerder)return 'Systeembeheerder';
  var ik=huidigeGebruiker();
  return ik?naam(ik):'Onbekend';
