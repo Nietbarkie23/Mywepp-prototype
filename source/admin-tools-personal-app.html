@@ -629,24 +629,23 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="locatieMaken">Locatie<br>maken</button>
       <button type="button" class="abtn" data-adm="groepMaken">Groep<br>maken</button>
       <button type="button" class="abtn" data-adm="clientMaken">Cliënt<br>maken</button>
-      <button type="button" class="abtn" data-adm="persoonMaken">Medewerker of<br>naaste maken</button>
+      <button type="button" class="abtn" data-adm="persoonMaken">(Non)prof.<br>maken</button>
     </div>
     <div class="adminbar-group"><span class="adminbar-kop">Bewerken</span>
       <button type="button" class="abtn" data-adm="instituutBewerken">Instituut<br>bewerken</button>
       <button type="button" class="abtn" data-adm="groepBewerken">Groep<br>bewerken</button>
       <button type="button" class="abtn" data-adm="clientBewerken">Cliënt<br>bewerken</button>
-      <button type="button" class="abtn" data-adm="persoonBewerken">Medewerker of<br>naaste bewerken</button>
+      <button type="button" class="abtn" data-adm="persoonBewerken">(Non)prof.<br>bewerken</button>
     </div>
     <div class="adminbar-group"><span class="adminbar-kop">Verwijderen</span>
       <button type="button" class="abtn danger" data-adm="instituutVerwijderen">Instituut<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="locatieVerwijderen">Locatie<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="groepVerwijderen">Groep<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="clientVerwijderen">Cliënt<br>verwijderen</button>
-      <button type="button" class="abtn danger" data-adm="persoonVerwijderen">Medewerker of<br>naaste verwijderen</button>
+      <button type="button" class="abtn danger" data-adm="persoonVerwijderen">(Non)prof.<br>verwijderen</button>
     </div>
     <div class="adminbar-group adminbar-breed"><span class="adminbar-kop">Overzichten</span>
       <button type="button" class="abtn tab on" data-admintab="bulk">Standaard-<br>rollen</button>
-      <button type="button" class="abtn tab" data-admintab="groep">Groep<br>bewerken</button>
       <button type="button" class="abtn tab" data-admintab="groepen">Groepen<br>beheren</button>
       <button type="button" class="abtn tab" data-admintab="controle">Controle <span class="countchip" id="controle-teller"></span></button>
       <button type="button" class="abtn tab" data-admintab="matrix">Wie ziet<br>wie</button>
@@ -659,7 +658,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="groepeer">Groepeer</button>
       <button type="button" class="abtn" data-adm="groepHerstellen">Groep<br>herstellen</button>
       <button type="button" class="abtn" data-adm="clientHerstellen">Cliënt<br>herstellen</button>
-      <button type="button" class="abtn" data-adm="persoonHerstellen">Medewerker of<br>naaste herstellen</button>
+      <button type="button" class="abtn" data-adm="persoonHerstellen">(Non)prof.<br>herstellen</button>
     </div>
   </div>
 
@@ -693,6 +692,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <p class="note">Per recht kies je één <b>standaardrol</b> (die 80%-rol) en optioneel enkele <b>optionele rollen</b> ernaast — zo kan een groep als die van Angelina meerdere rollen aanbieden zonder dat het systeem hoeft te raden welke de hoofdrol is.</p>
         <div id="bulk-rechten"></div>
         <div class="actions end">
+          <button type="button" id="naar-groep-rechten">Eén groep apart instellen…</button>
           <button type="button" class="primary" id="bulk-toepassen">Toepassen op geselecteerde groepen</button>
         </div>
         <div id="bulk-bevestiging"></div>
@@ -702,7 +702,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
   <section id="admintab-groep" hidden>
     <div class="panel">
-      <div class="head"><h2>Groep bewerken</h2><span class="sub">Bekijk en overschrijf de standaardrechten voor één groep</span></div>
+      <div class="head"><h2>Standaardrollen van één groep</h2><span class="sub">Afwijken van de organisatiebrede instelling</span></div>
       <div class="body">
         <div class="row">
           <div class="field"><label for="groep-select">Groep</label><select id="groep-select"></select></div>
@@ -1463,6 +1463,10 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-admintab]'),functi
   kiesAdmintab(b.getAttribute('data-admintab'));
  });
 });
+/* "Groep bewerken" stond twee keer in de balk: als handeling (naam en locatie)
+   en als overzicht (standaardrollen van één groep afwijken). Dat tweede hoort
+   bij de standaardrollen en is daar nu vandaan te bereiken. */
+el('naar-groep-rechten').addEventListener('click',function(){kiesAdmintab('groep');});
 el('adm-scherm-sluiten').addEventListener('click',function(){
  el('modal-card').innerHTML='';
  admPaneelUit();
@@ -3597,10 +3601,31 @@ function locatieMakenFlow(){
   if(voegLocatieToe(el('modal-naam-veld').value,el('modal-instituut-select').value))closeModal();
  });
 }
+/* Deze knop sprong naar het hele groepenoverzicht, met de lijst van bestaande
+   groepen erbij. Bij "maken" hoor je gewoon een formulier te krijgen, net als
+   bij instituut, locatie en cliënt. */
 function groepMakenFlow(){
- showView('admin');
- kiesAdmintab('groepen');
- setTimeout(function(){el('sb-nieuwe-groep').focus();},50);
+ openModal('<h3>Groep maken</h3>'+
+  '<fieldset class="admblok"><legend>Nieuwe groep</legend>'+
+  '<div class="admveld"><label for="modal-naam-veld">Naam<span class="verplicht">*</span></label>'+
+   '<input class="admin" id="modal-naam-veld" maxlength="60" placeholder="Naam van de groep"></div>'+
+  '<div class="admveld"><label for="modal-groep-locatie">Locatie</label>'+
+   '<select class="admin" id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option>'+esc(l)+'</option>';}).join('')+'</select></div>'+
+  '</fieldset>'+
+  '<div id="modal-groep-fout" class="mini" style="color:var(--brick)" hidden>Vul een naam in voor de groep.</div>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-opslaan').addEventListener('click',function(){
+  var naamVal=el('modal-naam-veld').value.trim();
+  if(!naamVal){el('modal-groep-fout').hidden=false;return;}
+  var locatie=el('modal-groep-locatie').value;
+  if(!voegGroepToe(naamVal))return;
+  groepLocatie[naamVal]=locatie;
+  syncOrganisatieData();
+  closeModal();
+  kiesAdmintab('groepen');
+ });
 }
 function kiesGroepDan(titel,onGroep){kiesUitLijstModal(titel,GROEPEN,function(g){return g;},onGroep);}
 function clientMakenFlow(){
