@@ -2936,15 +2936,18 @@ function controleSignalen(){
     actie:{soort:'client',id:c.id,groep:g,label:'Profiel openen'}});
   });
  });
- /* 12. Accounts zonder tweede stap terwijl de groep die eist. Met alleen een
-        uitgelekt wachtwoord ligt het dossier dan open. */
- GROEPEN.filter(eistTweestaps).forEach(function(g){
-  actieveIn(g,'medewerker').concat(actieveIn(g,'naaste')).forEach(function(pp){
-   if(pp.tweestaps||!heeftToegang(pp))return;
-   signalen.push({ernst:'hoog',groep:g,
-    tekst:naam(pp)+' heeft geen tweestapsverificatie, terwijl deze groep dat verplicht stelt.',
-    actie:{soort:'persoon',id:pp.id,type:pp.type,groep:g,label:'Profiel openen'}});
-  });
+ /* 12. Accounts zonder tweede stap terwijl een groep die eist. Met alleen een
+        uitgelekt wachtwoord ligt het dossier dan open. Dit hangt aan de persoon
+        en niet aan de groep: wie in twee groepen zit stond er anders dubbel in,
+        terwijl het om één account met één ontbrekende tweede stap gaat. */
+ people.filter(function(pp){
+  return (pp.type==='medewerker'||pp.type==='naaste')&&!pp.archived&&pp._state!=='verwijderd'&&
+   !pp.tweestaps&&heeftToegang(pp)&&(pp.groepen||[]).some(eistTweestaps);
+ }).forEach(function(pp){
+  var eisers=pp.groepen.filter(eistTweestaps);
+  signalen.push({ernst:'hoog',groep:eisers.join(', '),
+   tekst:naam(pp)+' heeft geen tweestapsverificatie, terwijl '+(eisers.length>1?'deze groepen dat verplicht stellen':'deze groep dat verplicht stelt')+'.',
+   actie:{soort:'persoon',id:pp.id,type:pp.type,groep:eisers[0],label:'Profiel openen'}});
  });
  /* 13. Een naaste met toegang tot meerdere cliënten. Een familielid hoort
         normaal bij één cliënt; meer is ongebruikelijk en het controleren waard. */
