@@ -270,6 +270,9 @@ input,select{width:100%;font:inherit;font-size:14.5px;padding:9px 11px;
 .row.three{grid-template-columns:1fr 1fr 1fr}
 .field.chip-select select{width:auto}
 .lockedfield{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink-soft);padding:9px 12px;font-size:13.5px}
+/* Een veld dat je wel ziet maar niet zelf invult, ziet er ook zo uit. */
+input.vastveld{background:var(--paper);color:var(--ink-soft);cursor:default}
+input.vastveld:focus{border-color:var(--line);box-shadow:none}
 
 .note{border-left:3px solid var(--line-strong);padding:4px 0 4px 12px;margin:4px 0 14px;font-size:13.5px;color:var(--ink-soft)}
 .note.open{border-left-color:var(--amber);background:var(--amber-bg);padding:10px 12px 10px 12px;border-radius:0 var(--radius) var(--radius) 0;color:var(--amber)}
@@ -1020,7 +1023,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel"><div class="body">
       <div class="row">
         <div class="field"><label>Contactpersoon</label><div class="lockedfield" id="av-naam-display"></div></div>
-        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
+        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-vast" hidden></p><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
       </div>
       <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>
       <div class="actions end"><button type="button" data-back="pp-controleren">Terug</button><button type="button" class="primary" id="av-versturen" disabled>Wijzigingen doorvoeren</button></div>
@@ -1740,6 +1743,7 @@ async function loadFromSupabase(){
    if(opgeslagen.groep_tweestaps&&typeof opgeslagen.groep_tweestaps==='object')groepTweestaps=opgeslagen.groep_tweestaps;
    if(opgeslagen.beoordeelde_signalen&&typeof opgeslagen.beoordeelde_signalen==='object')beoordeeldeSignalen=opgeslagen.beoordeelde_signalen;
    if(opgeslagen.support&&typeof opgeslagen.support.naam==='string'&&opgeslagen.support.naam)SUPPORT.naam=opgeslagen.support.naam;
+   if(opgeslagen.support&&typeof opgeslagen.support.tel==='string'&&opgeslagen.support.tel)SUPPORT.tel=opgeslagen.support.tel;
    if(opgeslagen.digibord&&typeof opgeslagen.digibord==='object')digibordPerGroep=opgeslagen.digibord;
    if(opgeslagen.maaltijden&&typeof opgeslagen.maaltijden==='object')MAALTIJDRESERVERINGEN=opgeslagen.maaltijden;
   }
@@ -2806,7 +2810,7 @@ var SYSTEEMBEHEER={tel:'088 123 45 67'};
 /* MyWepp Support werkt namens de leverancier, niet namens een groep. Wie dat
    is hoorde nergens te staan: de balk toonde gewoon de vorige medewerker, en
    het logboek schreef diens naam onder handelingen die Support deed. */
-var SUPPORT={naam:'MyWepp Support'};
+var SUPPORT={naam:'MyWepp Support',tel:'088 555 20 20'};
 /* Wie je bent komt uit één plek: de keuzelijst "Ingelogd als". Support en
    systeembeheer sluiten elkaar uit — je kijkt mee namens de leverancier óf je
    bent de beheerder van de organisatie, niet allebei tegelijk. */
@@ -2852,6 +2856,16 @@ function renderAccountSelect(){
  var supportOptie=(isSupport||el('rol-select').value==='support')
   ? '<option value="support"'+(isSupport?' selected':'')+'>'+esc(SUPPORT.naam)+' — meekijken</option>'
   : '';
+ /* Wie namens de leverancier meekijkt, hoort niet in de huid van een medewerker
+    of naaste te kunnen stappen. Dat zou twee dingen kapotmaken: het logboek
+    schrijft dan hun naam onder handelingen die Support deed, en Support krijgt
+    de rechten van die persoon op cliënten waar hij niets te zoeken heeft.
+    Terug naar een gewoon account gaat via Weergave, precies zoals je hier
+    binnenkwam. */
+ if(isSupport){
+  el('account-select').innerHTML=supportOptie;
+  return;
+ }
  el('account-select').innerHTML=supportOptie+systeembeheerOptie+opties.map(function(p){
   var label=naam(p)+' — '+(p.type==='medewerker'?'Medewerker':'Naaste')+(p.contactVolgorde?', contactpersoon '+p.contactVolgorde:'');
   return '<option value="'+p.id+'"'+(eigenGekozen&&p.id===huidigeGebruikerId?' selected':'')+'>'+esc(label)+'</option>';
@@ -3859,6 +3873,7 @@ function doorvoerenFlow(){
   return;
  }
  var ik=huidigeGebruiker();
+ var vastNummer=nummerLigtVast(),nummer=terugbelnummer();
  var gevolgen=vertrekGevolgen();
  openModal('<h3>Wijzigingen doorvoeren</h3>'+
   '<p class="mini" style="margin:0 0 12px">Dit voert alle openstaande wijzigingen door, ook die je in het groepsprofiel hebt gemaakt. Daarna is het niet meer terug te draaien.</p>'+
@@ -3868,9 +3883,12 @@ function doorvoerenFlow(){
     '</ul><p class="mini">Je kunt toch doorvoeren, maar dan moet iemand dit later alsnog regelen. Overdragen doe je in het groepsprofiel, bij Wijzigingen controleren.</p></div>':'')+
   '<fieldset class="admblok"><legend>Wie voert dit door</legend>'+
    '<div class="admveld"><label>Naam</label><div class="admin lockedfield" id="adm-dv-naam">'+esc(ik?naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker'):wieBenIk())+'</div></div>'+
-   '<div class="admveld"><label for="adm-dv-tel">Telefoonnummer<span class="verplicht">*</span></label>'+
-    '<input class="admin" id="adm-dv-tel" value="'+esc(ik&&ik.tel?ik.tel:'')+'" placeholder="06 12 34 56 78"></div>'+
-   '<p class="mini" id="adm-dv-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p>'+
+   (vastNummer
+    ?'<div class="admveld"><label>Telefoonnummer</label><div class="admin lockedfield" id="adm-dv-tel-vast">'+esc(nummer)+'</div></div>'+
+     '<p class="mini" style="margin:0 0 4px">Dit is het vaste servicenummer van '+esc(wieBenIk())+'. Het staat vast en is niet per handeling aan te passen.</p>'
+    :'<div class="admveld"><label for="adm-dv-tel">Telefoonnummer<span class="verplicht">*</span></label>'+
+     '<input class="admin" id="adm-dv-tel" value="'+esc(nummer)+'" placeholder="06 12 34 56 78"></div>'+
+     '<p class="mini" id="adm-dv-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p>')+
    '<div class="checkline"><input type="checkbox" id="adm-dv-akkoord"><label for="adm-dv-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>'+
   '</fieldset>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
@@ -3878,17 +3896,22 @@ function doorvoerenFlow(){
  el('modal-annuleer').addEventListener('click',closeModal);
  var knop=el('adm-dv-doorvoeren');
  var controleer=function(){
-  var telOk=telGeldig(el('adm-dv-tel').value);
-  el('adm-dv-tel').style.borderColor=telOk?'':'var(--brick)';
-  el('adm-dv-tel-fout').hidden=telOk;
+  var telOk=true;
+  if(!vastNummer){
+   telOk=telGeldig(el('adm-dv-tel').value);
+   el('adm-dv-tel').style.borderColor=telOk?'':'var(--brick)';
+   el('adm-dv-tel-fout').hidden=telOk;
+  }
   knop.disabled=!(telOk&&el('adm-dv-akkoord').checked);
  };
- el('adm-dv-tel').addEventListener('input',controleer);
- el('adm-dv-tel').addEventListener('blur',controleer);
+ if(!vastNummer){
+  el('adm-dv-tel').addEventListener('input',controleer);
+  el('adm-dv-tel').addEventListener('blur',controleer);
+ }
  el('adm-dv-akkoord').addEventListener('change',controleer);
  knop.addEventListener('click',async function(){
   knop.disabled=true;knop.textContent='Bezig met opslaan…';
-  if(ik&&telGeldig(el('adm-dv-tel').value))ik.tel=el('adm-dv-tel').value.trim();
+  if(!vastNummer&&ik&&telGeldig(el('adm-dv-tel').value))ik.tel=el('adm-dv-tel').value.trim();
   var resultaat=await voerWijzigingenDoor();
   /* renderAll() in het doorvoeren heeft de knoppenbalk al bijgewerkt; nu nog
      het venster zelf, dat op dat moment in het Admin Tools-paneel hangt. */
@@ -4306,6 +4329,17 @@ function logboekTijd(d){
  return tweeCijfers(d.getDate())+'-'+tweeCijfers(d.getMonth()+1)+'-'+d.getFullYear()+
   ' '+tweeCijfers(d.getHours())+':'+tweeCijfers(d.getMinutes());
 }
+/* Support en systeembeheer werken niet namens een groep maar namens de
+   leverancier of de organisatie. Hun terugbelnummer is een vast servicenummer
+   en geen persoonlijk mobiel: dat hoort ingevuld te staan en niet ter plekke
+   overschreven te kunnen worden door wie er toevallig achter het scherm zit. */
+function terugbelnummer(){
+ if(isSupport)return SUPPORT.tel||'';
+ if(isSysteembeheerder)return SYSTEEMBEHEER.tel||'';
+ var ik=huidigeGebruiker();
+ return ik&&ik.tel?ik.tel:'';
+}
+function nummerLigtVast(){return staatBovenDeGroep();}
 function wieBenIk(){
  if(isSupport)return SUPPORT.naam;
  if(isSysteembeheerder)return 'Systeembeheerder';
@@ -4796,19 +4830,36 @@ function renderControleren(){
 el('verzenden-btn').addEventListener('click',function(){renderControleren();show('pp-controleren');});
 el('naar-versturen').addEventListener('click',function(){
  var ik=huidigeGebruiker();
- el('av-naam-display').textContent=ik?(naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker')):'Systeembeheerder — alle groepen';
- el('av-tel').value=ik?(ik.tel||''):'';el('av-akkoord').checked=false;el('av-versturen').disabled=true;
+ /* Stond hier altijd "Systeembeheerder", ook als je namens MyWepp Support
+    inlogde. Nu dezelfde naam als in de balk en in het logboek. */
+ el('av-naam-display').textContent=ik?(naam(ik)+' — '+(ik.type==='naaste'?'Naaste':'Medewerker')):(wieBenIk()+' — alle groepen');
+ el('av-tel').value=terugbelnummer();
+ /* Support en systeembeheer bellen terug op hun servicenummer; dat is niet iets
+    wat je per handeling verandert. */
+ zetTelefoonVast(nummerLigtVast());
+ el('av-akkoord').checked=false;el('av-versturen').disabled=true;
  el('av-tel').style.borderColor='';
  el('av-tel-fout').hidden=true;
  show('pp-versturen');
 });
+function zetTelefoonVast(vast){
+ var veld=el('av-tel');if(!veld)return;
+ veld.readOnly=!!vast;
+ veld.classList.toggle('vastveld',!!vast);
+ veld.setAttribute('aria-readonly',vast?'true':'false');
+ var uitleg=el('av-tel-vast');
+ if(uitleg){
+  uitleg.hidden=!vast;
+  if(vast)uitleg.textContent='Vast servicenummer van '+wieBenIk()+'. Niet per handeling aan te passen.';
+ }
+}
 function telGeldig(v){
  v=v.trim();
  if(!/^[0-9+\-\s()]+$/.test(v))return false;
  return v.replace(/\D/g,'').length>=9;
 }
 function checkVersturenKlaar(){
- var telOk=telGeldig(el('av-tel').value);
+ var telOk=nummerLigtVast()?true:telGeldig(el('av-tel').value);
  el('av-tel').style.borderColor=telOk?'':'var(--brick)';
  el('av-tel-fout').hidden=telOk;
  el('av-versturen').disabled=!(telOk&&el('av-akkoord').checked);
