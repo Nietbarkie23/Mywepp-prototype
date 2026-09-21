@@ -1071,6 +1071,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" id="pp-avg-inzage">Inzage (AVG)</button>
         <button type="button" id="pp-blokkeer">Toegang blokkeren</button>
       </div>
+      <div class="mini" id="pp-tweestaps-status" style="margin:-4px 0 10px"></div>
       <div class="mini" id="pp-blokkade-uitleg" style="margin:-4px 0 10px" hidden></div>
       <div id="pp-clienten"></div>
       <div class="sublistlabel" id="pp-lbl-medewerkers">Recht op medewerkers</div>
@@ -1525,7 +1526,15 @@ function hubBevestig(tekst){
  el('hub-bevestiging').textContent=tekst;
  setTimeout(function(){var b=el('hub-bevestiging');if(b)b.textContent='';},2000);
 }
-el('hub-tweestaps').addEventListener('change',function(){hubBevestig('Wijziging opgeslagen.');});
+el('hub-tweestaps').addEventListener('change',function(){
+ groepTweestaps[huidigeGroep]=this.checked;
+ logActie(this.checked
+  ?('Tweestapsverificatie verplicht gesteld voor groep "'+huidigeGroep+'"')
+  :('Tweestapsverificatie niet langer verplicht voor groep "'+huidigeGroep+'"'));
+ syncOrganisatieData();
+ hubBevestig('Wijziging opgeslagen.');
+ if(!el('admintab-controle').hidden)renderControle();
+});
 el('hub-opmerking').addEventListener('blur',function(){if(el('hub-opmerking').value.trim())hubBevestig('Opmerking opgeslagen.');});
 
 function personRowToDb(p){
@@ -1536,6 +1545,7 @@ function personRowToDb(p){
   gearchiveerd_op:geldigeDatum(p.gearchiveerdOp)?p.gearchiveerdOp:null,
   geblokkeerd:!!p.geblokkeerd,geblokkeerd_reden:p.geblokkeerdReden||null,
   toestemming:p.toestemming||{},
+  tweestaps:!!p.tweestaps,tweestaps_datum:geldigeDatum(p.tweestapsDatum)?p.tweestapsDatum:null,
   laatste_login:geldigeDatum(p.laatsteLogin)?p.laatsteLogin:null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
   medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
@@ -1552,6 +1562,8 @@ function dbRowToPerson(r){
  if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
  if(r.gearchiveerd_op)p.gearchiveerdOp=String(r.gearchiveerd_op).slice(0,10);
  if(r.toestemming&&typeof r.toestemming==='object')p.toestemming=r.toestemming;
+ if(r.tweestaps)p.tweestaps=true;
+ if(r.tweestaps_datum)p.tweestapsDatum=String(r.tweestaps_datum).slice(0,10);
  if(r.geblokkeerd)p.geblokkeerd=true;
  if(r.geblokkeerd_reden)p.geblokkeerdReden=r.geblokkeerd_reden;
  if(r.laatste_login)p.laatsteLogin=String(r.laatste_login).slice(0,10);
@@ -1581,6 +1593,7 @@ async function loadFromSupabase(){
    if(opgeslagen.groep_locatie)groepLocatie=opgeslagen.groep_locatie;
    if(Array.isArray(opgeslagen.gearchiveerde_groepen))gearchiveerdeGroepen=opgeslagen.gearchiveerde_groepen;
    if(opgeslagen.systeembeheer&&typeof opgeslagen.systeembeheer.tel==='string')SYSTEEMBEHEER.tel=opgeslagen.systeembeheer.tel;
+   if(opgeslagen.groep_tweestaps&&typeof opgeslagen.groep_tweestaps==='object')groepTweestaps=opgeslagen.groep_tweestaps;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
@@ -2295,6 +2308,7 @@ function openProfielPersoon(id,t){
  el('pp-toegang-tot').value=geldigeDatum(p.toegangTot)?p.toegangTot:'';
  toonToegangHint(p);
  toonBlokkadeKnop(p);
+ toonTweestapsStatus(p);
  el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
  toonMailFout('pp-mail','pp-mail-fout','');
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
@@ -2482,6 +2496,23 @@ el('pp-avg-inzage').addEventListener('click',function(){openAvgDossier(huidigPro
 /* Blokkeren trekt de toegang per direct in zonder iets te wissen. Bij een
    vermoeden van misbruik is dat de eerste stap: gegevens moeten blijven staan
    om te kunnen uitzoeken wat er is gebeurd. */
+/* Een account zonder tweede stap is met alleen een uitgelekt wachtwoord te
+   misbruiken. Of dat erg is hangt af van wat de groep vereist, dus dat staat
+   erbij. Aanzetten doet de persoon zelf in zijn eigen app; hier alleen tonen. */
+function toonTweestapsStatus(p){
+ var e=el('pp-tweestaps-status');if(!e)return;
+ var vereist=(p.groepen||[]).filter(eistTweestaps);
+ if(p.tweestaps){
+  e.textContent='Tweestapsverificatie staat aan'+(p.tweestapsDatum?' sinds '+datumNL(p.tweestapsDatum):'')+'.';
+  e.style.color='var(--moss)';
+ }else if(vereist.length){
+  e.textContent='Tweestapsverificatie staat uit, terwijl '+(vereist.length>1?'de groepen ':'groep ')+vereist.join(', ')+' die verplicht '+(vereist.length>1?'stellen':'stelt')+'. Deze persoon moet dat in de eigen app aanzetten.';
+  e.style.color='var(--brick)';
+ }else{
+  e.textContent='Tweestapsverificatie staat uit. Deze groep stelt dat niet verplicht.';
+  e.style.color='var(--ink-soft)';
+ }
+}
 function toonBlokkadeKnop(p){
  var knop=el('pp-blokkeer'),uitleg=el('pp-blokkade-uitleg');
  if(!knop)return;
@@ -2703,9 +2734,15 @@ function verversGroepReferenties(){
  el('groep-select').innerHTML=GROEPEN.map(function(x){return '<option'+(x===groepSel.groep?' selected':'')+'>'+esc(x)+'</option>';}).join('');
  el('pp-groep-naam').textContent=huidigeGroep;
  el('hub-groepnaam').textContent=huidigeGroep;
+ if(el('hub-tweestaps'))el('hub-tweestaps').checked=eistTweestaps(huidigeGroep);
  renderBulkGroepen();
 }
 var gearchiveerdeGroepen=[];
+/* De schakelaar "Tweestapsverificatie verplicht" zei alleen "opgeslagen" maar
+   bewaarde niets en deed niets. Nu staat het per groep vast, zodat de controle
+   kan melden wie er niet aan voldoet. */
+var groepTweestaps={};
+function eistTweestaps(g){return groepTweestaps[g]!==false;}
 function voegGroepToe(naamVal){
  naamVal=kap((naamVal||'').trim(),MAXLEN.groep);
  if(!naamVal)return false;
@@ -2899,7 +2936,27 @@ function controleSignalen(){
     actie:{soort:'client',id:c.id,groep:g,label:'Profiel openen'}});
   });
  });
- /* 12. Groep zonder mensen. */
+ /* 12. Accounts zonder tweede stap terwijl de groep die eist. Met alleen een
+        uitgelekt wachtwoord ligt het dossier dan open. */
+ GROEPEN.filter(eistTweestaps).forEach(function(g){
+  actieveIn(g,'medewerker').concat(actieveIn(g,'naaste')).forEach(function(pp){
+   if(pp.tweestaps||!heeftToegang(pp))return;
+   signalen.push({ernst:'hoog',groep:g,
+    tekst:naam(pp)+' heeft geen tweestapsverificatie, terwijl deze groep dat verplicht stelt.',
+    actie:{soort:'persoon',id:pp.id,type:pp.type,groep:g,label:'Profiel openen'}});
+  });
+ });
+ /* 13. Een naaste met toegang tot meerdere cliënten. Een familielid hoort
+        normaal bij één cliënt; meer is ongebruikelijk en het controleren waard. */
+ people.filter(function(pp){return pp.type==='naaste'&&!pp.archived&&pp._state!=='verwijderd';}).forEach(function(pp){
+  var clienten=Object.keys(pp.clientRechten||{}).map(function(id){return findPerson(+id);})
+   .filter(function(c){return c&&c.type==='client'&&!c.archived;});
+  if(clienten.length<2)return;
+  signalen.push({ernst:'laag',groep:(pp.groepen||[]).join(', '),
+   tekst:naam(pp)+' is een naaste met toegang tot '+clienten.length+' cliënten: '+clienten.map(naam).join(', ')+'. Controleer of dat klopt.',
+   actie:{soort:'persoon',id:pp.id,type:pp.type,groep:(pp.groepen||[])[0]||huidigeGroep,label:'Profiel openen'}});
+ });
+ /* 14. Groep zonder mensen. */
  GROEPEN.forEach(function(g){
   if(!actieveIn(g,'client').length&&!actieveIn(g,'medewerker').length&&!actieveIn(g,'naaste').length){
    signalen.push({ernst:'laag',groep:g,tekst:'Deze groep is helemaal leeg.',actie:{soort:'groep',groep:g,label:'Groep openen'}});
@@ -3263,7 +3320,7 @@ function telRechten(p){
 }
 function exporteerIedereen(){
  var kop=['Naam','Type','Groepen','Algemene rol','E-mailadres','Telefoon','Contactpersoon','Status',
-          'Toegang tot','Toegang verlopen','Geblokkeerd','Laatst gebruikt','Aantal rechten','Gearchiveerd'];
+          'Toegang tot','Toegang verlopen','Geblokkeerd','Tweestapsverificatie','Laatst gebruikt','Aantal rechten','Gearchiveerd'];
  var regels=[kop.map(csvVeld).join(';')];
  people.slice().sort(function(a,b){
   return (a.type+naam(a)).localeCompare(b.type+naam(b));
@@ -3277,6 +3334,7 @@ function exporteerIedereen(){
    geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'',
    toegangVerlopen(p)?'ja':'nee',
    p.geblokkeerd?'ja':'nee',
+   p.type==='client'?'':(p.tweestaps?'aan':'uit'),
    geldigeDatum(p.laatsteLogin)?datumNL(p.laatsteLogin):'',
    telRechten(p),
    p.archived?'ja':'nee'
@@ -3598,7 +3656,8 @@ async function syncOrganisatieData(){
    {sleutel:'locatie_instituut',waarde:locatieInstituut},
    {sleutel:'groep_locatie',waarde:groepLocatie},
    {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen},
-   {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER}
+   {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER},
+   {sleutel:'groep_tweestaps',waarde:groepTweestaps}
   ],{onConflict:'sleutel'});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
@@ -3944,6 +4003,7 @@ function avgDossier(p){
  voeg('Status',p.status);
  voeg('Toegang geblokkeerd',p.geblokkeerd?('ja'+(p.geblokkeerdReden?' — '+p.geblokkeerdReden:'')):'nee');
  voeg('Laatst gebruikt',geldigeDatum(p.laatsteLogin)?datumNL(p.laatsteLogin):'niet geregistreerd');
+ if(p.type!=='client')voeg('Tweestapsverificatie',p.tweestaps?('aan'+(p.tweestapsDatum?' sinds '+datumNL(p.tweestapsDatum):'')):'uit');
  voeg('Toegang tot en met',geldigeDatum(p.toegangTot)?datumNL(p.toegangTot):'geen einddatum');
  voeg('Profielfoto',p.foto?('ja, opgeslagen'+(magFotoTonen(p)?'':' — wordt niet getoond, geen toestemming')):'nee');
  if(p.type==='client'){
@@ -4717,7 +4777,9 @@ function renderMijnProfiel(){
    openModal('<h3>Tweestapsverificatie uitzetten?</h3><div class="msec"><p>Je staat op het punt om tweestapsverificatie uit te zetten. Je account is daarna minder beveiligd. Je logt dan alleen in met je e-mailadres en wachtwoord.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Uitzetten</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-bevestig').addEventListener('click',function(){
-    p.tweestaps=false;p.tweestapsDatum='';closeModal();renderMijnProfiel();
+    p.tweestaps=false;p.tweestapsDatum='';
+    zetTweestapsOpAccount(false);
+    closeModal();renderMijnProfiel();
    });
   }else{
    openModal('<h3>Tweestapsverificatie instellen</h3>'+
@@ -4736,10 +4798,23 @@ function renderMijnProfiel(){
     if(!/^\d{6}$/.test(code)){el('mp-2fa-code').style.borderColor='var(--brick)';return;}
     p.tweestaps=true;
     p.tweestapsDatum=new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'long',year:'numeric'});
+    zetTweestapsOpAccount(true);
     closeModal();renderMijnProfiel();
    });
   }
  });
+}
+/* "Mijn profiel" en het account in de beheeromgeving zijn dezelfde persoon.
+   Werd dat niet doorgezet, dan zette iemand de tweede stap aan terwijl de
+   controle bleef melden dat hij ontbrak. */
+function zetTweestapsOpAccount(aan){
+ var ik=huidigeGebruiker();
+ if(!ik)return;
+ ik.tweestaps=!!aan;
+ if(aan)ik.tweestapsDatum=vandaagISO(); else delete ik.tweestapsDatum;
+ logActie(aan?(naam(ik)+' heeft tweestapsverificatie aangezet'):(naam(ik)+' heeft tweestapsverificatie uitgezet'));
+ syncToSupabase();
+ if(typeof renderAll==='function')renderAll();
 }
 function openWachtwoordModal(){
  openModal('<h3>Wachtwoord wijzigen</h3>'+
