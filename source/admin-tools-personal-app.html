@@ -1207,7 +1207,18 @@ function esc(s){
   .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 var verzondenTimer=null;
-function show(id){clearTimeout(verzondenTimer);['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);}); window.scrollTo(0,0);}
+function show(id){
+ clearTimeout(verzondenTimer);
+ ['pp-hub','pp-formulier','pp-controleren','pp-versturen','pp-verzonden','pp-digibord','pp-statistieken','pp-maaltijden','pp-profiel-client','pp-profiel-persoon','pp-gearchiveerd'].forEach(function(x){el(x).hidden=(x!==id);});
+ /* Deze drie werden alleen gevuld door de link op het hubscherm. Kwam je er
+    langs een andere weg — een controlesignaal, de terugknop, een sprong uit
+    het zoekscherm — dan stond je voor een leeg scherm. Het vullen hoort bij
+    het tonen, niet bij één specifieke knop. */
+ if(id==='pp-statistieken'&&typeof renderStatTable==='function')renderStatTable();
+ if(id==='pp-maaltijden'&&typeof renderMaaltijdKalender==='function')renderMaaltijdKalender();
+ if(id==='pp-digibord'&&typeof renderDigibord==='function')renderDigibord();
+ window.scrollTo(0,0);
+}
 /* maxlength in het formulier houdt alleen normale invoer tegen; geplakte of via
    de console gezette waarden moeten hier stranden, anders groeit een record
    ongelimiteerd en rekt het de hele lijst uit. */
@@ -1690,6 +1701,7 @@ async function loadFromSupabase(){
    if(opgeslagen.groep_tweestaps&&typeof opgeslagen.groep_tweestaps==='object')groepTweestaps=opgeslagen.groep_tweestaps;
    if(opgeslagen.beoordeelde_signalen&&typeof opgeslagen.beoordeelde_signalen==='object')beoordeeldeSignalen=opgeslagen.beoordeelde_signalen;
    if(opgeslagen.support&&typeof opgeslagen.support.naam==='string'&&opgeslagen.support.naam)SUPPORT.naam=opgeslagen.support.naam;
+   if(opgeslagen.digibord&&typeof opgeslagen.digibord==='object')digibordPerGroep=opgeslagen.digibord;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
@@ -3967,7 +3979,8 @@ async function syncOrganisatieData(){
    {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER},
    {sleutel:'groep_tweestaps',waarde:groepTweestaps},
    {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen},
-   {sleutel:'support',waarde:SUPPORT}
+   {sleutel:'support',waarde:SUPPORT},
+   {sleutel:'digibord',waarde:digibordPerGroep}
   ],{onConflict:'sleutel'});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
@@ -4157,11 +4170,7 @@ document.querySelectorAll('[data-add]').forEach(function(b){b.addEventListener('
 document.querySelectorAll('[data-toggle]').forEach(function(b){b.addEventListener('click',function(){el(b.getAttribute('data-toggle')).classList.toggle('closed');});});
 document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){show(b.getAttribute('data-back'));});});
 document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){
- var target=b.getAttribute('data-open');
- if(target==='pp-statistieken')renderStatTable();
- if(target==='pp-maaltijden')renderMaaltijdKalender();
- if(target==='pp-digibord')renderDigibordPreview();
- show(target);
+ show(b.getAttribute('data-open'));
 });});
 /* Wie welke toegang tot cliëntgegevens geeft of intrekt, moet achteraf te
    herleiden zijn. Het logboek was eerder vaste voorbeeldtekst; het houdt nu de
@@ -4765,6 +4774,19 @@ var DIGIBORD=[
  {k:'maaltijdenbord',l:'Maaltijdenbord',s:'Toont het menu van vandaag',on:true},
  {k:'kalenderbord',l:'Kalenderbord',s:'Algemene afspraken van de groep',on:false}
 ];
+/* Het Digibord hangt in de hal van één groep, maar de instelling gold voor alle
+   groepen tegelijk — terwijl de bevestiging wel "opgeslagen voor <groep>" zei.
+   Zet je iets aan voor De Boomgaard, dan veranderde het ook in De Wilgenhof.
+   De aan-/uitstand staat nu per groep; de lijst zelf blijft de beschrijving. */
+var digibordPerGroep={};
+function digibordStand(groep){
+ if(!digibordPerGroep[groep]){
+  var stand={};
+  DIGIBORD.forEach(function(d){stand[d.k]=d.on;});
+  digibordPerGroep[groep]=stand;
+ }
+ return digibordPerGroep[groep];
+}
 var CLIENTDATA={};
 /* Alles wat in de cliënt-app wordt vastgelegd — doelen, rapportages, agenda,
    ik-boek, geheugensteuntjes, instellingen en chats — leefde alleen in het
@@ -4828,7 +4850,8 @@ function zetGroteTekst(aan){
  if(knop){knop.classList.toggle('aan',!!aan);knop.setAttribute('aria-pressed',aan?'true':'false');}
 }
 function groteTekstAan(){return document.documentElement.getAttribute('data-tekst')==='groot';}
-function digiOn(k){return DIGIBORD.filter(function(d){return d.k===k;})[0].on;}
+/* De voorvertoning volgt de stand van de groep waar je nu in zit. */
+function digiOn(k){return !!digibordStand(huidigeGroep)[k];}
 function renderDigibordPreview(){
  var clienten=personenVanType('client'),medewerkers=personenVanType('medewerker');
  var cards=[];
@@ -4845,18 +4868,26 @@ function renderDigibordPreview(){
  el('digibord-preview').innerHTML=cards.length?cards.join(''):'<div class="digiscreen-empty">Niets aangevinkt — het Digibord toont nu niks.</div>';
 }
 function renderDigibord(){
+ var stand=digibordStand(huidigeGroep);
  el('digibord-lijst').innerHTML=DIGIBORD.map(function(d){
-  return '<div class="digirow"><div class="dtxt"><b>'+d.l+'</b><span>'+d.s+'</span></div>'+
-   '<label class="toggle"><input type="checkbox" data-dk="'+d.k+'" '+(d.on?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
+  return '<div class="digirow"><div class="dtxt"><b>'+esc(d.l)+'</b><span>'+esc(d.s)+'</span></div>'+
+   '<label class="toggle"><input type="checkbox" data-dk="'+esc(d.k)+'" aria-label="'+esc(d.l)+'" '+(stand[d.k]?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>';
  }).join('');
  Array.prototype.forEach.call(el('digibord-lijst').querySelectorAll('[data-dk]'),function(c){
-  c.addEventListener('change',function(){DIGIBORD.filter(function(d){return d.k===c.getAttribute('data-dk');})[0].on=c.checked;renderDigibordPreview();});
+  c.addEventListener('change',function(){
+   digibordStand(huidigeGroep)[c.getAttribute('data-dk')]=c.checked;
+   renderDigibordPreview();
+  });
  });
  renderDigibordPreview();
 }
 renderDigibord();
 el('digibord-opslaan').addEventListener('click',function(){
+ var stand=digibordStand(huidigeGroep);
+ var aan=DIGIBORD.filter(function(d){return stand[d.k];}).map(function(d){return d.l;});
  el('digibord-bevestiging').innerHTML='<div class="bevestiging reveal">Digibord-instellingen opgeslagen voor '+esc(huidigeGroep)+'.</div>';
+ logActie('Digibord van '+huidigeGroep+' ingesteld op: '+(aan.length?aan.join(', '):'niets actief'));
+ syncOrganisatieData();
  verzondenTimer=setTimeout(function(){show('pp-hub');},1500);
 });
 
