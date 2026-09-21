@@ -162,7 +162,7 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .matrix{border-collapse:collapse;width:100%;font-size:13px}
 .matrix th,.matrix td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:7px 9px;text-align:left;white-space:nowrap}
 .matrix thead th{background:var(--paper);position:sticky;top:0;font-weight:600}
-.matrix tbody th{background:var(--surface);position:sticky;left:0;font-weight:500;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+.matrix tbody th{background:var(--surface);position:sticky;left:0;font-weight:500;max-width:250px;overflow:hidden;text-overflow:ellipsis}
 .matrix td{text-align:center}
 .matrix select{width:auto;min-width:108px;font-size:12px;padding:3px 6px}
 .matrix .geen{color:var(--ink-faint)}
@@ -476,6 +476,7 @@ td.dot{text-align:center}
 .reviewrow .rtxt{flex:1;font-size:14px}
 .reviewrow .rtxt b{font-weight:500}
 .reviewrow .rtag{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.wijzigdetail{font-size:12px;color:var(--ink-soft);margin-top:3px;line-height:1.5}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(20,26,36,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 .modal-overlay[hidden]{display:none}
@@ -1774,6 +1775,8 @@ async function loadFromSupabase(){
   await laadClientData();
   gegevensGeladen=true;
   toonLaadStatus();
+  /* De geladen stand is de nulstand waar wijzigingen tegen worden afgezet. */
+  zetBasisVoorIedereen();
   if(typeof renderAll==='function')renderAll();
   if(!el('admintab-groepen').hidden)renderSysteembeheer();
  }catch(e){
@@ -3560,8 +3563,16 @@ el('zoek-archief').addEventListener('change',function(){zoekAllesArchief=this.ch
    AVG-vraag steeds opnieuw uitzoekwerk, omdat de rechten per persoon verspreid
    staan. Hier staan ze in één raster, en direct aanpasbaar. */
 var matrixGroep=null;
+/* "Wie ziet wie" liet alleen medewerkers zien. Maar een mantelzorger met
+   prikbord kijkt net zo goed in het dossier van een cliënt, dus als antwoord op
+   de vraag wie er bij iemand kan was dit scherm onvolledig. */
 function matrixPersonen(groep){
- return people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(groep)>-1;});
+ return people.filter(function(p){
+  return (p.type==='medewerker'||p.type==='naaste')&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(groep)>-1;
+ }).sort(function(a,b){
+  if(a.type!==b.type)return a.type==='medewerker'?-1:1;
+  return naam(a).localeCompare(naam(b));
+ });
 }
 function matrixClienten(groep){
  return people.filter(function(p){return p.type==='client'&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(groep)>-1;});
@@ -3571,18 +3582,27 @@ function renderMatrix(){
  el('matrix-groep').innerHTML=GROEPEN.map(function(g){
   return '<option'+(g===matrixGroep?' selected':'')+'>'+esc(g)+'</option>';
  }).join('');
- var medewerkers=matrixPersonen(matrixGroep),clienten=matrixClienten(matrixGroep);
- el('matrix-sub').textContent=medewerkers.length+' medewerkers × '+clienten.length+' cliënten';
- if(!medewerkers.length||!clienten.length){
+ var betrokkenen=matrixPersonen(matrixGroep),clienten=matrixClienten(matrixGroep);
+ var aantalMw=betrokkenen.filter(function(p){return p.type==='medewerker';}).length;
+ var aantalNa=betrokkenen.length-aantalMw;
+ el('matrix-sub').textContent=aantalMw+' medewerker'+(aantalMw===1?'':'s')+' en '+aantalNa+' naaste'+(aantalNa===1?'':'n')+' × '+clienten.length+' cliënt'+(clienten.length===1?'':'en');
+ if(!betrokkenen.length||!clienten.length){
   el('matrix-inhoud').innerHTML='<p class="empty-msg">'+
-   (!clienten.length?'Geen cliënten in deze groep.':'Geen medewerkers in deze groep.')+'</p>';
+   (!clienten.length?'Geen cliënten in deze groep.':'Geen medewerkers of naasten in deze groep.')+'</p>';
   return;
  }
- var rollen=ROLLEN.medewerker.clienten.filter(function(r){return r!=='Geen';});
- var html='<div class="matrixwrap"><table class="matrix"><thead><tr><th>Medewerker</th>'+
+ var html='<div class="matrixwrap"><table class="matrix"><thead><tr><th>Wie</th>'+
   clienten.map(function(c){return '<th>'+esc(naam(c))+'</th>';}).join('')+'</tr></thead><tbody>';
- medewerkers.forEach(function(m){
-  html+='<tr><th>'+esc(naam(m))+'</th>'+clienten.map(function(c){
+ betrokkenen.forEach(function(m){
+  /* Elk type heeft zijn eigen rollenlijst; een naaste is geen medewerker. */
+  var rollen=ROLLEN[m.type].clienten.filter(function(r){return r!=='Geen';});
+  /* Een rol op papier zegt niets als het account geblokkeerd of verlopen is.
+     Dit scherm hoort te laten zien wie er nu echt bij kan. */
+  var kanInloggen=heeftToegang(m);
+  var reden=m.geblokkeerd?'geblokkeerd':(toegangVerlopen(m)?'verlopen':'geen toegang');
+  html+='<tr><th>'+esc(naam(m))+' <span class="mini">· '+esc(m.type==='medewerker'?'medewerker':'naaste')+'</span>'+
+   (kanInloggen?'':' <span class="statuschip" style="background:var(--amber-bg);color:var(--amber)" title="Deze persoon kan op dit moment niet inloggen">'+reden+'</span>')+'</th>'+
+   clienten.map(function(c){
    var huidig=rolOpClient(m,c.id)||'';
    return '<td><select data-mx="'+m.id+'|'+c.id+'" aria-label="Rol van '+esc(naam(m))+' op '+esc(naam(c))+'" class="'+(huidig?'':'geen')+'">'+
     '<option value="">Geen toegang</option>'+
@@ -3604,7 +3624,7 @@ function renderMatrix(){
    logActie(sel.value
     ? naam(m)+' kreeg rol "'+sel.value+'" op cliënt '+naam(c)
     : 'Toegang van '+naam(m)+' tot cliënt '+naam(c)+' ingetrokken');
-   updateTally();renderAcc('medewerker');
+   updateTally();renderAcc(m.type);
   });
  });
 }
@@ -3615,9 +3635,10 @@ el('matrix-export').addEventListener('click',function(){
  bevestigExport('toegang','wie toegang heeft tot welke cliënt in '+matrixGroep,function(){exporteerMatrixNu(medewerkers,clienten);});
 });
 function exporteerMatrixNu(medewerkers,clienten){
- var regels=[['Medewerker'].concat(clienten.map(naam)).map(csvVeld).join(';')];
+ var regels=[['Wie','Soort','Kan inloggen'].concat(clienten.map(naam)).map(csvVeld).join(';')];
  medewerkers.forEach(function(m){
-  regels.push([naam(m)].concat(clienten.map(function(c){return rolOpClient(m,c.id)||'Geen toegang';})).map(csvVeld).join(';'));
+  regels.push([naam(m),TYPELABEL[m.type],heeftToegang(m)?'ja':'nee']
+   .concat(clienten.map(function(c){return rolOpClient(m,c.id)||'Geen toegang';})).map(csvVeld).join(';'));
  });
  downloadCsv(regels,'mywepp-toegang-'+matrixGroep.replace(/[^a-z0-9]+/gi,'-').toLowerCase());
  logActie('Toegangsoverzicht van '+matrixGroep+' geëxporteerd');
@@ -3884,7 +3905,8 @@ function doorvoerenRegelsHtml(){
   return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
    '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+
    (elders?' <span class="mini">· uit groep '+esc(elders)+'</span>':'')+
-   (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
+   (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+
+   wijzigingDetailsHtml(p)+'</div>'+
    '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+esc(wijzigingLabel(p))+'</span></div>';
  }).join('')+'</div>';
 }
@@ -4404,7 +4426,7 @@ function logActie(tekst){
  if(!tekst)return;
  var regel={tijd:logboekTijd(new Date()),wie:wieBenIk(),groep:huidigeGroep,tekst:tekst};
  LOGBOEK.unshift(regel);
- if(LOGBOEK.length>200)LOGBOEK.length=200;
+ if(LOGBOEK.length>LOGBOEK_MAX)LOGBOEK.length=LOGBOEK_MAX;
  if(sb){
   /* Het logboek mag het opslaan van de wijziging zelf nooit blokkeren, maar
      stilzwijgend verdwijnen mag het ook niet: het is de verantwoording. */
@@ -4414,10 +4436,16 @@ function logActie(tekst){
   catch(e){registreerOpslag('logboek',false);}
  }
 }
+/* Het logboek haalde er 100 regels uit terwijl het geheugen er 200 hield: het
+   scherm zei dan "12 van 100 regels" zonder dat ergens stond dat er in de
+   database meer staat. Bij een verantwoordingsmiddel is dat misleidend — wie
+   niets vindt, concludeert dat het niet gebeurd is. Eén grens, en die wordt
+   genoemd. */
+var LOGBOEK_MAX=500;
 async function laadLogboek(){
  if(!sb)return;
  try{
-  var res=await sb.from('logboek').select('tijd,wie,groep,tekst').order('tijd',{ascending:false}).limit(100);
+  var res=await sb.from('logboek').select('tijd,wie,groep,tekst').order('tijd',{ascending:false}).limit(LOGBOEK_MAX);
   if(res.error||!res.data)return;
   LOGBOEK=res.data.map(function(r){
    return {tijd:logboekTijd(new Date(r.tijd)),wie:r.wie,groep:r.groep,tekst:r.tekst};
@@ -4459,7 +4487,8 @@ function openLogboek(behoudFilter){
  var groepen=[''].concat(GROEPEN).map(function(g){
   return '<option value="'+esc(g)+'">'+(g?esc(g):'Alle groepen')+'</option>';
  }).join('');
- openModal('<h3>Logboek</h3><p class="mini" style="margin:0 0 10px">Wie heeft wanneer iets aan gebruikers of rechten gewijzigd.</p>'+
+ openModal('<h3>Logboek</h3><p class="mini" style="margin:0 0 10px">Wie heeft wanneer iets aan gebruikers of rechten gewijzigd. '+
+  (LOGBOEK.length>=LOGBOEK_MAX?'Dit scherm toont de laatste '+LOGBOEK_MAX+' regels; oudere regels blijven in de database staan maar staan hier niet bij.':'')+'</p>'+
   '<div class="row"><div class="field"><label for="logboek-zoek">Zoeken</label>'+
   '<input id="logboek-zoek" maxlength="60" placeholder="Naam, cliënt of wat er gebeurde"></div>'+
   '<div class="field"><label for="logboek-groep">Groep</label><select id="logboek-groep">'+groepen+'</select></div></div>'+
@@ -4533,10 +4562,23 @@ function renderGearchiveerd(){
  Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-herstel]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-herstel'));
-   p.archived=false;delete p.gearchiveerdOp;
-   logActie(naam(p)+' teruggezet uit het archief');
-   renderGearchiveerd();renderAll();
-   syncToSupabase();
+   if(!p)return;
+   /* Terugzetten is niet alleen iemand weer zichtbaar maken: alle rechten die
+      hij had komen in één klap terug, ook op cliënten. Dat hoort niet
+      ongemerkt te gebeuren, dus eerst laten zien wat er terugkomt. */
+   var aantal=RECHTVELDEN.reduce(function(n,veld){return n+Object.keys(p[veld]||{}).length;},0);
+   var verlopen=toegangVerlopen(p);
+   bevestigModal('Terugzetten uit het archief',
+    '<p><b>'+esc(naam(p))+'</b> komt terug in '+esc((p.groepen||[]).join(', ')||'geen groep')+'.</p>'+
+    '<p>'+(aantal?'Daarmee komen ook '+aantal+' eerder vastgelegde recht'+(aantal===1?'':'en')+' terug, waaronder toegang tot cli\u00ebnten.':'Deze persoon had geen rechten op anderen.')+
+    (verlopen?' De tijdelijke toegang is verlopen op '+esc(datumNL(p.toegangTot))+', dus inloggen kan pas na een nieuwe einddatum.':'')+
+    (p.geblokkeerd?' Let op: dit account staat geblokkeerd en blijft dat.':'')+'</p>',
+    'Ja, terugzetten',function(){
+     p.archived=false;delete p.gearchiveerdOp;
+     logActie(naam(p)+' teruggezet uit het archief'+(aantal?' met '+aantal+' recht'+(aantal===1?'':'en'):''));
+     renderGearchiveerd();renderAll();
+     syncToSupabase();
+    });
   });
  });
 }
@@ -4866,6 +4908,66 @@ function renderVertrekGevolgen(){
   '<button type="button" class="primary" id="vertrek-overdragen">Taken overdragen…</button>';
  el('vertrek-overdragen').addEventListener('click',openOverdracht);
 }
+/* ---- Wat is er precies gewijzigd? ----
+   Het controlescherm zei alleen "gewijzigd". Je tekende dus voor wijzigingen
+   die je niet kon zien: of iemand een ander e-mailadres kreeg of er een recht
+   op een cliënt bij kwam, maakte op het scherm geen verschil. Dit vergelijkt
+   de huidige stand met hoe iemand erbij stond toen de gegevens werden geladen
+   of toen er voor het laatst is doorgevoerd. */
+var BASISVELDEN=['voor','achter','mail','tel','rol','contactVolgorde','status','toegangTot',
+ 'geblokkeerd','geblokkeerdReden','tweestaps','wettelijkeVertegenwoordiger','archived'];
+var VELDLABEL={voor:'voornaam',achter:'achternaam',mail:'e-mailadres',tel:'telefoonnummer',
+ rol:'rol',contactVolgorde:'contactpersoon',status:'status',toegangTot:'toegang tot en met',
+ geblokkeerd:'toegang geblokkeerd',geblokkeerdReden:'reden blokkade',tweestaps:'tweestapsverificatie',
+ wettelijkeVertegenwoordiger:'wettelijk vertegenwoordiger',archived:'gearchiveerd',foto:'profielfoto'};
+function basisVan(p){
+ var b={};
+ BASISVELDEN.forEach(function(v){b[v]=p[v];});
+ b.groepen=(p.groepen||[]).slice();
+ b.foto=!!p.foto;
+ b.toestemming=JSON.stringify(p.toestemming||{});
+ RECHTVELDEN.forEach(function(v){b[v]=JSON.stringify(p[v]||{});});
+ return b;
+}
+function zetBasisVoorIedereen(){people.forEach(function(p){p._basis=basisVan(p);});}
+function toonWaarde(veld,w){
+ if(w===true)return 'ja';
+ if(w===false||w===undefined||w===null||w==='')return 'leeg';
+ if(veld==='wettelijkeVertegenwoordiger'){var x=findPerson(w);return x?naam(x):'onbekend';}
+ if(veld==='contactVolgorde')return 'contactpersoon '+w;
+ if(veld==='toegangTot')return geldigeDatum(w)?datumNL(w):String(w);
+ return String(w);
+}
+function telSleutels(json){try{return Object.keys(JSON.parse(json)||{}).length;}catch(e){return 0;}}
+function wijzigingDetails(p){
+ if(!p||!p._basis)return [];
+ var nu=basisVan(p),oud=p._basis,uit=[];
+ Object.keys(VELDLABEL).forEach(function(v){
+  /* Vergelijk op wat er op het scherm zou komen te staan. Anders telde
+     undefined tegenover false als verschil en las je "leeg \u2192 leeg". */
+  var a=toonWaarde(v,oud[v]),b=toonWaarde(v,nu[v]);
+  if(a===b)return;
+  uit.push(VELDLABEL[v]+': '+a+' \u2192 '+b);
+ });
+ var erbij=nu.groepen.filter(function(g){return oud.groepen.indexOf(g)<0;});
+ var eraf=oud.groepen.filter(function(g){return nu.groepen.indexOf(g)<0;});
+ if(erbij.length)uit.push('groep erbij: '+erbij.join(', '));
+ if(eraf.length)uit.push('uit groep: '+eraf.join(', '));
+ if(nu.toestemming!==oud.toestemming)uit.push('toestemming aangepast');
+ RECHTVELDEN.forEach(function(v){
+  if(nu[v]===oud[v])return;
+  var a=telSleutels(oud[v]),b=telSleutels(nu[v]);
+  var label={clientRechten:'rechten op cli\u00ebnten',medewerkerRechten:'rechten op medewerkers',naasteRechten:'rechten op naasten'}[v];
+  uit.push(a===b?(label+' aangepast'):(label+': '+a+' \u2192 '+b));
+ });
+ return uit;
+}
+function wijzigingDetailsHtml(p){
+ if(p._state!=='gewijzigd')return '';
+ var d=wijzigingDetails(p);
+ if(!d.length)return '';
+ return '<div class="wijzigdetail">'+d.map(esc).join(' \u00b7 ')+'</div>';
+}
 function renderControleren(){
  renderVertrekGevolgen();
  var wijzigingen=people.filter(function(p){return p._state;});
@@ -4877,7 +4979,8 @@ function renderControleren(){
   return '<div class="reviewrow"><span class="rdot" style="background:'+STATE_COLOR[p._state]+'"></span>'+
    '<div class="rtxt"><b>'+esc(naam(p))+'</b> — '+TYPELABEL[p.type]+(p.mail?', '+esc(p.mail):'')+
    (elders?' <span class="mini">· uit groep '+esc(elders)+'</span>':'')+
-   (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+'</div>'+
+   (p._nieuweGroep?' · verplaatst naar '+esc(p._nieuweGroep):'')+
+   wijzigingDetailsHtml(p)+'</div>'+
    '<span class="rtag" style="color:'+STATE_COLOR[p._state]+'">'+esc(wijzigingLabel(p))+'</span></div>';
  }).join('') : '<p class="empty-msg" style="padding:16px 22px">Geen wijzigingen om door te voeren.</p>';
 }
@@ -4965,6 +5068,8 @@ async function voerWijzigingenDoor(){
   logActie('Wijzigingen doorgevoerd: '+delen.join(', '));
  }
  var opgeslagen=laadMislukt()?false:await syncToSupabase();
+ /* Vanaf nu is dit de nieuwe nulstand om tegen af te zetten. */
+ zetBasisVoorIedereen();
  renderAll();
  return {nieuw:nieuw,gewijzigd:gewijzigd,ontkoppeld:ontkoppeld,gearchiveerd:gearchiveerd,
   verplaatst:verplaatst,opgeslagen:opgeslagen};
@@ -5106,6 +5211,7 @@ function renderMaaltijdKalender(){
  });
 }
 
+zetBasisVoorIedereen();
 renderAll();
 
 /* --- Digibord beheren --- */
