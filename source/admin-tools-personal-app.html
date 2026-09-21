@@ -202,7 +202,8 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 /* Wat je in de balk aanklikt vult het scherm eronder, in plaats van een venster
    over de pagina te leggen. Zo blijft zichtbaar wáár je bent. */
 .admscherm{margin-bottom:18px;border-color:var(--line-strong)}
-.admscherm .head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.admscherm .head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.admscherm .head .sub{flex:1;min-width:120px;text-align:left}
 .admscherm #modal-card{animation:none;box-shadow:none;max-width:none;max-height:none;padding:0;overflow:visible;background:transparent}
 .admscherm #modal-card h3{margin-top:0}
 .adminbar-kop{flex:0 0 100%;color:#9AA3B0;font-size:10.5px;font-weight:700;letter-spacing:.09em;
@@ -664,6 +665,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
   <section class="panel admscherm" id="adm-scherm" hidden>
     <div class="head"><h2 id="adm-scherm-titel">Handeling</h2>
+      <span class="sub" id="adm-scherm-stap"></span>
       <button type="button" class="small" id="adm-scherm-sluiten">Sluiten</button></div>
     <div class="body" id="adm-scherm-body"></div>
   </section>
@@ -3779,6 +3781,7 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-adm]'),function(b)
   var actie=ADMIN_TOOLBAR_ACTIES[b.getAttribute('data-adm')];
   if(!actie)return;
   zetActieveAdmKnop(b);
+  admActieNaam=(b.innerHTML||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
   admInline=true;
   actie();
   /* Een handeling die meteen naar een ander scherm springt (bijvoorbeeld naar
@@ -3945,6 +3948,7 @@ function focusbaarIn(container){
    stappen, velden en controles blijven daardoor ongewijzigd werken. */
 var admInline=false;
 var admVorigTab='bulk';
+var admActieNaam='';
 function admPaneelAan(){
  var kaart=el('modal-card'),paneel=el('adm-scherm');
  if(!kaart||!paneel)return;
@@ -3954,8 +3958,14 @@ function admPaneelAan(){
  el('modal-overlay').hidden=true;
  el('admin-intro').hidden=true;
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=true;});
+ /* Een handeling loopt vaak over drie stappen (type, groep, persoon). Zonder
+    de naam van de handeling erbij weet je halverwege niet meer of je iemand
+    aan het aanmaken of aan het verwijderen bent — en dat scheelt nogal. */
  var titel=kaart.querySelector('h3');
- el('adm-scherm-titel').textContent=titel?titel.textContent:'Handeling';
+ var vraag=titel?titel.textContent:'';
+ el('adm-scherm-titel').textContent=admActieNaam||vraag||'Handeling';
+ var stap=el('adm-scherm-stap');
+ if(stap)stap.textContent=(admActieNaam&&vraag&&vraag!==admActieNaam)?vraag:'';
  if(titel)titel.hidden=true;
 }
 function admPaneelUit(){
@@ -3967,6 +3977,7 @@ function admPaneelUit(){
   kaart.setAttribute('aria-modal','true');
  }
  if(el('admin-intro'))el('admin-intro').hidden=false;
+ admActieNaam='';
  if(typeof wisActieveAdmKnop==='function')wisActieveAdmKnop();
  var actief=document.querySelector('[data-admintab].on');
  kiesAdmintab(actief?actief.getAttribute('data-admintab'):admVorigTab);
@@ -3986,11 +3997,16 @@ function openModal(html){
  (eerste||el('modal-card')).focus();
 }
 function closeModal(){
- /* Tijdens een handeling in het scherm sluit dit alleen de huidige stap; het
-    paneel blijft staan tot de flow klaar is of je op Sluiten drukt. */
+ /* Een handeling van drie stappen roept hiertussen ook closeModal aan. Sloten
+    we het paneel meteen, dan viel de handeling halverwege uit elkaar. Daarom
+    wordt alleen de inhoud geleegd; komt er direct een volgende stap, dan vult
+    die hem weer. Blijft hij leeg, dan was het een annulering en gaat het paneel
+    alsnog dicht. */
  if(admInline&&el('modal-card').parentNode===el('adm-scherm-body')){
   el('modal-card').innerHTML='';
-  admPaneelUit();
+  setTimeout(function(){
+   if(admInline&&el('modal-card').parentNode===el('adm-scherm-body')&&!el('modal-card').querySelector('h3'))admPaneelUit();
+  },0);
   return;
  }
  if(typeof wisActieveAdmKnop==='function')wisActieveAdmKnop();
