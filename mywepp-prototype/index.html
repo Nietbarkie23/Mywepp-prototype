@@ -1040,7 +1040,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="panel"><div class="body">
       <div class="row">
         <div class="field"><label>Contactpersoon</label><div class="lockedfield" id="av-naam-display"></div></div>
-        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-vast" hidden></p><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
+        <div class="field"><label for="av-tel">Telefoonnummer</label><input id="av-tel" maxlength="25" placeholder="06 12 34 56 78"><p class="mini" id="av-tel-vast" hidden></p><p class="mini" id="av-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p></div>
       </div>
       <div class="checkline"><input type="checkbox" id="av-akkoord"><label for="av-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>
       <div class="actions end"><button type="button" data-back="pp-controleren">Terug</button><button type="button" class="primary" id="av-versturen" disabled>Wijzigingen doorvoeren</button></div>
@@ -1281,7 +1281,10 @@ function show(id){
 /* maxlength in het formulier houdt alleen normale invoer tegen; geplakte of via
    de console gezette waarden moeten hier stranden, anders groeit een record
    ongelimiteerd en rekt het de hele lijst uit. */
-var MAXLEN={naam:60,mail:120,tel:25,groep:60};
+/* De beheerkant kapte namen op 60 tekens af, maar de clientapp en Mijn profiel
+   deden dat niet: daar ging 500 tekens zo de database in, en daarmee ook het
+   account. Eén set grenzen voor allebei. */
+var MAXLEN={naam:60,mail:120,tel:25,groep:60,functie:60,titel:80,tijd:20};
 function kap(tekst,max){return String(tekst==null?'':tekst).slice(0,max);}
 function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
 function genereerEmail(voor,achter,domein){
@@ -2372,11 +2375,28 @@ function openFotoModal(elId,persoon){
  });
  el('foto-annuleren').addEventListener('click',closeModal);
  el('foto-opslaan').addEventListener('click',function(){
+  var was=p.foto||null;
   p.foto=nieuweFoto;
   setGrootAvatar(elId,p);
   closeModal();
-  renderAcc(p.type);
-  syncToSupabase();
+  if(was===(nieuweFoto||null))return;
+  /* Dit venster wordt ook gebruikt voor "Mijn profiel" in de clientapp, en dat
+     is geen persoon uit de lijst: die heeft geen type, waardoor renderAcc op
+     een niet-bestaande teller uitkwam en de handler halverwege afbrak. */
+  var isPersoon=people.indexOf(p)>-1;
+  if(isPersoon){
+   /* Een foto wijzigen ging meteen naar de database, zonder logregel en zonder
+      mee te tellen als wijziging — terwijl elke andere aanpassing wacht op
+      "doorvoeren". Bij een foto van een cliënt wil je juist kunnen zien wie hem
+      erop heeft gezet. */
+   if(p._state!=='nieuw')p._state='gewijzigd';
+   logActie(nieuweFoto?('Profielfoto van '+naam(p)+' gewijzigd'):('Profielfoto van '+naam(p)+' verwijderd'));
+   renderAcc(p.type);
+   updateTally();
+  }else{
+   /* Mijn profiel: de foto hoort ook bij het account zelf. */
+   if(typeof zetProfielOpAccount==='function')zetProfielOpAccount();
+  }
  });
 }
 el('pc-foto-wijzigen').addEventListener('click',function(){openFotoModal('pc-foto');});
@@ -3995,7 +4015,7 @@ function doorvoerenFlow(){
     ?'<div class="admveld"><label>Telefoonnummer</label><div class="admin lockedfield" id="adm-dv-tel-vast">'+esc(nummer)+'</div></div>'+
      '<p class="mini" style="margin:0 0 4px">Dit is het vaste servicenummer van '+esc(wieBenIk())+'. Het staat vast en is niet per handeling aan te passen.</p>'
     :'<div class="admveld"><label for="adm-dv-tel">Telefoonnummer<span class="verplicht">*</span></label>'+
-     '<input class="admin" id="adm-dv-tel" value="'+esc(nummer)+'" placeholder="06 12 34 56 78"></div>'+
+     '<input class="admin" id="adm-dv-tel" maxlength="25" value="'+esc(nummer)+'" placeholder="06 12 34 56 78"></div>'+
      '<p class="mini" id="adm-dv-tel-fout" style="color:var(--brick)" hidden>Vul een geldig telefoonnummer in (minstens 9 cijfers).</p>')+
    '<div class="checkline"><input type="checkbox" id="adm-dv-akkoord"><label for="adm-dv-akkoord">Ik heb de wijzigingen gecontroleerd en ga akkoord met doorvoeren.</label></div>'+
   '</fieldset>'+
@@ -5669,8 +5689,8 @@ function renderCaGeheugen(){
  el('ca-geheugen-nieuw').addEventListener('click',function(){
   var WEEKDAGEN=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
   openModal('<h3>Herinnering toevoegen</h3>'+
-   '<div class="field"><label>Waar gaat het over?</label><input id="modal-geh-titel" placeholder="Bijv. Tanden poetsen"></div>'+
-   '<div class="field"><label>Tijdstip</label><input id="modal-geh-tijd" value="08:00"></div>'+
+   '<div class="field"><label>Waar gaat het over?</label><input id="modal-geh-titel" maxlength="80" placeholder="Bijv. Tanden poetsen"></div>'+
+   '<div class="field"><label>Tijdstip</label><input id="modal-geh-tijd" maxlength="20" value="08:00"></div>'+
    '<div class="field"><label>Hoe vaak?</label><select id="modal-geh-herhaling">'+
     '<option value="elke-dag">Elke dag</option>'+
     '<option value="werkdagen">Op werkdagen (ma–vr)</option>'+
@@ -5687,7 +5707,7 @@ function renderCaGeheugen(){
    el('modal-geh-datum-veld').hidden=(v!=='eenmalig');
   });
   el('modal-opslaan').addEventListener('click',function(){
-   var titel=el('modal-geh-titel').value.trim();if(!titel){el('modal-geh-titel').style.borderColor='var(--brick)';return;}
+   var titel=kap(el('modal-geh-titel').value.trim(),MAXLEN.titel);if(!titel){el('modal-geh-titel').style.borderColor='var(--brick)';return;}
    var herhaling=el('modal-geh-herhaling').value,dagen;
    if(herhaling==='elke-dag')dagen='Elke dag';
    else if(herhaling==='werkdagen')dagen='Op werkdagen';
@@ -5785,12 +5805,12 @@ function renderMijnProfiel(){
  var p=MIJN_PROFIEL;
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="mp-terug">← Terug</button><b style="font-size:15px">Mijn profiel</b></div>';
  html+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:18px"><div class="hubavatar" id="mp-foto" style="width:64px;height:64px;flex:0 0 64px"></div><button type="button" class="small" id="mp-foto-wijzigen">Kies of maak foto</button></div>';
- html+='<div class="field"><label>Voornaam</label><input id="mp-voor" value="'+esc(p.voor)+'"></div>';
- html+='<div class="field"><label>Achternaam</label><input id="mp-achter" value="'+esc(p.achter)+'"></div>';
- html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" value="'+esc(p.mobiel)+'"></div>';
- html+='<div class="field"><label>Functie</label><input id="mp-functie" value="'+esc(p.functie)+'"></div>';
+ html+='<div class="field"><label>Voornaam</label><input id="mp-voor" maxlength="60" value="'+esc(p.voor)+'"></div>';
+ html+='<div class="field"><label>Achternaam</label><input id="mp-achter" maxlength="60" value="'+esc(p.achter)+'"></div>';
+ html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" maxlength="25" value="'+esc(p.mobiel)+'"></div>';
+ html+='<div class="field"><label>Functie</label><input id="mp-functie" maxlength="60" value="'+esc(p.functie)+'"></div>';
  html+='<div class="field"><label>Geboortedatum</label><input type="date" id="mp-geboortedatum" value="'+esc(p.geboortedatum)+'"></div>';
- html+='<div class="field"><label>E-mailadres</label><input id="mp-mail" value="'+esc(p.mail)+'"></div>';
+ html+='<div class="field"><label>E-mailadres</label><input id="mp-mail" maxlength="120" value="'+esc(p.mail)+'"></div>';
  html+='<div class="sublistlabel">Beveiliging</div>';
  html+='<div class="togglerow"><span>Tweestapsverificatie</span>'+(p.tweestaps?'<span class="badge" style="background:var(--moss-bg);color:var(--moss);border-color:var(--moss-line)">Actief</span>':'<span class="badge">Niet actief</span>')+'</div>';
  if(p.tweestaps)html+='<p class="mini" style="margin:-4px 0 8px">Ingesteld op '+esc(p.tweestapsDatum)+'.</p>';
@@ -5809,19 +5829,19 @@ function renderMijnProfiel(){
      en e-mailadres veranderden alleen in dit scherm en stonden in het beheer
      nog op het oude. Een ongeldig adres werd zonder meer aangenomen, terwijl
      je daarmee inlogt. */
-  var mail=el('mp-mail').value.trim();
+  var mail=kap(el('mp-mail').value.trim(),MAXLEN.mail);
   var geboorte=el('mp-geboortedatum').value;
   var fout='';
   if(!mailGeldig(mail))fout='Vul een geldig e-mailadres in.';
   else if(geboorte&&(!geldigeDatum(geboorte)||geboorte>vandaagISO()))fout='Een geboortedatum in de toekomst kan niet.';
   if(fout){el('mp-bevestiging').innerHTML='<p class="mini" style="color:var(--brick);margin-top:10px">'+esc(fout)+'</p>';return;}
-  p.voor=el('mp-voor').value.trim()||p.voor;
-  p.achter=el('mp-achter').value.trim()||p.achter;
-  p.mobiel=el('mp-mobiel').value.trim();
-  p.functie=el('mp-functie').value.trim();
+  p.voor=kap(el('mp-voor').value.trim(),MAXLEN.naam)||p.voor;
+  p.achter=kap(el('mp-achter').value.trim(),MAXLEN.naam)||p.achter;
+  p.mobiel=kap(el('mp-mobiel').value.trim(),MAXLEN.tel);
+  p.functie=kap(el('mp-functie').value.trim(),MAXLEN.functie);
   p.geboortedatum=geboorte;
-  p.mail=mail;
-  p.opmerkingen=el('mp-opmerkingen').value;
+  p.mail=kap(mail,MAXLEN.mail);
+  p.opmerkingen=kap(el('mp-opmerkingen').value,400);
   zetProfielOpAccount();
   el('mp-bevestiging').innerHTML='<div class="bevestiging reveal" style="margin-top:10px">Profiel opgeslagen.</div>';
  });
@@ -6055,11 +6075,11 @@ function renderCaDoelen(){
  var nieuwDoelBtn=el('ca-nieuw-doel');
  if(nieuwDoelBtn)nieuwDoelBtn.addEventListener('click',function(){
   openModal('<h3>Nieuw doel</h3>'+
-   '<div class="field"><label>Titel</label><input id="modal-doel-titel" placeholder="Bijv. Zelfstandig aankleden"></div>'+
+   '<div class="field"><label>Titel</label><input id="modal-doel-titel" maxlength="80" placeholder="Bijv. Zelfstandig aankleden"></div>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
-   var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
+   var titel=kap(el('modal-doel-titel').value.trim(),MAXLEN.titel);if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
    d.doelen.push({id:d._nextDoelId++,titel:titel,rapportages:[]});bewaarClientData(caClientId);closeModal();renderCaDoelen();
   });
  });
@@ -6105,10 +6125,10 @@ function renderCaDoelen(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editdoel]'),function(b){
   b.addEventListener('click',function(){
    var doel=d.doelen.filter(function(x){return x.id===+b.getAttribute('data-editdoel');})[0];
-   openModal('<h3>Doel hernoemen</h3><div class="field"><label>Titel</label><input id="modal-doel-titel" value="'+esc(doel.titel)+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Doel hernoemen</h3><div class="field"><label>Titel</label><input id="modal-doel-titel" maxlength="80" value="'+esc(doel.titel)+'"></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
-    var titel=el('modal-doel-titel').value.trim();if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
+    var titel=kap(el('modal-doel-titel').value.trim(),MAXLEN.titel);if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
     doel.titel=titel;bewaarClientData(caClientId);closeModal();renderCaDoelen();
    });
   });
@@ -6294,10 +6314,10 @@ function renderCaAgenda(){
   var betrokkenen=people.filter(function(x){return (x.type==='medewerker'||x.type==='naaste')&&x.groepen.indexOf(huidigeGroep)>-1&&rolOpClient(x,caClientId)&&x._state!=='verwijderd'&&heeftToegang(x);});
   var herinnerChecklist=betrokkenen.map(function(p){return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">'+avatarHtmlSized(naam(p),26)+'<input type="checkbox" value="'+p.id+'" class="afspr-herinner" style="width:auto">'+esc(naam(p))+'</label>';}).join('');
   openModal('<h3>Afspraak toevoegen</h3>'+
-   '<div class="field"><label>Titel</label><input id="modal-afspr-titel" placeholder="Bijv. Fysiotherapie"></div>'+
+   '<div class="field"><label>Titel</label><input id="modal-afspr-titel" maxlength="80" placeholder="Bijv. Fysiotherapie"></div>'+
    '<div class="row"><div class="field"><label>Datum</label><input type="date" id="modal-afspr-datum" value="'+caAgendaZichtbareDatum()+'"></div>'+
    '<div class="field"><label>Tijd</label><div class="timerow"><select id="modal-afspr-uur">'+uurOpties+'</select><span>:</span><select id="modal-afspr-min">'+minOpties+'</select></div></div></div>'+
-   '<div class="field"><label>Locatie</label><input id="modal-afspr-locatie" placeholder="Bijv. Buurtcentrum"></div>'+
+   '<div class="field"><label>Locatie</label><input id="modal-afspr-locatie" maxlength="80" placeholder="Bijv. Buurtcentrum"></div>'+
    '<div class="field"><label>Herinnering</label><select id="modal-afspr-herinnering">'+herinneringOpties+'</select></div>'+
    '<div class="field"><label>Herhalen</label><select id="modal-afspr-herhaling">'+herhalingOpties+'</select></div>'+
    (betrokkenen.length?'<div class="field"><label>Wie krijgt de herinnering</label>'+herinnerChecklist+'</div>':'')+
@@ -6305,7 +6325,7 @@ function renderCaAgenda(){
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Toevoegen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
-   var titel=el('modal-afspr-titel').value.trim();if(!titel){el('modal-afspr-titel').style.borderColor='var(--brick)';return;}
+   var titel=kap(el('modal-afspr-titel').value.trim(),MAXLEN.titel);if(!titel){el('modal-afspr-titel').style.borderColor='var(--brick)';return;}
    /* Zonder datum kwam de afspraak op '—' te staan en was hij daarna nergens
       meer te vinden: de kalender en de lijst filteren allebei op datum. */
    var datumval=el('modal-afspr-datum').value;
@@ -6576,7 +6596,7 @@ function renderCaGroepBewerken(){
  function magInGesprek(x){return x._state!=='verwijderd'&&heeftToegang(x)&&!!rolOpClient(x,caClientId);}
  var nietleden=alleBetrokkenen.filter(function(x){return th.leden.indexOf(x.id)<0&&magInGesprek(x);});
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-groep-terug">← Terug</button><b style="font-size:15px">Chatgroep bewerken</b></div>';
- html+='<div class="field"><label>Groepsnaam</label><input id="ca-groep-naam" value="'+esc(th.naam)+'"></div>';
+ html+='<div class="field"><label>Groepsnaam</label><input id="ca-groep-naam" maxlength="60" value="'+esc(th.naam)+'"></div>';
  html+='<div class="sublistlabel" style="margin-top:14px">Leden ('+leden.length+')</div>';
  html+=leden.length? leden.map(function(l){
   return '<div class="chatlist-row">'+avatarHtmlSized(naam(l),34)+'<div class="ctxt"><b>'+esc(naam(l))+'</b><span>'+esc(l.type==='medewerker'?(l.rol||'Medewerker'):'Naaste')+(magInGesprek(l)?'':' · hoort hier niet meer bij')+'</span></div>'+
@@ -6592,7 +6612,7 @@ function renderCaGroepBewerken(){
  /* Zonder bewaren was een hernoeming of een gewijzigd ledenlijstje na een
     herlaad weer weg. */
  el('ca-groep-naam').addEventListener('blur',function(){
-  var nieuw=this.value.trim();
+  var nieuw=kap(this.value.trim(),MAXLEN.groep);
   if(!nieuw||nieuw===th.naam)return;
   th.naam=nieuw;bewaarChatThread(caChatKey);
  });
