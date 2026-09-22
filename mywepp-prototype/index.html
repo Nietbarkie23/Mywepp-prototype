@@ -785,10 +785,14 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div id="sb-koppel-bevestiging"></div>
       </div>
     </div>
+    <!-- bereikbaarheid: op verzoek verborgen, kan later weer van pas komen. Niet
+         verwijderen — het telefoonnummer van systeembeheer en de naam van de
+         supportmedewerker blijven gewoon werken, alleen het scherm om ze in te
+         stellen staat uit. Terugzetten = deze comment weghalen.
     <div class="panel">
       <div class="head"><h2>Bereikbaarheid</h2><span class="sub">Voor technische vragen uit alle groepen</span></div>
       <div class="body">
-        <p class="note">De systeembeheerder is geen medewerker van een groep en stond daardoor nergens met een telefoonnummer. Wat je hier invult, zien medewerkers in elke groep staan bij de contactpersonen.</p>
+        <p class="note">Wat je hier invult, zien medewerkers in elke groep staan bij de contactpersonen.</p>
         <div class="row">
           <div class="field"><label for="sb-tel">Telefoonnummer systeembeheer</label><input id="sb-tel" maxlength="25" placeholder="088 123 45 67"></div>
         </div>
@@ -798,11 +802,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="row" style="margin-top:14px">
           <div class="field"><label for="sb-support-naam">Naam van de supportmedewerker</label><input id="sb-support-naam" maxlength="60" placeholder="MyWepp Support"></div>
         </div>
-        <p class="mini">Wie namens MyWepp meekijkt. Deze naam staat in de balk en onder alles wat Support in het logboek vastlegt, zodat achteraf te zien is wie wat heeft gedaan.</p>
+        <p class="mini">Wie namens MyWepp meekijkt. Deze naam staat in de balk en in het logboek.</p>
         <div class="actions end"><button type="button" class="primary" id="sb-support-opslaan">Naam opslaan</button></div>
         <div id="sb-support-bevestiging"></div>
       </div>
     </div>
+    bereikbaarheid -->
   </section>
 
   <section id="admintab-controle" hidden>
@@ -928,7 +933,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px">
-      <h1 style="font-size:22px;display:inline-block">Formulier: Gebruikers beheren<span class="conceptbadge" id="concept-badge" hidden>Concept opgeslagen</span></h1>
+      <h1 style="font-size:22px;display:inline-block">Gebruikers beheren<span class="conceptbadge" id="concept-badge" hidden>Concept opgeslagen</span></h1>
       <p class="tellingen" id="formulier-tellingen"></p>
       <div class="koppelmelding" id="formulier-koppeling" hidden></div>
     </div>
@@ -944,7 +949,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="tallytop"><b id="tally-count">0 wijzigingen</b><span>klaar om door te voeren</span></div>
         <div class="tallybar"><span id="tally-nieuw" style="background:var(--moss)"></span><span id="tally-gewijzigd" style="background:var(--amber)"></span><span id="tally-verwijderd" style="background:var(--brick)"></span></div>
       </div>
-      <div class="infolink" id="info-toggle">Uitleg over dit formulier <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="infolink" id="info-toggle">Uitleg <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
       <button type="button" class="ghost" style="width:100%;border-radius:0;border-top:1px solid var(--line);justify-content:flex-start;padding:14px 22px" id="logboek-btn">Logboek bekijken</button>
       <button type="button" class="ghost" style="width:100%;border-radius:0;border-top:1px solid var(--line);justify-content:flex-start;padding:14px 22px" id="naar-gearchiveerd">Gearchiveerd bekijken</button>
     </div>
@@ -988,7 +993,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="collapse closed" id="contactpersonen-collapse" style="margin-top:12px;box-shadow:none">
           <div class="chead" data-toggle="contactpersonen-collapse"><b>Contactpersonen kiezen</b><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
           <div class="cbody">
-            <p class="mini" style="margin:0 0 10px">Medewerkers die als contactpersoon zijn gemarkeerd — dit zijn de aanspreekpunten die naasten te zien krijgen.</p>
+            <p class="mini" style="margin:0 0 10px">Het aanspreekpunt van deze groep. Naasten zien wie dit is.</p>
             <div id="contactpersonen-lijst"></div>
           </div>
         </div>
@@ -1004,7 +1009,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Gearchiveerd</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Personen die alleen aan deze groep gekoppeld waren en via de prullenbak zijn verwijderd. Hun gegevens staan er nog, dus je kunt ze terughalen. Gearchiveerde gegevens mogen niet onbeperkt bewaard blijven: na 24 maanden wordt dat gemeld en hoor je ze te wissen, tenzij je kunt onderbouwen waarom dat niet kan. "Inzage" toont alles wat er over iemand is vastgelegd.</p></div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Mensen die je hebt verwijderd. Hun gegevens staan er nog, dus je kunt ze terugzetten. Na 24 maanden krijg je een seintje om ze definitief te wissen.</p></div>
     <div class="panel" id="gearchiveerd-lijst" style="padding:0"></div>
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
@@ -1117,7 +1122,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label for="pc-tel">Telefoonnummer</label><input id="pc-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="sublistlabel" style="margin-top:20px">Toestemming</div>
-      <p class="note">Een foto van iemand gebruiken mag niet zomaar: daar is toestemming voor nodig, en je moet kunnen aantonen dát die er is. Zonder vinkje toont MyWepp alleen de initialen.</p>
+      <p class="note">Vink alleen aan waar de cliënt of zijn vertegenwoordiger toestemming voor heeft gegeven. Zonder vinkje toont MyWepp de initialen in plaats van een foto.</p>
       <label class="chip" style="margin:0 6px 8px 0"><input type="checkbox" id="pc-toestemming-foto"> Profielfoto mag getoond worden</label>
       <label class="chip" style="margin:0 6px 8px 0"><input type="checkbox" id="pc-toestemming-media"> Foto's en video's in het dossier</label>
       <label class="chip" style="margin:0 0 8px"><input type="checkbox" id="pc-toestemming-chat"> Deelname aan de groepschat</label>
@@ -1159,7 +1164,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
       <div class="row">
         <div class="field"><label for="pp-toegang-tot">Toegang tot en met</label><input id="pp-toegang-tot" type="date">
-          <div class="mini" id="pp-toegang-hint">Leeg laten voor vaste medewerkers. Vul een datum in bij een invaller, stagiair of uitzendkracht; daarna vervalt de toegang vanzelf.</div>
+          <div class="mini" id="pp-toegang-hint">Leeg laten bij vaste medewerkers. Vul een datum in bij een invaller of stagiair; daarna stopt de toegang vanzelf.</div>
         </div>
         <div class="field"><label>Type rol</label><div class="lockedfield" id="pp-typerol-display"></div></div>
       </div>
@@ -1171,7 +1176,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="row">
         <div class="field"><label>Locatierol</label><div class="lockedfield" id="pp-locatierol-display"></div></div>
       </div>
-      <p class="mini">Type rol, algemene rol, groep en locatierol worden automatisch bepaald door de standaardrollen van de groep (Admin Tools) en zijn hier niet aan te passen.</p>
+      <p class="mini">Deze rollen komen uit de instellingen van de groep en zijn hier niet aan te passen.</p>
 
       <div class="sublistlabel">Gekoppelde groepen</div>
       <div id="pp-groepen-keuze" class="groepkeuze"></div>
@@ -2147,14 +2152,9 @@ function waarschuwOntkoppelen(p,onJa){
  var anderen=andereGroepenVan(p);
  if(!blijftElders(p)||!anderen.length){onJa();return;}
  bevestigModal(
-  'Let op: '+naam(p)+' blijft bestaan',
-  '<p>'+esc(naam(p))+' is ook gekoppeld aan <b>'+anderen.map(esc).join('</b>, <b>')+'</b>.</p>'+
-  '<p>Je haalt '+esc(naam(p))+' hiermee alleen weg uit <b>'+esc(huidigeGroep)+'</b>. '+
-  'In '+(anderen.length>1?'die groepen':'die groep')+' blijft '+esc(naam(p))+
-  ' gewoon bestaan. Er wordt dus niemand verwijderd of gearchiveerd.</p>'+
-  '<p>Wel vervalt alle toegang binnen <b>'+esc(huidigeGroep)+'</b>: de rechten van '+esc(naam(p))+
-  ' op de cliënten, medewerkers en naasten hier, en de rechten die zij op '+esc(naam(p))+
-  ' hadden. Koppel je '+esc(naam(p))+' later terug, dan moeten die opnieuw worden ingesteld.</p>',
+  esc(naam(p))+' blijft bestaan',
+  '<p>'+esc(naam(p))+' werkt ook in <b>'+anderen.map(esc).join('</b>, <b>')+'</b> en blijft daar gewoon staan. Je haalt '+esc(naam(p))+' alleen weg uit <b>'+esc(huidigeGroep)+'</b>.</p>'+
+  '<p>Alle toegang binnen '+esc(huidigeGroep)+' vervalt. Koppel je '+esc(naam(p))+' later terug, dan moet je die opnieuw instellen.</p>',
   'Ja, alleen uit '+huidigeGroep+' halen',onJa);
 }
 var TYPELABEL={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
@@ -2259,7 +2259,7 @@ function toonToestemming(p){
   info.textContent='Laatst vastgelegd op '+datumNL(t.vastgelegdOp)+(t.door?' door '+t.door:'')+'.';
   info.style.color='';
  }else{
-  info.textContent='Nog niet vastgelegd. Leg vast wat er is afgesproken met de cliënt of zijn vertegenwoordiger.';
+  info.textContent='Nog niets vastgelegd.';
   info.style.color='var(--amber)';
  }
  if(p.foto&&!t.foto){
@@ -2388,8 +2388,8 @@ function renderGroepenKeuze(p,keuzeId,hintId){
   return '<label class="chip'+(aan?' on':'')+'"><input type="checkbox" data-pgroep="'+esc(g)+'" '+(aan?'checked':'')+'>'+esc(g)+(g===huidigeGroep?' (huidig)':'')+'</label>';
  }).join('');
  el(hintId).textContent=meervoud
-  ? 'Gekoppeld aan meerdere groepen. Vink een groep uit om te ontkoppelen of te verplaatsen.'
-  : 'Vink een groep aan om ook daaraan te koppelen, of te verplaatsen.';
+  ? 'Werkt in meerdere groepen. Vink een groep uit om daar weg te halen.'
+  : 'Vink aan bij welke groepen deze persoon hoort.';
  Array.prototype.forEach.call(el(keuzeId).querySelectorAll('[data-pgroep]'),function(c){
   c.addEventListener('change',function(){
    var g=c.getAttribute('data-pgroep');
@@ -2401,11 +2401,9 @@ function renderGroepenKeuze(p,keuzeId,hintId){
        die uitleg hebt gezien, anders springt het terug. */
     c.checked=true;
     bevestigModal('Loskoppelen van '+g,
-     '<p>'+esc(naam(p))+' blijft daarna gekoppeld aan <b>'+
+     '<p>'+esc(naam(p))+' blijft in <b>'+
      p.groepen.filter(function(x){return x!==g;}).map(esc).join('</b>, <b>')+'</b>.</p>'+
-     '<p>Alle rechten binnen <b>'+esc(g)+'</b> vervallen: zowel wat '+esc(naam(p))+
-     ' daar mocht zien, als wat anderen daar op '+esc(naam(p))+
-     ' mochten. Dit kun je niet ongedaan maken door opnieuw te koppelen.</p>',
+     '<p>Alle toegang binnen '+esc(g)+' vervalt. Opnieuw koppelen zet die niet terug.</p>',
      'Ja, loskoppelen van '+g,function(){
       p.groepen=p.groepen.filter(function(x){return x!==g;});
       ruimRechtenZonderGedeeldeGroepOp(p);
@@ -2446,12 +2444,12 @@ function zetContactBlok(p,t){
    of nog ruim geldig. Anders moet je zelf gaan rekenen. */
 function toonToegangHint(p){
  var hint=el('pp-toegang-hint');if(!hint)return;
- var standaard='Leeg laten voor vaste medewerkers. Vul een datum in bij een invaller, stagiair of uitzendkracht; daarna vervalt de toegang vanzelf.';
+ var standaard='Leeg laten bij vaste medewerkers. Vul een datum in bij een invaller of stagiair; daarna stopt de toegang vanzelf.';
  var veld=el('pp-toegang-tot');
  var datum=veld?veld.value:'';
  if(!geldigeDatum(datum)){hint.textContent=standaard;hint.style.color='';return;}
  var dagen=dagenTotVerloop({toegangTot:datum});
- if(dagen<0){hint.textContent='Deze toegang is verlopen op '+datumNL(datum)+'. '+naam(p)+' kan niet meer inloggen en telt nergens meer als toegang.';hint.style.color='var(--brick)';}
+ if(dagen<0){hint.textContent='Verlopen op '+datumNL(datum)+'. '+naam(p)+' kan niet meer inloggen.';hint.style.color='var(--brick)';}
  else if(dagen===0){hint.textContent='Vandaag is de laatste dag. Morgen vervalt de toegang.';hint.style.color='var(--amber)';}
  else if(dagen<=14){hint.textContent='Nog '+dagen+' dag'+(dagen===1?'':'en') +' toegang, tot en met '+datumNL(datum)+'.';hint.style.color='var(--amber)';}
  else {hint.textContent='Toegang tot en met '+datumNL(datum)+' ('+dagen+' dagen).';hint.style.color='';}
@@ -2663,7 +2661,7 @@ function toonTweestapsStatus(p){
   e.textContent='Tweestapsverificatie staat aan'+(p.tweestapsDatum?' sinds '+datumNL(p.tweestapsDatum):'')+'.';
   e.style.color='var(--moss)';
  }else if(vereist.length){
-  e.textContent='Tweestapsverificatie staat uit, terwijl '+(vereist.length>1?'de groepen ':'groep ')+vereist.join(', ')+' die verplicht '+(vereist.length>1?'stellen':'stelt')+'. Deze persoon moet dat in de eigen app aanzetten.';
+  e.textContent='Tweestapsverificatie staat uit, maar is verplicht in '+vereist.join(' en ')+'. Deze persoon moet dat zelf aanzetten in de app.';
   e.style.color='var(--brick)';
  }else{
   e.textContent='Tweestapsverificatie staat uit. Deze groep stelt dat niet verplicht.';
@@ -2948,9 +2946,8 @@ function toonKoppelingInFormulier(){
  var partners=partnersVan(huidigeGroep).filter(function(g){return GROEPEN.indexOf(g)>-1;});
  vak.hidden=!partners.length;
  if(!partners.length)return;
- vak.innerHTML='<b>Let op: deze groep is gekoppeld aan '+partners.map(esc).join(' en ')+'.</b> '+
-  'Wat je hier bij <b>medewerkers</b> wijzigt — iemand toevoegen, verwijderen of ontkoppelen — geldt meteen ook daar, want het is hetzelfde team. '+
-  'Cliënten en naasten blijven bij deze groep en veranderen niet mee.';
+ vak.innerHTML='<b>Let op: deze groep werkt samen met '+partners.map(esc).join(' en ')+'.</b> '+
+  'Voeg je hier een medewerker toe of haal je er een weg, dan gebeurt dat daar ook. Cliënten en naasten veranderen niet mee.';
 }
 function verversGroepReferenties(){
  el('pp-groep-naam').textContent=huidigeGroep;
@@ -4221,6 +4218,7 @@ el('sb-koppelen').addEventListener('click',function(){
 /* Leeg mag: dan heeft de organisatie (nog) geen nummer en verbergen we de regel
    liever dan een half ingevuld nummer te tonen. */
 function bewaarSysteembeheerTel(){
+ if(!el('sb-tel'))return false;
  var waarde=kap(el('sb-tel').value.trim(),MAXLEN.tel);
  var fout=waarde!==''&&!telGeldig(waarde);
  el('sb-tel-fout').hidden=!fout;
@@ -4234,12 +4232,17 @@ function bewaarSysteembeheerTel(){
   logActie(waarde?('Telefoonnummer systeembeheer gewijzigd naar '+waarde):'Telefoonnummer systeembeheer gewist');
   syncOrganisatieData();
  }
- el('sb-tel-bevestiging').textContent=waarde?'Nummer opgeslagen.':'Nummer gewist.';
- setTimeout(function(){var b=el('sb-tel-bevestiging');if(b)b.textContent='';},2500);
+ var bev=el('sb-tel-bevestiging');
+ if(bev){
+  bev.textContent=waarde?'Nummer opgeslagen.':'Nummer gewist.';
+  setTimeout(function(){var b=el('sb-tel-bevestiging');if(b)b.textContent='';},2500);
+ }
  return true;
 }
-el('sb-tel-opslaan').addEventListener('click',bewaarSysteembeheerTel);
-el('sb-support-opslaan').addEventListener('click',function(){
+/* Het scherm Bereikbaarheid staat in comment; de bediening eromheen blijft staan
+   maar mag niet omvallen als de velden er niet zijn. */
+if(el('sb-tel-opslaan'))el('sb-tel-opslaan').addEventListener('click',bewaarSysteembeheerTel);
+if(el('sb-support-opslaan'))el('sb-support-opslaan').addEventListener('click',function(){
  /* Leeg laten mag niet: dan zou het logboek handelingen onder een lege naam
     vastleggen en is niet meer te achterhalen wie er heeft meegekeken. */
  var naamVal=kap(el('sb-support-naam').value.trim(),60)||'MyWepp Support';
@@ -4254,7 +4257,7 @@ el('sb-support-opslaan').addEventListener('click',function(){
  el('sb-support-bevestiging').textContent='Naam opgeslagen.';
  setTimeout(function(){var b=el('sb-support-bevestiging');if(b)b.textContent='';},2500);
 });
-el('sb-tel').addEventListener('input',function(){
+if(el('sb-tel'))el('sb-tel').addEventListener('input',function(){
  if(!el('sb-tel-fout').hidden&&(this.value.trim()===''||telGeldig(this.value))){
   el('sb-tel-fout').hidden=true;this.style.borderColor='';
  }
@@ -4438,16 +4441,20 @@ document.addEventListener('keydown',function(e){
  else if(!e.shiftKey&&document.activeElement===laatste){e.preventDefault();eerste.focus();}
 });
 
+/* De uitleg stond vol met woorden uit het systeem: standaardrollen op
+   "globaal-, groeps-, cliënten- en medewerkersniveau". Wie hier werkt hoeft dat
+   niet te weten — die wil weten wat een cliënt, medewerker of naaste is en wat
+   hij hier kan doen. */
 var INFOTEXT={
- client:{titel:'Over cliënten',tekst:'Cliënten zijn de bewoners van deze groep. Je maakt een cliënt aan met alleen een naam en eventueel een e-mailadres — wie er toegang toe krijgt bepaal je apart, per medewerker of naaste.'},
- medewerker:{titel:'Over medewerkers',tekst:'Medewerkers krijgen bij het aanmaken automatisch de standaardrollen van de organisatie op globaal-, groeps-, cliënten- en medewerkersniveau. Je kunt dit hier per persoon nog aanpassen.'},
- naaste:{titel:'Over naasten',tekst:'Naasten krijgen alleen een globale rol en een groepsrol. Toegang tot een specifieke cliënt ken je apart toe, vanuit die cliënt zelf.'}
+ client:{titel:'Cliënten',tekst:'De bewoners van deze groep. Je vult alleen een naam in. Wie hun gegevens mag zien, stel je per medewerker of naaste in.'},
+ medewerker:{titel:'Medewerkers',tekst:'De mensen die in deze groep werken. Ze krijgen automatisch de rechten die voor deze groep zijn ingesteld. Je kunt dat per persoon aanpassen.'},
+ naaste:{titel:'Naasten',tekst:'Familie of mantelzorgers. Je geeft ze toegang tot één of meer cliënten, niet tot de hele groep.'}
 };
 function infoSecties(keys){
  return keys.map(function(k){return '<div class="msec"><b>'+INFOTEXT[k].titel+'</b><p>'+INFOTEXT[k].tekst+'</p></div>';}).join('');
 }
 el('info-toggle').addEventListener('click',function(){
- openModal('<h3>Over dit formulier</h3><div class="msec"><p>Wijzigingen die je hier maakt worden pas echt doorgevoerd nadat je op "Wijzigingen doorvoeren" klikt. Tot die tijd kun je alles nog aanpassen of ongedaan maken via "Verwijderen".</p></div>'
+ openModal('<h3>Uitleg</h3><div class="msec"><p>Wat je hier verandert, gaat pas in als je op <b>Wijzigingen doorvoeren</b> klikt. Tot die tijd kun je alles nog aanpassen.</p></div>'
   +infoSecties(['client','medewerker','naaste'])
   +'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Snap ik</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
