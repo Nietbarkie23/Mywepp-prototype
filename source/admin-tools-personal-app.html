@@ -231,10 +231,19 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .admreview .reviewrow{padding:10px 14px}
 .admwaarschuwing{background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px}
 .admwaarschuwing b{display:block;font-size:14px;color:var(--amber);margin-bottom:6px}
+/* Die blokweergave is voor de kop van de waarschuwing. Vet midden in een zin
+   (een groepsnaam benadrukken) brak daardoor naar een eigen regel. */
+.admwaarschuwing p b{display:inline;font-size:inherit;color:var(--ink);font-weight:600;margin:0}
 .admwaarschuwing ul{margin:0 0 8px 18px;padding:0;font-size:13.5px;color:var(--ink)}
 .admwaarschuwing li{margin-bottom:4px}
 .admwaarschuwing .mini{margin:0}
 .admgelukt{background:var(--moss-bg);border:1px solid var(--moss-line);border-radius:var(--radius-sm);padding:14px 16px;color:var(--moss);font-size:14px;line-height:1.6}
+/* Wie in een gekoppelde groep werkt moet weten dat een wijziging aan het team
+   in de andere groep meekomt. Dat hoort in beeld te staan voordat je iets doet,
+   niet pas achteraf in het logboek. */
+.koppelmelding{background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:var(--radius-sm);
+ padding:11px 14px;margin-top:10px;font-size:13.5px;color:var(--ink);line-height:1.6}
+.koppelmelding b{color:var(--amber)}
 /* In het origineel zie je niet welk scherm openstaat. Dat is juist wat je wilt
    weten als je twintig knoppen voor je hebt. */
 .abtn.on{background:#fff;border-color:#fff;color:#1D2733;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
@@ -732,47 +741,19 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
   <section id="admintab-bulk">
     <div class="panel">
-      <div class="head"><h2>Voor welke groepen?</h2><span class="sub">Selecteer een of meerdere groepen binnen dit domein</span></div>
-      <div class="body">
-        <div class="groepkeuze" id="bulk-groepen"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="head"><h2>Voor welk type persoon</h2></div>
+      <div class="head"><h2>Voor welk type persoon</h2><span class="sub">Geldt voor de hele organisatie</span></div>
       <div class="body">
         <div class="typetabs" id="bulk-typetabs">
           <button type="button" class="typetab on" data-type="medewerker">Medewerker</button>
           <button type="button" class="typetab" data-type="naaste">Naaste</button>
         </div>
         <p class="note">Per recht kies je één <b>standaardrol</b> (die 80%-rol) en optioneel enkele <b>optionele rollen</b> ernaast — zo kan een groep als die van Angelina meerdere rollen aanbieden zonder dat het systeem hoeft te raden welke de hoofdrol is.</p>
+        <p class="note">Dit is de standaard voor de hele organisatie. Wijkt één groep af, stel dat dan bij die groep zelf in: <b>Groep bewerken</b> in de knoppenbalk, of het potlood bij <b>Groepen beheren</b>.</p>
         <div id="bulk-rechten"></div>
         <div class="actions end">
-          <button type="button" id="naar-groep-rechten">Eén groep apart instellen…</button>
-          <button type="button" class="primary" id="bulk-toepassen">Toepassen op geselecteerde groepen</button>
+          <button type="button" class="primary" id="bulk-toepassen">Opslaan als organisatiestandaard</button>
         </div>
         <div id="bulk-bevestiging"></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="admintab-groep" hidden>
-    <div class="panel">
-      <div class="head"><h2>Standaardrollen van één groep</h2><span class="sub">Afwijken van de organisatiebrede instelling</span></div>
-      <div class="body">
-        <div class="row">
-          <div class="field"><label for="groep-select">Groep</label><select id="groep-select"></select></div>
-        </div>
-        <div class="typetabs" id="groep-typetabs">
-          <button type="button" class="typetab on" data-type="medewerker">Medewerker</button>
-          <button type="button" class="typetab" data-type="naaste">Naaste</button>
-        </div>
-        <div id="groep-rechten"></div>
-        <div class="actions">
-          <button type="button" id="groep-reset">Terug naar organisatiestandaard</button>
-          <button type="button" class="primary" id="groep-opslaan">Opslaan voor deze groep</button>
-        </div>
-        <div id="groep-bevestiging"></div>
       </div>
     </div>
   </section>
@@ -788,6 +769,20 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         </div>
         <div class="actions end"><button type="button" class="primary" id="sb-groep-toevoegen">Groep toevoegen</button></div>
         <div id="sb-groep-bevestiging"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="head"><h2>Gekoppelde groepen</h2><span class="sub">Zelfde team, eigen cliënten</span></div>
+      <div class="body">
+        <p class="note">Draaien twee groepen met hetzelfde team, koppel ze dan. Iedere medewerker van de ene groep werkt daarna automatisch ook in de andere, ook wie er later bij komt. Cliënten en naasten worden nooit gedeeld: die blijven bij hun eigen groep, en niemand krijgt er toegang bij zonder dat je dat zelf instelt.</p>
+        <div id="sb-koppel-lijst"></div>
+        <div class="row" style="margin-top:16px">
+          <div class="field"><label for="sb-koppel-a">Groep</label><select id="sb-koppel-a"></select></div>
+          <div class="field"><label for="sb-koppel-b">Koppelen aan</label><select id="sb-koppel-b"></select></div>
+        </div>
+        <div class="actions end"><button type="button" class="primary" id="sb-koppelen">Koppelen</button></div>
+        <div id="sb-koppel-bevestiging"></div>
       </div>
     </div>
     <div class="panel">
@@ -935,6 +930,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     <div class="intro" style="padding-top:6px;padding-bottom:14px">
       <h1 style="font-size:22px;display:inline-block">Formulier: Gebruikers beheren<span class="conceptbadge" id="concept-badge" hidden>Concept opgeslagen</span></h1>
       <p class="tellingen" id="formulier-tellingen"></p>
+      <div class="koppelmelding" id="formulier-koppeling" hidden></div>
     </div>
 
     <div class="panel" id="contact-banner" style="padding:14px 20px">
@@ -1359,19 +1355,47 @@ var orgDefault={
  naaste:{globaal:{rol:'Mantelzorger',opt:[]},groep:{rol:'Mantelzorger',opt:['Mantelzorger simpel']}}
 };
 var groupOverride={};
+/* ---- Gekoppelde groepen ----
+   Twee groepen op dezelfde locatie draaien in de praktijk vaak met één team:
+   dezelfde medewerkers, maar hun eigen cliënten. Dat met de hand bijhouden gaat
+   mis zodra er iemand bij komt of weggaat — dan werkt iemand wel in de ene groep
+   en niet in de andere zonder dat iemand dat merkt. Een koppeling deelt daarom
+   automatisch de medewerkers.
+   Cliënten en naasten worden nooit gedeeld. Die horen bij één groep, en juist
+   die scheiding wil je in de zorg overeind houden: een gekoppeld team betekent
+   niet dat iedereen in elkaars dossiers kan. */
+var groepKoppelingen=[];
+function clusterVan(g){
+ var c=groepKoppelingen.filter(function(k){return k.indexOf(g)>-1;})[0];
+ return c?c.slice():[g];
+}
+function isGekoppeld(g){return clusterVan(g).length>1;}
+function partnersVan(g){return clusterVan(g).filter(function(x){return x!==g;});}
+/* Zet de groepen van één medewerker recht: zit hij in een gekoppelde groep, dan
+   hoort hij in alle groepen van dat cluster. Geeft terug of er iets veranderde. */
+function vulKoppelingAan(p){
+ if(!p||p.type!=='medewerker'||!p.groepen)return false;
+ var erbij=[];
+ p.groepen.slice().forEach(function(g){
+  clusterVan(g).forEach(function(x){
+   if(p.groepen.indexOf(x)<0&&GROEPEN.indexOf(x)>-1){p.groepen.push(x);erbij.push(x);}
+  });
+ });
+ if(!erbij.length)return false;
+ if(p._state!=='nieuw')p._state='gewijzigd';
+ return true;
+}
+/* Na het leggen of wijzigen van een koppeling iedereen in één keer bijwerken. */
+function pasKoppelingenToe(){
+ var aantal=0;
+ people.forEach(function(p){if(!p.archived&&vulKoppelingAan(p))aantal++;});
+ return aantal;
+}
 var bulkSel={groepen:{}, type:'medewerker', werk:{}};
 GROEPEN.forEach(function(g){bulkSel.groepen[g]=false;});
 function resetWerk(type){bulkSel.werk=JSON.parse(JSON.stringify(orgDefault[type]));}
 resetWerk('medewerker');
 
-function renderBulkGroepen(){
- el('bulk-groepen').innerHTML=GROEPEN.map(function(g){
-  return '<label class="chip'+(bulkSel.groepen[g]?' on':'')+'"><input type="checkbox" data-g="'+esc(g)+'" '+(bulkSel.groepen[g]?'checked':'')+'>'+esc(g)+'</label>';
- }).join('')+'<label class="chip"><input type="checkbox" id="bulk-alle">Alle groepen</label>';
- Array.prototype.forEach.call(el('bulk-groepen').querySelectorAll('[data-g]'),function(c){
-  c.addEventListener('change',function(){bulkSel.groepen[c.getAttribute('data-g')]=c.checked;renderBulkGroepen();updateBulkKnop();});});
- el('bulk-alle').addEventListener('change',function(){GROEPEN.forEach(function(g){bulkSel.groepen[g]=el('bulk-alle').checked;});renderBulkGroepen();updateBulkKnop();});
-}
 var CHEVRON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
 var rolMenuOpen={};
 function rolMenuKey(container,k,kind){return (container.id||'c')+'|'+k+'|'+kind;}
@@ -1446,13 +1470,7 @@ function rechtenRows(container,type,data,onchange){
   });
  });
 }
-function updateBulkKnop(){
- var any=GROEPEN.some(function(g){return bulkSel.groepen[g];});
- el('bulk-toepassen').disabled=!any;
-}
-el('bulk-toepassen').disabled=true;
 function initBulkTab(){
- renderBulkGroepen();
  rechtenRows(el('bulk-rechten'),bulkSel.type,bulkSel.werk);
  Array.prototype.forEach.call(el('bulk-typetabs').querySelectorAll('.typetab'),function(b){
   b.addEventListener('click',function(){
@@ -1461,57 +1479,26 @@ function initBulkTab(){
    rechtenRows(el('bulk-rechten'),bulkSel.type,bulkSel.werk);el('bulk-bevestiging').innerHTML='';
   });
  });
+ /* Dit scherm ging over "een of meerdere groepen", terwijl je bij het bewerken
+    van een groep toch al kiest wat daar geldt. Twee plekken voor hetzelfde
+    leverden vooral de vraag op welke van de twee won. Hier staat nu de
+    organisatiestandaard; een groep die daarvan afwijkt regel je bij die groep. */
  el('bulk-toepassen').addEventListener('click',function(){
-  var gekozen=GROEPEN.filter(function(g){return bulkSel.groepen[g];});
-  gekozen.forEach(function(g){
-   groupOverride[g]=groupOverride[g]||{};
-   groupOverride[g][bulkSel.type]=JSON.parse(JSON.stringify(bulkSel.werk));
-  });
-  el('bulk-bevestiging').innerHTML='<div class="bevestiging reveal">Standaardrollen voor <b>'+esc(bulkSel.type)+'</b> zijn in één keer ingesteld voor: '+esc(gekozen.join(', '))+'.</div>';
-  renderGroepTab();
+  orgDefault[bulkSel.type]=JSON.parse(JSON.stringify(bulkSel.werk));
+  var afwijkend=GROEPEN.filter(function(g){return groupOverride[g]&&groupOverride[g][bulkSel.type];});
+  logActie('Organisatiestandaard voor '+bulkSel.type+'s opgeslagen');
+  syncOrganisatieData();
+  el('bulk-bevestiging').innerHTML='<div class="bevestiging reveal">Opgeslagen als organisatiestandaard voor <b>'+esc(bulkSel.type==='medewerker'?'medewerkers':'naasten')+'</b>.'+
+   (afwijkend.length?' <span class="mini">'+esc(afwijkend.join(', '))+' '+(afwijkend.length===1?'wijkt':'wijken')+' hiervan af en '+(afwijkend.length===1?'houdt':'houden')+' de eigen instelling.</span>':'')+'</div>';
+  renderAll();
  });
 }
 initBulkTab();
 
-var groepSel={groep:GROEPEN[0],type:'medewerker'};
 function effectiveFor(groep,type){
  var ov=groupOverride[groep]&&groupOverride[groep][type];
  return {data: ov?JSON.parse(JSON.stringify(ov)):JSON.parse(JSON.stringify(orgDefault[type])), overridden: !!ov};
 }
-function renderGroepTab(){
- var eff=effectiveFor(groepSel.groep,groepSel.type);
- var head='<div class="mini" style="margin-bottom:12px">'+(eff.overridden
-   ?'<span class="tag override">Aangepast voor deze groep</span>'
-   :'<span class="tag inherit">Organisatiestandaard</span>')+'</div>';
- el('groep-rechten').innerHTML=head+'<div id="groep-rechten-inner"></div>';
- rechtenRows(el('groep-rechten-inner'),groepSel.type,eff.data,function(){
-  var isNowOverride = JSON.stringify(eff.data)!==JSON.stringify(orgDefault[groepSel.type]);
-  var tagEl=el('groep-rechten').querySelector('.tag');
-  tagEl.className='tag '+(isNowOverride?'override':'inherit');
-  tagEl.textContent=isNowOverride?'Aangepast voor deze groep (nog niet opgeslagen)':'Organisatiestandaard';
- });
- groepSel._working=eff.data;
-}
-el('groep-select').innerHTML=GROEPEN.map(function(g){return '<option>'+esc(g)+'</option>';}).join('');
-el('groep-select').addEventListener('change',function(){groepSel.groep=el('groep-select').value;el('groep-bevestiging').innerHTML='';renderGroepTab();});
-Array.prototype.forEach.call(el('groep-typetabs').querySelectorAll('.typetab'),function(b){
- b.addEventListener('click',function(){
-  Array.prototype.forEach.call(el('groep-typetabs').querySelectorAll('.typetab'),function(x){x.classList.remove('on');});
-  b.classList.add('on');groepSel.type=b.getAttribute('data-type');el('groep-bevestiging').innerHTML='';renderGroepTab();
- });
-});
-el('groep-opslaan').addEventListener('click',function(){
- groupOverride[groepSel.groep]=groupOverride[groepSel.groep]||{};
- groupOverride[groepSel.groep][groepSel.type]=JSON.parse(JSON.stringify(groepSel._working));
- el('groep-bevestiging').innerHTML='<div class="bevestiging reveal">Opgeslagen voor '+esc(groepSel.groep)+'.</div>';
- renderGroepTab();
-});
-el('groep-reset').addEventListener('click',function(){
- if(groupOverride[groepSel.groep])delete groupOverride[groepSel.groep][groepSel.type];
- el('groep-bevestiging').innerHTML='<div class="bevestiging reveal">Teruggezet naar de organisatiestandaard.</div>';
- renderGroepTab();
-});
-renderGroepTab();
 
 function kiesAdmintab(naamVal){
  /* De tabbladenrij is opgegaan in de knoppenbalk: alles wat je kunt openen
@@ -1539,7 +1526,6 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-admintab]'),functi
 /* "Groep bewerken" stond twee keer in de balk: als handeling (naam en locatie)
    en als overzicht (standaardrollen van één groep afwijken). Dat tweede hoort
    bij de standaardrollen en is daar nu vandaan te bereiken. */
-el('naar-groep-rechten').addEventListener('click',function(){kiesAdmintab('groep');});
 el('adm-scherm-sluiten').addEventListener('click',function(){
  el('modal-card').innerHTML='';
  admPaneelUit();
@@ -1758,12 +1744,17 @@ async function loadFromSupabase(){
    if(opgeslagen.support&&typeof opgeslagen.support.tel==='string'&&opgeslagen.support.tel)SUPPORT.tel=opgeslagen.support.tel;
    if(opgeslagen.digibord&&typeof opgeslagen.digibord==='object')digibordPerGroep=opgeslagen.digibord;
    if(opgeslagen.maaltijden&&typeof opgeslagen.maaltijden==='object')MAALTIJDRESERVERINGEN=opgeslagen.maaltijden;
+   if(Array.isArray(opgeslagen.groep_koppelingen))groepKoppelingen=opgeslagen.groep_koppelingen.filter(Array.isArray);
+   if(opgeslagen.org_default&&opgeslagen.org_default.medewerker&&opgeslagen.org_default.naaste){
+    orgDefault.medewerker=opgeslagen.org_default.medewerker;
+    orgDefault.naaste=opgeslagen.org_default.naaste;
+   }
+   if(opgeslagen.groep_rollen&&typeof opgeslagen.groep_rollen==='object')groupOverride=opgeslagen.groep_rollen;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
   nextId=Math.max.apply(null,people.map(function(x){return x.id;}).concat([0]))+1;
   if(GROEPEN.indexOf(huidigeGroep)<0)huidigeGroep=GROEPEN[0];
-  if(GROEPEN.indexOf(groepSel.groep)<0)groepSel.groep=GROEPEN[0];
   /* Groepen die uit de database komen kenden nog geen locatie of bulk-selectie. */
   GROEPEN.forEach(function(gr){
    if(!groepLocatie[gr])groepLocatie[gr]=LOCATIES[0]||null;
@@ -2933,6 +2924,7 @@ el('account-select').addEventListener('change',function(){
 });
 function renderAll(){
  ['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();
+ toonKoppelingInFormulier();
  toonAdminWie();
  if(el('admintab-controle')&&!el('admintab-controle').hidden)renderControle();
 }
@@ -2949,12 +2941,22 @@ function sbBevestig(tekst){
  el('sb-groep-bevestiging').textContent=tekst;
  setTimeout(function(){var b=el('sb-groep-bevestiging');if(b)b.textContent='';},2500);
 }
+/* Staat in het formulier van een gekoppelde groep, zodat je vóór je iets
+   wijzigt weet dat het team gedeeld is. */
+function toonKoppelingInFormulier(){
+ var vak=el('formulier-koppeling');if(!vak)return;
+ var partners=partnersVan(huidigeGroep).filter(function(g){return GROEPEN.indexOf(g)>-1;});
+ vak.hidden=!partners.length;
+ if(!partners.length)return;
+ vak.innerHTML='<b>Let op: deze groep is gekoppeld aan '+partners.map(esc).join(' en ')+'.</b> '+
+  'Wat je hier bij <b>medewerkers</b> wijzigt — iemand toevoegen, verwijderen of ontkoppelen — geldt meteen ook daar, want het is hetzelfde team. '+
+  'Cliënten en naasten blijven bij deze groep en veranderen niet mee.';
+}
 function verversGroepReferenties(){
- el('groep-select').innerHTML=GROEPEN.map(function(x){return '<option'+(x===groepSel.groep?' selected':'')+'>'+esc(x)+'</option>';}).join('');
  el('pp-groep-naam').textContent=huidigeGroep;
  el('hub-groepnaam').textContent=huidigeGroep;
  if(el('hub-tweestaps'))el('hub-tweestaps').checked=eistTweestaps(huidigeGroep);
- renderBulkGroepen();
+ toonKoppelingInFormulier();
 }
 var gearchiveerdeGroepen=[];
 /* De schakelaar "Tweestapsverificatie verplicht" zei alleen "opgeslagen" maar
@@ -2976,13 +2978,48 @@ function voegGroepToe(naamVal){
  sbBevestig('Groep "'+naamVal+'" toegevoegd.');
  return true;
 }
+/* De standaardrollen van één groep stonden op een eigen tabblad met een eigen
+   groepskeuze, los van het scherm waar je de groep bewerkt. Je koos daar dus nog
+   een keer een groep, terwijl je er al in zat. Ze horen hier, bij de groep zelf. */
+var groepBewerkType='medewerker';
 function hernoemGroep(g){
+ groepBewerkType='medewerker';
+ var werk={medewerker:effectiveFor(g,'medewerker').data,naaste:effectiveFor(g,'naaste').data};
+ var partners=partnersVan(g);
  openModal('<h3>Groep bewerken</h3>'+
+  (partners.length?'<div class="admwaarschuwing"><b>Gekoppelde groep</b><p class="mini" style="margin:0">Deze groep deelt haar team met <b>'+partners.map(esc).join('</b>, <b>')+'</b>. Wat je hier voor medewerkers instelt, geldt alleen voor deze groep — maar de medewerkers zelf zijn dezelfde.</p></div>':'')+
   '<fieldset class="admblok"><legend>Groep</legend>'+
   '<div class="admveld"><label for="modal-groep-naam">Naam<span class="verplicht">*</span></label><input class="admin" id="modal-groep-naam" value="'+esc(g)+'"></div>'+
   '<div class="admveld"><label for="modal-groep-locatie">Locatie</label><select class="admin" id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option'+(l===groepLocatie[g]?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></div>'+
   '</fieldset>'+
+  '<fieldset class="admblok"><legend>Standaardrollen in deze groep</legend>'+
+  '<p class="mini" style="margin:0 0 10px">Wat iemand hier standaard mag. Laat je dit staan, dan volgt de groep de organisatiestandaard uit Standaardrollen.</p>'+
+  '<div class="typetabs" id="modal-groep-typetabs">'+
+   '<button type="button" class="typetab on" data-type="medewerker">Medewerker</button>'+
+   '<button type="button" class="typetab" data-type="naaste">Naaste</button>'+
+  '</div>'+
+  '<div id="modal-groep-rechten"></div>'+
+  '<button type="button" class="small" id="modal-groep-reset" style="margin-top:8px">Terug naar organisatiestandaard</button>'+
+  '</fieldset>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+ var toonRechten=function(){
+  var eff=effectiveFor(g,groepBewerkType);
+  var vlag=JSON.stringify(werk[groepBewerkType])!==JSON.stringify(orgDefault[groepBewerkType]);
+  el('modal-groep-rechten').innerHTML='<div class="mini" style="margin-bottom:10px"><span class="tag '+(vlag?'override':'inherit')+'">'+
+   (vlag?'Wijkt af van de organisatiestandaard':'Volgt de organisatiestandaard')+'</span></div><div id="modal-groep-rechten-inner"></div>';
+  rechtenRows(el('modal-groep-rechten-inner'),groepBewerkType,werk[groepBewerkType],toonRechten);
+ };
+ toonRechten();
+ Array.prototype.forEach.call(el('modal-groep-typetabs').querySelectorAll('.typetab'),function(b){
+  b.addEventListener('click',function(){
+   Array.prototype.forEach.call(el('modal-groep-typetabs').querySelectorAll('.typetab'),function(x){x.classList.remove('on');});
+   b.classList.add('on');groepBewerkType=b.getAttribute('data-type');toonRechten();
+  });
+ });
+ el('modal-groep-reset').addEventListener('click',function(){
+  werk[groepBewerkType]=JSON.parse(JSON.stringify(orgDefault[groepBewerkType]));
+  toonRechten();
+ });
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
   var nieuw=kap(el('modal-groep-naam').value.trim(),MAXLEN.groep);
@@ -2990,6 +3027,7 @@ function hernoemGroep(g){
   if(!nieuw)return;
   if(nieuw!==g&&GROEPEN.indexOf(nieuw)>-1){alert('Er bestaat al een groep met deze naam.');return;}
   var hernoemd=nieuw!==g;
+  var locatieGewijzigd=groepLocatie[g]!==nieuweLocatie;
   if(hernoemd){
    /* Alles wat op groepsnaam is gesleuteld moet mee; alleen doen bij een échte
       naamswijziging, want anders wist het verplaatsen naar dezelfde sleutel de waarde. */
@@ -3002,16 +3040,36 @@ function hernoemGroep(g){
    bulkSel.groepen[nieuw]=bulkSel.groepen[g]||false;delete bulkSel.groepen[g];
    delete groepLocatie[g];
    if(huidigeGroep===g)huidigeGroep=nieuw;
-   if(groepSel.groep===g)groepSel.groep=nieuw;
   }
   groepLocatie[nieuw]=nieuweLocatie;
+  /* Standaardrollen die gelijk zijn aan de organisatiestandaard slaan we niet op
+     als afwijking: anders blijft een groep straks achter als de organisatie
+     verandert, zonder dat iemand dat zo bedoeld heeft. */
+  var rolwijzigingen=[];
+  ['medewerker','naaste'].forEach(function(t){
+   var afwijkend=JSON.stringify(werk[t])!==JSON.stringify(orgDefault[t]);
+   var hadAfwijking=!!(groupOverride[nieuw]&&groupOverride[nieuw][t]);
+   if(afwijkend){
+    groupOverride[nieuw]=groupOverride[nieuw]||{};
+    if(JSON.stringify(groupOverride[nieuw][t])!==JSON.stringify(werk[t]))rolwijzigingen.push(t);
+    groupOverride[nieuw][t]=JSON.parse(JSON.stringify(werk[t]));
+   }else if(hadAfwijking){
+    delete groupOverride[nieuw][t];rolwijzigingen.push(t);
+   }
+  });
   verversGroepReferenties();
   closeModal();
   renderSysteembeheer();
   renderAll();
   syncGroepenToSupabase();
-  logActie(hernoemd?('Groep "'+g+'" hernoemd naar "'+nieuw+'"'):('Locatie van groep "'+nieuw+'" gewijzigd naar "'+nieuweLocatie+'"'));
-  sbBevestig(hernoemd?('Groep hernoemd naar "'+nieuw+'".'):('Locatie van "'+nieuw+'" bijgewerkt.'));
+  /* Alleen melden wat er echt is veranderd; anders schreef het logboek een
+     locatiewijziging op terwijl je alleen een rol had aangepast. */
+  if(hernoemd)logActie('Groep "'+g+'" hernoemd naar "'+nieuw+'"');
+  if(locatieGewijzigd)logActie('Locatie van groep "'+nieuw+'" gewijzigd naar "'+nieuweLocatie+'"');
+  if(rolwijzigingen.length)logActie('Standaardrollen van groep "'+nieuw+'" gewijzigd voor '+rolwijzigingen.join(' en '));
+  sbBevestig(hernoemd?('Groep hernoemd naar "'+nieuw+'".')
+   :(rolwijzigingen.length?('Standaardrollen van "'+nieuw+'" bijgewerkt.')
+   :(locatieGewijzigd?('Locatie van "'+nieuw+'" bijgewerkt.'):('Niets gewijzigd aan "'+nieuw+'".'))));
  });
 }
 function verwijderGroep(g){
@@ -3029,7 +3087,6 @@ function verwijderGroep(g){
   delete groupOverride[g];
   delete bulkSel.groepen[g];
   if(huidigeGroep===g)huidigeGroep=GROEPEN[0];
-  if(groepSel.groep===g)groepSel.groep=GROEPEN[0];
   verversGroepReferenties();
   closeModal();
   renderSysteembeheer();
@@ -4060,7 +4117,72 @@ el('admin-uitloggen').addEventListener('click',function(){
   });
 });
 
+function medewerkersVanGroep(g){
+ return people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p._state!=='verwijderd'&&p.groepen.indexOf(g)>-1;});
+}
+function renderKoppelingen(){
+ var lijst=el('sb-koppel-lijst');if(!lijst)return;
+ lijst.innerHTML=groepKoppelingen.length? groepKoppelingen.map(function(cluster,i){
+  var gedeeld=medewerkersVanGroep(cluster[0]).length;
+  return '<div class="personrow"><div class="pinfo">'+
+   '<div class="naam">'+cluster.map(esc).join(' <span class="mini">+</span> ')+'</div>'+
+   '<div class="mail">'+gedeeld+' gedeelde medewerker'+(gedeeld===1?'':'s')+' · '+
+   cluster.map(function(g){var c=sbCounts(g);return esc(g)+': '+c.c+' cliënt'+(c.c===1?'':'en');}).join(' · ')+'</div></div>'+
+   '<button type="button" class="small danger" data-ontkoppel="'+i+'">Koppeling opheffen</button></div>';
+ }).join('') : '<p class="empty-msg" style="padding:14px 0">Nog geen gekoppelde groepen. Elke groep heeft nu zijn eigen team.</p>';
+ Array.prototype.forEach.call(lijst.querySelectorAll('[data-ontkoppel]'),function(b){
+  b.addEventListener('click',function(){ontkoppelCluster(+b.getAttribute('data-ontkoppel'));});
+ });
+ /* Alleen groepen die nog nergens aan hangen, of die je aan een bestaand cluster
+    kunt toevoegen; een groep zit in hoogstens één cluster. */
+ var a=el('sb-koppel-a'),b=el('sb-koppel-b');
+ if(!a||!b)return;
+ var vorigeA=a.value,vorigeB=b.value;
+ a.innerHTML=GROEPEN.map(function(g){return '<option'+(g===vorigeA?' selected':'')+'>'+esc(g)+'</option>';}).join('');
+ var gekozenA=a.value||GROEPEN[0];
+ var opties=GROEPEN.filter(function(g){return clusterVan(g).indexOf(gekozenA)<0;});
+ b.innerHTML=opties.length
+  ? opties.map(function(g){return '<option'+(g===vorigeB?' selected':'')+'>'+esc(g)+'</option>';}).join('')
+  : '<option value="">Geen andere groep beschikbaar</option>';
+ el('sb-koppelen').disabled=!opties.length;
+}
+function koppelGroepen(a,b){
+ if(!a||!b||a===b)return;
+ var clusterA=clusterVan(a),clusterB=clusterVan(b);
+ var samen=clusterA.concat(clusterB.filter(function(g){return clusterA.indexOf(g)<0;}));
+ var teamA=medewerkersVanGroep(a).length,teamB=medewerkersVanGroep(b).length;
+ bevestigModal('Groepen koppelen',
+  '<p><b>'+samen.map(esc).join('</b>, <b>')+'</b> gaan met hetzelfde team werken.</p>'+
+  '<p>'+teamA+' medewerker'+(teamA===1?'':'s')+' uit '+esc(a)+' en '+teamB+' uit '+esc(b)+
+  ' komen daarmee in alle gekoppelde groepen te staan. Wie er later bij komt, komt er automatisch bij.</p>'+
+  '<p>Cliënten en naasten blijven waar ze zijn. Niemand krijgt hierdoor toegang tot een cliënt: die rechten stel je per persoon in, zoals altijd.</p>',
+  'Ja, koppelen',function(){
+   groepKoppelingen=groepKoppelingen.filter(function(k){return samen.indexOf(k[0])<0&&!k.some(function(g){return samen.indexOf(g)>-1;});});
+   groepKoppelingen.push(samen);
+   var aantal=pasKoppelingenToe();
+   logActie('Groepen gekoppeld: '+samen.join(' + ')+(aantal?' — '+aantal+' medewerker'+(aantal===1?'':'s')+' gedeeld':''));
+   syncOrganisatieData();syncToSupabase();
+   renderSysteembeheer();renderAll();
+   el('sb-koppel-bevestiging').innerHTML='<div class="bevestiging reveal">'+esc(samen.join(' + '))+' werken nu met hetzelfde team.</div>';
+  });
+}
+function ontkoppelCluster(i){
+ var cluster=groepKoppelingen[i];if(!cluster)return;
+ var gedeeld=medewerkersVanGroep(cluster[0]).length;
+ bevestigModal('Koppeling opheffen',
+  '<p><b>'+cluster.map(esc).join('</b>, <b>')+'</b> krijgen weer een eigen team.</p>'+
+  '<p>De '+gedeeld+' medewerker'+(gedeeld===1?'':'s')+' die nu in al deze groepen staan, blijven daar staan: ze zijn er echt aan gekoppeld en hun rechten horen erbij. Wil je iemand ergens weghalen, doe dat dan bewust per persoon — dan zie je ook welke rechten daarmee vervallen.</p>'+
+  '<p>Wat stopt, is het automatisch delen: wie hierna wordt toegevoegd komt alleen in de groep waar je hem aanmaakt.</p>',
+  'Ja, opheffen',function(){
+   groepKoppelingen.splice(i,1);
+   logActie('Koppeling opgeheven tussen '+cluster.join(' + '));
+   syncOrganisatieData();
+   renderSysteembeheer();renderAll();
+   el('sb-koppel-bevestiging').innerHTML='<div class="bevestiging reveal">'+esc(cluster.join(' + '))+' delen geen medewerkers meer automatisch.</div>';
+  });
+}
 function renderSysteembeheer(){
+ renderKoppelingen();
  el('sb-groepen-sub').textContent=GROEPEN.length+' groep'+(GROEPEN.length===1?'':'en')+' in deze organisatie';
  if(el('sb-tel')&&document.activeElement!==el('sb-tel'))el('sb-tel').value=SYSTEEMBEHEER.tel||'';
  if(el('sb-support-naam')&&document.activeElement!==el('sb-support-naam'))el('sb-support-naam').value=SUPPORT.naam||'';
@@ -4091,6 +4213,10 @@ function renderSysteembeheer(){
 }
 el('sb-groep-toevoegen').addEventListener('click',function(){
  if(voegGroepToe(el('sb-nieuwe-groep').value))el('sb-nieuwe-groep').value='';
+});
+el('sb-koppel-a').addEventListener('change',renderKoppelingen);
+el('sb-koppelen').addEventListener('click',function(){
+ koppelGroepen(el('sb-koppel-a').value,el('sb-koppel-b').value);
 });
 /* Leeg mag: dan heeft de organisatie (nog) geen nummer en verbergen we de regel
    liever dan een half ingevuld nummer te tonen. */
@@ -4172,7 +4298,13 @@ async function syncOrganisatieData(){
    {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen},
    {sleutel:'support',waarde:SUPPORT},
    {sleutel:'digibord',waarde:digibordPerGroep},
-   {sleutel:'maaltijden',waarde:MAALTIJDRESERVERINGEN}
+   {sleutel:'maaltijden',waarde:MAALTIJDRESERVERINGEN},
+   {sleutel:'groep_koppelingen',waarde:groepKoppelingen},
+   /* De standaardrollen leefden alleen in het geheugen: na een herlaad stond
+      iedere groep weer op de fabrieksinstelling, ook als je net iets anders had
+      ingesteld. */
+   {sleutel:'org_default',waarde:orgDefault},
+   {sleutel:'groep_rollen',waarde:groupOverride}
   ],{onConflict:'sleutel'});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
@@ -4339,7 +4471,10 @@ el('formulier-terug').addEventListener('click',function(){
  }
 });
 function pushNew(t){
- var basis={id:nextId++,type:t,voor:'',achter:'',mail:'',groepen:[huidigeGroep],_state:'nieuw'};
+ /* Een nieuwe medewerker in een gekoppelde groep hoort meteen in het hele
+    cluster te staan, anders klopt het team al bij het aanmaken niet. */
+ var startGroepen=t==='medewerker'?clusterVan(huidigeGroep).filter(function(g){return GROEPEN.indexOf(g)>-1;}):[huidigeGroep];
+ var basis={id:nextId++,type:t,voor:'',achter:'',mail:'',groepen:startGroepen,_state:'nieuw'};
  if(t==='client'){
   var effM=effectiveFor(huidigeGroep,'medewerker').data;
   if(effM.clienten.rol!=='Geen'){
