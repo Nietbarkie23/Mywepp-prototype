@@ -1359,6 +1359,19 @@ function sbFetch(url,opties){
  return fetch(url,opties);
 }
 var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_URL,SB_KEY,{global:{fetch:sbFetch}}):null;
+/* Bij het sluiten van de pagina haalt supabase-js eerst nog asynchroon de
+   sessie op voordat hij het verzoek verstuurt; soms is de pagina dan al weg en
+   komt er niets aan (aangetoond: af en toe verloren). Daarom op dat moment
+   rechtstreeks één keepalive-verzoek naar de database, zonder tussenstappen. */
+function schrijfBijSluiten(tabel,rijen,conflictKolom){
+ try{
+  var body=JSON.stringify(rijen);
+  fetch(SB_URL+'/rest/v1/'+tabel+'?on_conflict='+encodeURIComponent(conflictKolom),{
+   method:'POST',keepalive:body.length<60000,
+   headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+   body:body});
+ }catch(e){/* de pagina gaat dicht; er is niemand meer om iets te melden */}
+}
 
 function el(i){return document.getElementById(i);}
 /* Alles wat een gebruiker zelf intypt (namen, e-mail, groepsnamen, rapportages,
@@ -6756,14 +6769,16 @@ window.addEventListener('pagehide',function(){paginaSluit=true;bewaarAllesNu();}
 window.addEventListener('pageshow',function(){paginaSluit=false;});
 function bewaarClientDataNu(clientId){
  if(!sb||!clientId||opslagGeblokkeerd())return;
- try{
-  sb.from('client_data').upsert([{
+ var rij={
    client_id:clientId,
    dossier:CLIENTDATA[clientId]||{},
    geheugen:GEHEUGEN[clientId]||{},
    instellingen:CA_INSTELLINGEN[clientId]||{},
    bijgewerkt:new Date().toISOString()
-  }],{onConflict:'client_id'}).then(
+  };
+ if(paginaSluit){schrijfBijSluiten('client_data',[rij],'client_id');return;}
+ try{
+  sb.from('client_data').upsert([rij],{onConflict:'client_id'}).then(
    function(res){registreerOpslag('clientdata',!(res&&res.error));},
    function(){registreerOpslag('clientdata',false);});
  }catch(e){registreerOpslag('clientdata',false);}
@@ -6772,10 +6787,64 @@ function bewaarClientData(clientId){
  if(!sb||!clientId)return;
  bewaarStraks('client-'+clientId,function(){bewaarClientDataNu(clientId);});
 }
+/* ---- Chat met meerdere mensen ----
+   Een gesprek werd als geheel weggeschreven. Stuurden twee mensen kort na
+   elkaar een bericht, dan wiste de tweede opslag het bericht van de eerste.
+   Ook stond de afzender als "Jij" opgeslagen, zodat iedereen andermans
+   berichten als eigen bericht zag, en de tijd als "nu" (aangetoond). Nu:
+   afzender met naam en id, een echt tijdstip, een uniek id per bericht, en bij
+   opslaan samenvoegen met wat er in de database staat. Oude berichten met
+   "Jij" en een volgnummer blijven werken zoals voorheen. */
+function nieuwBerichtId(){return 'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function berichtSleutel(m){
+ /* Oude volgnummers (1, 2, 3) zijn niet uniek tussen gebruikers; daar hoort
+    de afzender en de tekst bij om ze uit elkaar te houden. */
+ return typeof m.id==='string'?m.id:(m.id+'|'+m.van+'|'+m.tekst);
+}
+function isMijnBericht(m){
+ if(m.vanId!==undefined&&m.vanId!==null){var ik=huidigeGebruiker();return !!ik&&ik.id===m.vanId;}
+ return m.van==='Jij'||m.van===wieBenIk();
+}
+function chatTijd(t){
+ if(!t||!/^\d{4}-\d{2}-\d{2}T/.test(t))return t==='nu'?'':(t||'');
+ var d=new Date(t),nu=new Date();
+ var uur=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+ return d.toDateString()===nu.toDateString()?uur:(String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+' '+uur);
+}
+function voegGesprekSamen(lokaal,db){
+ if(!db||!Array.isArray(db.berichten))return lokaal;
+ var weg={};(lokaal.verwijderd||[]).concat(db.verwijderd||[]).forEach(function(k){weg[k]=true;});
+ var perSleutel={},volgorde=[];
+ db.berichten.concat(lokaal.berichten||[]).forEach(function(m){
+  var k=berichtSleutel(m);
+  if(weg[k])return;
+  if(!perSleutel[k]){perSleutel[k]=m;volgorde.push(k);return;}
+  /* Twee versies van hetzelfde bericht: de laatst bewerkte wint. */
+  if((m.bewerktOp||'')>(perSleutel[k].bewerktOp||''))perSleutel[k]=m;
+ });
+ var lijst=volgorde.map(function(k){return perSleutel[k];});
+ /* Berichten met een tijdstip op volgorde; oude zonder tijdstip blijven vooraan. */
+ lijst=lijst.map(function(m,i){return {m:m,i:i};}).sort(function(a,b){
+  var ta=/^\d{4}-/.test(a.m.tijd||'')?a.m.tijd:'',tb=/^\d{4}-/.test(b.m.tijd||'')?b.m.tijd:'';
+  return ta===tb?a.i-b.i:(ta<tb?-1:1);
+ }).map(function(x){return x.m;});
+ lokaal.berichten=lijst;
+ lokaal.verwijderd=Object.keys(weg);
+ return lokaal;
+}
+function schrijfGesprek(sleutel){
+ return sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'});
+}
 function bewaarChatThreadNu(sleutel){
  if(!sb||!sleutel||!CHATSTORE[sleutel]||opslagGeblokkeerd())return;
  try{
-  sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'}).then(
+  /* Bij het sluiten van de pagina is er geen tijd voor eerst lezen: dan direct
+     schrijven, zodat in elk geval je eigen bericht bewaard blijft. */
+  if(paginaSluit){schrijfBijSluiten('chat_threads',[{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],'sleutel');return;}
+  sb.from('chat_threads').select('thread').eq('sleutel',sleutel).then(function(res){
+   if(res&&!res.error&&res.data&&res.data[0])voegGesprekSamen(CHATSTORE[sleutel],res.data[0].thread);
+   return schrijfGesprek(sleutel);
+  }).then(
    function(res){registreerOpslag('chat',!(res&&res.error));},
    function(){registreerOpslag('chat',false);});
  }catch(e){registreerOpslag('chat',false);}
@@ -8053,12 +8122,14 @@ function renderCaChatThread(){
   '<b style="font-size:13.5px">'+esc(th.naam)+'</b>'+
   (t.groep?'<div style="display:flex;gap:6px"><button type="button" class="small" id="ca-chat-media">Media</button><button type="button" class="small" id="ca-chat-leden">Leden</button></div>':'<span></span>')+'</div>';
  html+='<div id="ca-chat-berichten">'+th.berichten.map(function(m){
-  var mine=m.van==='Jij';
+  var mine=isMijnBericht(m);
   var acties=mine?'<span style="display:flex;gap:2px;align-items:center;margin-right:4px">'+
    '<button type="button" class="iconbtn tiny" data-editmsg="'+m.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
    '<button type="button" class="iconbtn tiny danger" data-delmsg="'+m.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
   '</span>':'';
-  return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+esc(m.van)+'</b>':'')+esc(m.tekst)+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+'</div></div>';
+  var tijd=chatTijd(m.tijd);
+  return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+esc(m.van)+'</b>':'')+esc(m.tekst)+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+
+   (tijd?'<span style="display:block;font-size:10px;opacity:.6;margin-top:2px">'+esc(tijd)+'</span>':'')+'</div></div>';
  }).join('')+'</div>';
  if(t.groep){
   var mediaPeriodes=[{label:'Deze maand',n:4},{label:'Vorige maand',n:3}];
@@ -8074,7 +8145,8 @@ function renderCaChatThread(){
  el('ca-chat-terug').addEventListener('click',renderCaChatList);
  if(!t.inactief)el('ca-chat-send').addEventListener('click',function(){
   var v=el('ca-chat-input').value.trim();if(!v)return;
-  th.berichten.push({id:th._nextMsgId++,van:'Jij',tekst:v,tijd:'nu'});bewaarChatThread(caChatKey);
+  var ik=huidigeGebruiker();
+  th.berichten.push({id:nieuwBerichtId(),van:wieBenIk(),vanId:ik?ik.id:null,tekst:v,tijd:new Date().toISOString()});bewaarChatThread(caChatKey);
   nieuweMelding(caClientId,'nieuwBericht','Nieuw bericht in '+(th.naam||'een gesprek'));
   el('ca-chat-input').value='';renderCaChatThread();
  });
@@ -8084,12 +8156,12 @@ function renderCaChatThread(){
  }
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editmsg]'),function(b){
   b.addEventListener('click',function(){
-   var m=th.berichten.filter(function(x){return x.id===+b.getAttribute('data-editmsg');})[0];
+   var m=th.berichten.filter(function(x){return String(x.id)===b.getAttribute('data-editmsg');})[0];
    openModal('<h3>Bericht bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-msg-tekst" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(m.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
     var tekst=el('modal-msg-tekst').value.trim();if(!tekst){el('modal-msg-tekst').style.borderColor='var(--brick)';return;}
-    m.tekst=tekst;m.bewerkt=true;bewaarChatThread(caChatKey);closeModal();renderCaChatThread();
+    m.tekst=tekst;m.bewerkt=true;m.bewerktOp=new Date().toISOString();bewaarChatThread(caChatKey);closeModal();renderCaChatThread();
    });
   });
  });
@@ -8097,11 +8169,15 @@ function renderCaChatThread(){
   b.addEventListener('click',function(){
    /* Overal elders wordt om bevestiging gevraagd; hier verdween een bericht op
       één tik, zonder weg terug. */
-   var id=+b.getAttribute('data-delmsg');
+   var id=b.getAttribute('data-delmsg');
    openModal('<h3>Bericht verwijderen</h3><div class="msec"><p>Weet je zeker dat je dit bericht wilt verwijderen? Dit kan niet ongedaan gemaakt worden.</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-bevestig').addEventListener('click',function(){
-    th.berichten=th.berichten.filter(function(x){return x.id!==id;});bewaarChatThread(caChatKey);
+    var weg=th.berichten.filter(function(x){return String(x.id)===id;})[0];
+    /* Onthouden dat dit bericht bewust weg is; anders zette het samenvoegen
+       met de database het weer terug. */
+    if(weg){th.verwijderd=(th.verwijderd||[]).concat(berichtSleutel(weg));}
+    th.berichten=th.berichten.filter(function(x){return String(x.id)!==id;});bewaarChatThread(caChatKey);
     closeModal();renderCaChatThread();
    });
   });

@@ -169,7 +169,17 @@ samengevoegd met de actuele databasestand, zodat een ingetrokken recht niet
 door een ander wordt teruggezet. Nieuwe personen: vlak voor het wegschrijven
 wordt het hoogste id opgevraagd en botsende nieuwe id's worden omgenummerd
 (`maakNieuweIdsVrij`, `hernummerPersoon`), daarna `insert` i.p.v. `upsert`.
-Tests: `intrekken.js`, `zelfde-id.js`, `hernummer.js`. Nagelopen en in orde:
+Tests: `intrekken.js`, `zelfde-id.js`, `hernummer.js`.
+
+**Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
+en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen
+bepaald (`isMijnBericht`); oude berichten met `van:'Jij'` blijven als eigen
+bericht werken. Opslaan voegt samen met de database (`voegGesprekSamen`);
+verwijderde berichten staan als grafsteen in `thread.verwijderd`. Bij het
+sluiten van de pagina schrijft `schrijfBijSluiten` rechtstreeks met één
+keepalive-fetch (supabase-js was daar te traag voor). Let op in tests:
+Playwright onderschept verzoeken van een pagina die sluit niet altijd — kijk
+naar `page.on('request')`, niet naar de nep-database (`clientdata-db.js`). Nagelopen en in orde:
 opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
 RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 
