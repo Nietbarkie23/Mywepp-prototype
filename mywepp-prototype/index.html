@@ -342,6 +342,9 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .grouplist .sub{font-size:13px;color:var(--ink-soft);margin:0 0 12px}
 .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .personrow[hidden]{display:none}
+.zoekkeuze{min-width:0}
+.zoekkeuze .zoekveld,.zoekkeuze select{width:100%;display:block}
+.zoekkeuze .zoekveld{margin-bottom:6px}
 .logkop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .archiefdatum{font-size:12px;color:var(--ink-soft)}
 .personrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);margin-bottom:8px;box-shadow:var(--shadow);flex-wrap:wrap}
@@ -2901,8 +2904,8 @@ function openRechtenOvernemen(){
   '<p>Kies een collega die hetzelfde werk doet. <b>'+esc(naam(doel))+'</b> krijgt dan in <b>'+esc(huidigeGroep)+'</b> precies dezelfde rechten als die collega.</p>'+
   '<p class="mini">Rechten die de collega niet heeft, vervallen ook bij '+esc(naam(doel))+'. Andere groepen blijven zoals ze zijn.</p></div>'+
   '<fieldset class="admblok"><legend>Collega</legend><div class="admveld"><label for="modal-bron">Overnemen van<span class="verplicht">*</span></label>'+
-  zoekveldHtml('modal-bron-zoek','Zoek een collega…')+
-  '<select class="admin" id="modal-bron">'+lijst+'</select></div>'+
+  '<div class="zoekkeuze">'+zoekveldHtml('modal-bron-zoek','Zoek een collega…')+
+  '<select class="admin" id="modal-bron">'+lijst+'</select></div></div>'+
   '<div class="overzicht-rechten" id="modal-overzicht" aria-live="polite"></div></fieldset>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
   '<button type="button" class="primary" id="modal-opslaan">Rechten overnemen</button></div>');
@@ -4209,7 +4212,7 @@ function kiesUitLijstModal(titel,opties,labelFn,onKies){
   el('modal-snap').addEventListener('click',closeModal);
   return;
  }
- openModal('<h3>'+esc(titel)+'</h3><fieldset class="admblok"><legend>Keuze</legend><div class="admveld"><label for="modal-kies-lijst">Kies uit de lijst<span class="verplicht">*</span></label>'+zoekveldHtml('modal-kies-zoek','Zoeken…')+'<select class="admin" id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+esc(labelFn(o))+'</option>';}).join('')+'</select></div></fieldset><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
+ openModal('<h3>'+esc(titel)+'</h3><fieldset class="admblok"><legend>Keuze</legend><div class="admveld"><label for="modal-kies-lijst">Kies uit de lijst<span class="verplicht">*</span></label><div class="zoekkeuze">'+zoekveldHtml('modal-kies-zoek','Zoeken…')+'<select class="admin" id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+esc(labelFn(o))+'</option>';}).join('')+'</select></div></div></fieldset><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
  koppelZoekveld(el('modal-kies-zoek'),el('modal-kies-lijst'),{leegTekst:'Niets gevonden.',naFilter:function(n){el('modal-opslaan').disabled=!n;}});
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
