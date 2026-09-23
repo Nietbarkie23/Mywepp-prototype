@@ -173,6 +173,10 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .matrix tr:hover td{background:var(--accent-bg)}
 
 .zoekveld{width:100%;margin-bottom:10px;font-size:13.5px;padding:7px 11px}
+.overzicht-rechten{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:10px 0 0;background:var(--paper,#fff)}
+.overzicht-rechten ul{margin:4px 0;padding-left:18px}
+.overzicht-rechten li{font-size:13px;margin:2px 0}
+.overzicht-rechten .vervalt{color:var(--brick)}
 .rowkies{width:auto;flex:0 0 auto;margin-right:2px;cursor:pointer}
 .bulkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;
  border:1px solid var(--accent-line);background:var(--accent-bg);border-radius:var(--radius-sm)}
@@ -1221,9 +1225,12 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
       <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
       <div class="actions" style="justify-content:flex-start;margin:0 0 10px;gap:8px;flex-wrap:wrap">
-        <button type="button" id="pp-rechten-overnemen">Rechten overnemen van een collega…</button>
+        <button type="button" id="pp-rechten-overnemen" title="Geef deze persoon dezelfde rechten als een collega die hetzelfde werk doet">Rechten overnemen van een collega…</button>
         <button type="button" id="pp-avg-inzage">Inzage (AVG)</button>
+        <!-- Blokkeren en Verwijderen gaan over een bestaand account; bij het
+             aanmaken is er nog niets om te blokkeren of te verwijderen. -->
         <button type="button" id="pp-blokkeer">Toegang blokkeren</button>
+        <button type="button" id="pp-verwijder" class="danger">Verwijderen</button>
       </div>
       <div class="mini" id="pp-tweestaps-status" style="margin:-4px 0 10px"></div>
       <div class="mini" id="pp-blokkade-uitleg" style="margin:-4px 0 10px" hidden></div>
@@ -2615,8 +2622,30 @@ function leesProfielRollen(p){
  return {rollen:nieuw,gewijzigd:gewijzigd};
 }
 var ROLCATEGORIE_LABEL={globaal:'algemene rol',groep:'groepsrol',locatie:'locatierol',clienten:'rol bij cliënt'};
+/* Wat je in het profiel hebt ingetikt maar nog niet hebt opgeslagen. Het profiel
+   wordt na elke rechtenwijziging opnieuw opgebouwd (bijvoorbeeld na het kiezen
+   van een collega bij Rechten overnemen); zonder dit sprong je terug naar boven
+   en stonden de velden weer op de oude waarden, wat voelde als een herladen
+   pagina waarin je werk verdwenen was. */
+function leesProfielConcept(){
+ var c={scroll:window.scrollY,velden:{},rollen:{}};
+ ['pp-voornaam','pp-achternaam','pp-mail','pp-tel','pp-toegang-tot'].forEach(function(i){c.velden[i]=el(i).value;});
+ Array.prototype.forEach.call(document.querySelectorAll('#pp-profiel-persoon [data-rolkeuze]'),function(sel){c.rollen[sel.getAttribute('data-rolkeuze')]=sel.value;});
+ return c;
+}
+function zetProfielConceptTerug(c,p){
+ Object.keys(c.velden).forEach(function(i){el(i).value=c.velden[i];});
+ Array.prototype.forEach.call(document.querySelectorAll('#pp-profiel-persoon [data-rolkeuze]'),function(sel){
+  var k=sel.getAttribute('data-rolkeuze');
+  if(c.rollen[k]&&Array.prototype.some.call(sel.options,function(o){return o.value===c.rollen[k];}))sel.value=c.rollen[k];
+ });
+ toonToegangHint(p);
+ window.scrollTo(0,c.scroll);
+}
 function openProfielPersoon(id,t){
  var p=findPerson(id);if(!p)return;
+ var zelfdeProfiel=huidigProfielId===id&&!el('pp-profiel-persoon').hidden;
+ var concept=zelfdeProfiel?leesProfielConcept():null;
  huidigProfielId=id;
  el('pp-titel').textContent=naam(p)+' — volledig profiel';
  setGrootAvatar('pp-foto',p);
@@ -2648,7 +2677,13 @@ function openProfielPersoon(id,t){
  el('pp-lbl-naasten').hidden=(t==='naaste');
  renderGroepenKeuze(p,'pp-groepen-keuze','pp-groepen-hint');
  zetContactBlok(p,t);
+ var nieuw=p._state==='nieuw';
+ el('pp-blokkeer').hidden=nieuw;
+ el('pp-verwijder').hidden=nieuw;
+ if(nieuw)el('pp-blokkade-uitleg').hidden=true;
+ el('pp-titel').textContent=nieuw?('Nieuwe '+TYPELABEL[t].toLowerCase()+' aanmaken'):(naam(p)+' — volledig profiel');
  show('pp-profiel-persoon');
+ if(concept)zetProfielConceptTerug(concept,p);
 }
 el('pp-persoon-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
@@ -2779,6 +2814,39 @@ function neemRechtenOver(doel,bron){
  if(gewijzigd&&doel._state!=='nieuw')doel._state='gewijzigd';
  return gewijzigd;
 }
+/* Wat er concreet verandert als doel de rechten van bron overneemt: de rechten
+   die erbij komen of anders worden, en de rechten die vervallen. Dezelfde
+   lijsten als neemRechtenOver, zodat het overzicht niet kan afwijken van wat
+   er daarna echt gebeurt. */
+function rechtenVerschil(doel,bron){
+ var krijgt=[],vervalt=[];
+ var vergelijk=function(veld,lijst,soort){
+  lijst.forEach(function(ander){
+   if(ander.id===doel.id)return;
+   var nieuw=(bron[veld]||{})[ander.id]||null,oud=(doel[veld]||{})[ander.id]||null;
+   if(nieuw)krijgt.push({naam:naam(ander),soort:soort,rol:nieuw,zelfde:nieuw===oud});
+   else if(oud)vervalt.push({naam:naam(ander),soort:soort,rol:oud});
+  });
+ };
+ vergelijk('clientRechten',personenVanType('client'),'cliënt');
+ if(doel.type==='medewerker'){
+  vergelijk('medewerkerRechten',personenVanType('medewerker'),'medewerker');
+  vergelijk('naasteRechten',personenVanType('naaste'),'naaste');
+ }
+ return {krijgt:krijgt,vervalt:vervalt};
+}
+var OVERZICHT_KORT=4;
+function rechtenOverzichtHtml(doel,bron,uitgeklapt){
+ var v=rechtenVerschil(doel,bron);
+ if(!v.krijgt.length&&!v.vervalt.length)return '<p class="mini" style="margin:0">'+esc(naam(bron))+' heeft in '+esc(huidigeGroep)+' geen rechten. Overnemen haalt dus niets weg en voegt niets toe.</p>';
+ var regels=v.krijgt.map(function(r){return '<li>'+esc(r.naam)+' <span class="mini">('+esc(r.soort)+')</span> — '+esc(r.rol)+(r.zelfde?' <span class="mini">(had al)</span>':'')+'</li>';})
+  .concat(v.vervalt.map(function(r){return '<li class="vervalt">'+esc(r.naam)+' <span class="mini">('+esc(r.soort)+')</span> — vervalt</li>';}));
+ var zichtbaar=uitgeklapt?regels:regels.slice(0,OVERZICHT_KORT);
+ var rest=regels.length-zichtbaar.length;
+ return '<b style="font-size:13px">'+esc(naam(doel))+' krijgt '+v.krijgt.length+' recht'+(v.krijgt.length===1?'':'en')+
+  (v.vervalt.length?', '+v.vervalt.length+' vervalt':'')+'</b><ul>'+zichtbaar.join('')+'</ul>'+
+  (regels.length>OVERZICHT_KORT?'<button type="button" class="ghost small" id="modal-toonmeer">'+(uitgeklapt?'Toon minder':'Toon meer ('+rest+')')+'</button>':'');
+}
 function openRechtenOvernemen(){
  var doel=findPerson(huidigProfielId);
  if(!doel)return;
@@ -2787,15 +2855,33 @@ function openRechtenOvernemen(){
   openMelding('Geen collega beschikbaar','Er is in deze groep niemand anders van hetzelfde type om rechten van over te nemen.');
   return;
  }
+ /* Het profiel eronder wordt bij het kiezen van een collega niet opnieuw
+    opgebouwd: alleen het overzicht in dit venster verandert. Zo blijft wat je
+    in het profiel al had ingevuld gewoon staan. */
+ var concept=leesProfielConcept();
  var lijst=bronnen.map(function(b){
   return '<option value="'+b.id+'">'+esc(naam(b))+' — '+telRechtenInGroep(b,doel.type)+' recht(en) in deze groep</option>';
  }).join('');
- openModal('<h3>Rechten overnemen</h3><div class="msec">'+
-  '<p>'+esc(naam(doel))+' krijgt precies dezelfde rechten als de gekozen collega, binnen <b>'+esc(huidigeGroep)+'</b>.</p>'+
-  '<p>Rechten die de collega niet heeft worden ook bij '+esc(naam(doel))+' weggehaald, zodat de twee echt gelijk staan. Rechten in andere groepen blijven ongemoeid.</p></div>'+
-  '<fieldset class="admblok"><legend>Collega</legend><div class="admveld"><label for="modal-bron">Overnemen van<span class="verplicht">*</span></label><select class="admin" id="modal-bron">'+lijst+'</select></div></fieldset>'+
+ openModal('<h3>Rechten overnemen van een collega</h3><div class="msec">'+
+  '<p>Kies een collega die hetzelfde werk doet. <b>'+esc(naam(doel))+'</b> krijgt dan in <b>'+esc(huidigeGroep)+'</b> precies dezelfde rechten als die collega.</p>'+
+  '<p class="mini">Rechten die de collega niet heeft, vervallen ook bij '+esc(naam(doel))+'. Andere groepen blijven zoals ze zijn.</p></div>'+
+  '<fieldset class="admblok"><legend>Collega</legend><div class="admveld"><label for="modal-bron">Overnemen van<span class="verplicht">*</span></label>'+
+  zoekveldHtml('modal-bron-zoek','Zoek een collega…')+
+  '<select class="admin" id="modal-bron">'+lijst+'</select></div>'+
+  '<div class="overzicht-rechten" id="modal-overzicht" aria-live="polite"></div></fieldset>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
   '<button type="button" class="primary" id="modal-opslaan">Rechten overnemen</button></div>');
+ var uitgeklapt=false;
+ function toonOverzicht(){
+  var bron=findPerson(+el('modal-bron').value);
+  el('modal-opslaan').disabled=!bron;
+  el('modal-overzicht').innerHTML=bron?rechtenOverzichtHtml(doel,bron,uitgeklapt):'<p class="mini" style="margin:0">Geen collega gevonden.</p>';
+  var knop=el('modal-toonmeer');
+  if(knop)knop.addEventListener('click',function(){uitgeklapt=!uitgeklapt;toonOverzicht();});
+ }
+ el('modal-bron').addEventListener('change',function(e){e.preventDefault();uitgeklapt=false;toonOverzicht();});
+ koppelZoekveld(el('modal-bron-zoek'),el('modal-bron'),{leegTekst:'Geen collega met deze naam.',naFilter:function(){uitgeklapt=false;toonOverzicht();}});
+ toonOverzicht();
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
   var bron=findPerson(+el('modal-bron').value);
@@ -2806,8 +2892,9 @@ function openRechtenOvernemen(){
    logActie(naam(doel)+' nam de rechten van '+naam(bron)+' over in '+huidigeGroep+' ('+aantal+' wijziging'+(aantal===1?'':'en')+')');
    syncToSupabase();
   }
-  openProfielPersoon(doel.id,doel.type);
   renderAll();
+  openProfielPersoon(doel.id,doel.type);
+  zetProfielConceptTerug(concept,doel);
   openMelding(aantal?'Rechten overgenomen':'Niets te wijzigen',
    aantal? naam(doel)+' heeft nu dezelfde rechten als '+naam(bron)+' in '+huidigeGroep+'. Er zijn '+aantal+' recht(en) aangepast.'
          : naam(doel)+' had al precies dezelfde rechten als '+naam(bron)+'.');
@@ -2884,6 +2971,35 @@ function wisselBlokkade(){
  });
 }
 el('pp-blokkeer').addEventListener('click',wisselBlokkade);
+/* Verwijderen vanuit het profiel volgt dezelfde regel als het doorvoeren:
+   zit iemand ook in een andere groep, dan wordt hij alleen uit deze groep
+   gehaald; is dit zijn laatste groep, dan gaat hij naar het archief. Uit het
+   archief is hij terug te zetten, en de gegevens blijven de wettelijke
+   bewaartermijn staan. De reden is optioneel maar komt in het logboek. */
+function verwijderVanuitProfiel(){
+ var p=findPerson(huidigProfielId);if(!p||p._state==='nieuw')return;
+ var anderen=andereGroepenVan(p),elders=blijftElders(p)&&anderen.length;
+ var uitleg=elders
+  ? '<p>'+esc(naam(p))+' zit ook in <b>'+anderen.map(esc).join('</b>, <b>')+'</b> en blijft daar gewoon staan. Je haalt '+esc(naam(p))+' alleen uit <b>'+esc(huidigeGroep)+'</b>; de rechten binnen deze groep vervallen.</p>'
+  : '<p><b>'+esc(huidigeGroep)+'</b> is de enige groep van '+esc(naam(p))+'. Verwijderen zet '+esc(naam(p))+' in het <b>archief</b>: inloggen kan dan niet meer, maar de gegevens blijven bewaard en '+esc(naam(p))+' is terug te zetten.</p>';
+ openModal('<h3>'+(elders?'Uit deze groep halen':'Verwijderen')+'</h3><div class="msec">'+uitleg+
+  '<p class="mini">Het wordt definitief bij "Wijzigingen doorvoeren".</p></div>'+
+  '<fieldset class="admblok"><legend>Reden</legend><div class="admveld"><label for="modal-verwijder-reden">Reden (optioneel)</label>'+
+  '<input class="admin" id="modal-verwijder-reden" maxlength="120" placeholder="Bijvoorbeeld: uit dienst, verhuisd"></div></fieldset>'+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="danger" id="modal-bevestig">'+(elders?'Alleen uit '+esc(huidigeGroep)+' halen':'Verwijderen')+'</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){
+  var reden=kap(el('modal-verwijder-reden').value.trim(),120);
+  if(reden)p._verwijderReden=reden; else delete p._verwijderReden;
+  closeModal();
+  markeerVerwijderd(p.id,p.type);
+  logActie((elders?naam(p)+' klaargezet om los te koppelen van '+huidigeGroep:naam(p)+' klaargezet om te archiveren')+(reden?' — reden: '+reden:''));
+  renderAll();
+  show('pp-formulier');
+ });
+}
+el('pp-verwijder').addEventListener('click',verwijderVanuitProfiel);
 /* De uitleg onder de datum moet meelopen terwijl je typt of kiest; anders zie je
    pas na opslaan en heropenen wat de ingevulde datum betekent. */
 ['input','change'].forEach(function(ev){
@@ -3968,6 +4084,50 @@ el('export-iedereen').addEventListener('click',function(){
 });
 
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
+/* ---- Herbruikbaar zoekveld ----
+   Eén component voor alle lijsten waarin je iemand of iets moet kiezen. Zonder
+   accenten en hoofdletters vergelijken, want "Cliënt" moet ook op "client"
+   gevonden worden. Werkt op twee soorten doelen:
+   - een <select>: de opties worden opnieuw opgebouwd (een verborgen <option>
+     werkt niet in elke browser);
+   - een container met rijen (itemSelector): niet-passende rijen gaan op hidden.
+   naFilter wordt aangeroepen na elke filterronde, zodat bijvoorbeeld een
+   overzicht naast de lijst kan meebewegen met wat er nu gekozen is. */
+function zoekTekst(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+function zoekveldHtml(id,placeholder){
+ var ph=placeholder||'Zoeken…';
+ return '<input type="search" class="zoekveld" id="'+id+'" placeholder="'+esc(ph)+'" aria-label="'+esc(ph)+'" autocomplete="off">';
+}
+function koppelZoekveld(input,doel,opties){
+ opties=opties||{};
+ if(!input||!doel)return function(){};
+ var leeg=document.createElement('p');
+ leeg.className='empty-msg zoek-leeg';leeg.hidden=true;
+ leeg.textContent=opties.leegTekst||'Niets gevonden.';
+ var isSelect=doel.tagName==='SELECT';
+ var alleOpties=isSelect?Array.prototype.map.call(doel.options,function(o){return {value:o.value,label:o.textContent};}):null;
+ if(isSelect)doel.parentNode.insertBefore(leeg,doel.nextSibling); else doel.appendChild(leeg);
+ function filter(){
+  var q=zoekTekst(input.value),n=0;
+  if(isSelect){
+   var was=doel.value;
+   var passend=alleOpties.filter(function(o){return !q||zoekTekst(o.label).indexOf(q)>-1;});
+   doel.innerHTML=passend.map(function(o){return '<option value="'+esc(o.value)+'">'+esc(o.label)+'</option>';}).join('');
+   if(passend.some(function(o){return o.value===was;}))doel.value=was;
+   n=passend.length;
+   doel.disabled=!n;
+  }else{
+   Array.prototype.forEach.call(doel.querySelectorAll(opties.itemSelector||'[data-zoek]'),function(it){
+    var ok=!q||zoekTekst(it.getAttribute('data-zoek')||it.textContent).indexOf(q)>-1;
+    it.hidden=!ok;if(ok)n++;
+   });
+  }
+  leeg.hidden=n>0;
+  if(opties.naFilter)opties.naFilter(n);
+ }
+ input.addEventListener('input',filter);
+ return filter;
+}
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
  if(!opties.length){
   openModal('<h3>'+esc(titel)+'</h3><div class="msec"><p>Er is niets om uit te kiezen.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
@@ -6329,7 +6489,9 @@ function werkBelBij(){
  var teller=el('ca-bel-teller');if(!teller)return;
  var n=caClientId?ongelezenMeldingen(caClientId):0;
  teller.hidden=!n;
- teller.textContent=n>9?'9+':String(n);
+ /* Boven de 99 is het precieze aantal niet meer nuttig en past het getal niet
+   meer in het bolletje. */
+ teller.textContent=n>99?'99+':String(n);
 }
 function renderCaMeldingen(){
  var lijst=meldingenVan(caClientId).filter(function(m){return ensureCaInstellingen(caClientId)[m.soort];});
