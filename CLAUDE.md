@@ -118,7 +118,7 @@ meeneemt — een nieuwe opslag per groepsnaam moet daar ook in.
 **Verplicht bij medewerkers en naasten:** voornaam, achternaam en e-mailadres
 (profiel, Meerdere toevoegen, Mijn profiel). Bij cliënten is het e-mailadres
 optioneel, want dat wordt zo nodig gegenereerd. Bij het aanmaken staan alleen
-"Rechten overnemen"; Inzage (AVG), Toegang blokkeren en Verwijderen alleen bij
+"Rechten overnemen"; Inzage (AVG) en Verwijderen alleen bij
 bewerken.
 
 ## Specificatie rollen en gebruikersbeheer (in master)
