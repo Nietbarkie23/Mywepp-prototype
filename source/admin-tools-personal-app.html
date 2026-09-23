@@ -341,6 +341,7 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .grouplist h2{font-size:15px;font-weight:600;margin:0 0 3px}
 .grouplist .sub{font-size:13px;color:var(--ink-soft);margin:0 0 12px}
 .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.personrow[hidden]{display:none}
 .personrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);margin-bottom:8px;box-shadow:var(--shadow);flex-wrap:wrap}
 /* In een smalle kolom (zoals de telefoonweergave van MyWepp Personal) eiste de
    keuzelijst alle ruimte op en hield de naam nul pixels over, waardoor die
@@ -795,6 +796,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="head"><h2>Groepen</h2><span class="sub" id="sb-groepen-sub"></span></div>
       <div class="body">
         <p class="note">Dit staat los van een individuele groep: hier beheer je welke groepen er binnen deze organisatie bestaan, en kun je meekijken met elke groep afzonderlijk.</p>
+        <input type="search" class="zoekveld" id="sb-groepen-zoek" placeholder="Zoek een groep…" aria-label="Zoek een groep" autocomplete="off">
         <div id="sb-groepen-lijst"></div>
         <div class="row" style="margin-top:16px">
           <div class="field"><label for="sb-nieuwe-groep">Nieuwe groep</label><input id="sb-nieuwe-groep" maxlength="60" placeholder="Naam van de groep"></div>
@@ -965,7 +967,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px">
-      <h1 style="font-size:22px;display:inline-block">Gebruikers beheren<span class="conceptbadge" id="concept-badge" hidden>Concept opgeslagen</span></h1>
+      <h1 style="font-size:22px;display:inline-block" id="formulier-titel">Gebruikersbeheer<span id="formulier-titel-groep"></span><span class="conceptbadge" id="concept-badge" hidden>Concept opgeslagen</span></h1>
       <p class="tellingen" id="formulier-tellingen"></p>
       <div class="koppelmelding" id="formulier-koppeling" hidden></div>
     </div>
@@ -2369,8 +2371,34 @@ function toonToestemming(p){
   info.textContent+=' Er staat een foto klaar, maar die wordt niet getoond zolang er geen toestemming is.';
  }
 }
+/* Waar een profiel vandaan is geopend. Na opslaan of annuleren ga je daar weer
+   naartoe: wie vanuit de Admin Tools een medewerker bewerkte, stond na het
+   opslaan ineens in het groepsprofiel en moest zelf de weg terug zoeken.
+   Wordt vastgelegd bij het openen, zolang de Admin Tools nog in beeld zijn
+   (de flows schakelen pas daarna naar het groepsprofiel). */
+var profielHerkomst=null;
+function legHerkomstVast(id){
+ if(huidigProfielId===id&&(!el('pp-profiel-persoon').hidden||!el('pp-profiel-client').hidden)&&el('view-admin').hidden)return;
+ if(!el('view-admin').hidden){
+  var tab=document.querySelector('[data-admintab].on');
+  profielHerkomst={view:'admin',tab:tab?tab.getAttribute('data-admintab'):null};
+ }else{
+  profielHerkomst=null;
+ }
+}
+function naarHerkomst(){
+ var h=profielHerkomst;profielHerkomst=null;
+ if(h&&h.view==='admin'){
+  showView('admin');
+  if(h.tab)kiesAdmintab(h.tab);
+  window.scrollTo(0,0);
+  return;
+ }
+ show('pp-formulier');
+}
 function openProfielClient(id){
  var p=findPerson(id);if(!p)return;
+ legHerkomstVast(id);
  huidigProfielId=id;
  el('pc-titel').textContent=naam(p)+' — volledig profiel';
  setGrootAvatar('pc-foto',p);
@@ -2383,6 +2411,7 @@ function openProfielClient(id){
  el('pc-vertegenwoordiger').innerHTML=vertegenwoordigerOpties(p);
  el('pc-rechten').innerHTML=personRechtenRow(id);
  wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
+ maakLijstZoekbaar('pc-rechten');
  var magVertOk=magContactWijzigen();
  el('pc-vertegenwoordiger').disabled=!magVertOk;
  el('pc-vertegenwoordiger-hint').textContent=magVertOk?'':'Alleen de huidige contactpersoon kan de wettelijke vertegenwoordiger wijzigen.';
@@ -2421,7 +2450,7 @@ el('pc-opslaan').addEventListener('click',function(){
  }
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAcc('client');updateTally();
- if(dubbelC)naamgenootMelding(dubbelC,p); else show('pp-formulier');
+ if(dubbelC)naamgenootMelding(dubbelC,p); else naarHerkomst();
 });
 function openFotoModal(elId,persoon){
  var p=persoon||findPerson(huidigProfielId);if(!p)return;
@@ -2646,6 +2675,7 @@ function openProfielPersoon(id,t){
  var p=findPerson(id);if(!p)return;
  var zelfdeProfiel=huidigProfielId===id&&!el('pp-profiel-persoon').hidden;
  var concept=zelfdeProfiel?leesProfielConcept():null;
+ if(!zelfdeProfiel)legHerkomstVast(id);
  huidigProfielId=id;
  el('pp-titel').textContent=naam(p)+' — volledig profiel';
  setGrootAvatar('pp-foto',p);
@@ -2677,6 +2707,7 @@ function openProfielPersoon(id,t){
  el('pp-lbl-naasten').hidden=(t==='naaste');
  renderGroepenKeuze(p,'pp-groepen-keuze','pp-groepen-hint');
  zetContactBlok(p,t);
+ ['pp-clienten','pp-medewerkers','pp-naasten'].forEach(function(c){maakLijstZoekbaar(c);});
  var nieuw=p._state==='nieuw';
  el('pp-blokkeer').hidden=nieuw;
  el('pp-verwijder').hidden=nieuw;
@@ -2712,7 +2743,7 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  }
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();
- if(dubbelP)naamgenootMelding(dubbelP,p); else show('pp-formulier');
+ if(dubbelP)naamgenootMelding(dubbelP,p); else naarHerkomst();
 });
 /* Annuleren gooide ingevulde gegevens zonder waarschuwing weg. Bij een nieuw
    aangemaakte persoon is dat extra vervelend: die verdwijnt dan half ingevuld
@@ -2732,7 +2763,7 @@ function naamgenootMelding(bestaande,nieuwe){
   (bestaande.mail?' ('+esc(bestaande.mail)+')':'')+'.</p>'+
   '<p>De wijziging is opgeslagen. Controleer of je niet per ongeluk twee keer dezelfde persoon hebt aangemaakt — verwisseling is in de zorg een reëel risico.</p></div>'+
   '<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Begrepen</button></div>');
- el('modal-snap').addEventListener('click',function(){closeModal();show('pp-formulier');});
+ el('modal-snap').addEventListener('click',function(){closeModal();naarHerkomst();});
 }
 function annuleerProfiel(prefix){
  var p=findPerson(huidigProfielId);
@@ -2745,11 +2776,11 @@ function annuleerProfiel(prefix){
   el('modal-blijf').addEventListener('click',closeModal);
   el('modal-weg').addEventListener('click',function(){
    if(nieuwEnLeeg&&!p.voor&&!p.achter){people=people.filter(function(x){return x.id!==p.id;});}
-   closeModal();renderAll();show('pp-formulier');
+   closeModal();renderAll();naarHerkomst();
   });
   return;
  }
- show('pp-formulier');
+ naarHerkomst();
 }
 el('pc-annuleren').addEventListener('click',function(){annuleerProfiel('pc');});
 el('pp-annuleren').addEventListener('click',function(){annuleerProfiel('pp');});
@@ -3204,7 +3235,16 @@ el('account-select').addEventListener('change',function(){
  MIJN_PROFIEL.mail=gekozen.mail||'';MIJN_PROFIEL.mobiel=gekozen.tel||'';
  renderAll();
 });
+/* De actieve groep hoort altijd in de titel te staan. Je wisselt vanuit de
+   Admin Tools, het controlescherm of het zoekscherm ongemerkt van groep, en
+   een wijziging in de verkeerde groep is in de zorg een echte fout. Daarom
+   hier, in renderAll, en niet alleen bij de groepskeuze. */
+function toonGroepInTitel(){
+ var t=el('formulier-titel-groep');
+ if(t)t.textContent=huidigeGroep?' \u2013 '+huidigeGroep:'';
+}
 function renderAll(){
+ toonGroepInTitel();
  ['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();
  toonKoppelingInFormulier();
  toonAdminWie();
@@ -3235,6 +3275,7 @@ function toonKoppelingInFormulier(){
 }
 function verversGroepReferenties(){
  el('pp-groep-naam').textContent=huidigeGroep;
+ toonGroepInTitel();
  el('hub-groepnaam').textContent=huidigeGroep;
  if(el('hub-tweestaps'))el('hub-tweestaps').checked=eistTweestaps(huidigeGroep);
  toonKoppelingInFormulier();
@@ -3685,11 +3726,13 @@ function renderControle(){
    /* Het nalopen van de toegang doe je vanuit het controlescherm zelf; daarvoor
       hoef je niet eerst naar het groepsprofiel. */
    if(s.actie.soort==='toegangscontrole'){openToegangscontrole(s.actie.client);return;}
-   showView('personal');
+   /* Eerst openen, dan pas van weergave wisselen: zo weet het profiel dat het
+      vanuit de Admin Tools kwam en keert het na opslaan daarheen terug. */
    if(s.actie.soort==='client')openProfielClient(s.actie.id);
    else if(s.actie.soort==='persoon')openProfielPersoon(s.actie.id,s.actie.type);
    else if(s.actie.soort==='archief'){renderGearchiveerd();show('pp-gearchiveerd');}
    else show('pp-formulier');
+   showView('personal');
   });
  });
 }
@@ -3747,8 +3790,8 @@ function renderZoeken(){
    if(!groep){openMelding('Geen groep',naam(p)+' zit in geen enkele groep en heeft dus geen profiel om te openen.');return;}
    huidigeGroep=groep;
    verversGroepReferenties();renderAll();
-   showView('personal');
    if(p.type==='client')openProfielClient(p.id); else openProfielPersoon(p.id,p.type);
+   showView('personal');
   });
  });
 }
@@ -4118,15 +4161,43 @@ function koppelZoekveld(input,doel,opties){
    doel.disabled=!n;
   }else{
    Array.prototype.forEach.call(doel.querySelectorAll(opties.itemSelector||'[data-zoek]'),function(it){
-    var ok=!q||zoekTekst(it.getAttribute('data-zoek')||it.textContent).indexOf(q)>-1;
+    var bron=it.getAttribute('data-zoek')||(it.querySelector('.naam')||it).textContent;
+    var ok=!q||zoekTekst(bron).indexOf(q)>-1;
     it.hidden=!ok;if(ok)n++;
    });
   }
   leeg.hidden=n>0;
   if(opties.naFilter)opties.naFilter(n);
  }
+ /* Een lijst die opnieuw wordt opgebouwd koppelt opnieuw; de oude filter moet
+    er dan af, anders draaien er na tien wijzigingen tien filters tegelijk. */
+ if(input._zoekFilter)input.removeEventListener('input',input._zoekFilter);
+ input._zoekFilter=filter;
  input.addEventListener('input',filter);
  return filter;
+}
+/* Zoekveld boven een lijst met personen die telkens opnieuw wordt opgebouwd
+   (de rechtenlijsten in een profiel). Pas vanaf ZOEK_VANAF rijen: bij een
+   handvol namen is een zoekveld alleen maar iets extra's om te lezen. De
+   zoekterm blijft staan als de lijst na een wijziging opnieuw wordt getekend. */
+var ZOEK_VANAF=5;
+var lijstZoekTermen={};
+function maakLijstZoekbaar(containerId,placeholder){
+ var box=el(containerId);if(!box)return;
+ var aantal=box.querySelectorAll('.personrow').length;
+ var veldId=containerId+'-zoek',veld=el(veldId);
+ if(aantal<=ZOEK_VANAF){
+  if(veld)veld.parentNode.removeChild(veld);
+  delete lijstZoekTermen[containerId];
+  return;
+ }
+ if(!veld){
+  box.insertAdjacentHTML('beforebegin',zoekveldHtml(veldId,placeholder||'Zoek op naam…'));
+  veld=el(veldId);
+  veld.addEventListener('input',function(){lijstZoekTermen[containerId]=veld.value;});
+ }
+ veld.value=lijstZoekTermen[containerId]||'';
+ koppelZoekveld(veld,box,{itemSelector:'.personrow',leegTekst:'Niemand gevonden met deze naam.'})();
 }
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
  if(!opties.length){
@@ -4134,9 +4205,11 @@ function kiesUitLijstModal(titel,opties,labelFn,onKies){
   el('modal-snap').addEventListener('click',closeModal);
   return;
  }
- openModal('<h3>'+esc(titel)+'</h3><fieldset class="admblok"><legend>Keuze</legend><div class="admveld"><label for="modal-kies-lijst">Kies uit de lijst<span class="verplicht">*</span></label><select class="admin" id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+esc(labelFn(o))+'</option>';}).join('')+'</select></div></fieldset><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
+ openModal('<h3>'+esc(titel)+'</h3><fieldset class="admblok"><legend>Keuze</legend><div class="admveld"><label for="modal-kies-lijst">Kies uit de lijst<span class="verplicht">*</span></label>'+zoekveldHtml('modal-kies-zoek','Zoeken…')+'<select class="admin" id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+esc(labelFn(o))+'</option>';}).join('')+'</select></div></fieldset><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
+ koppelZoekveld(el('modal-kies-zoek'),el('modal-kies-lijst'),{leegTekst:'Niets gevonden.',naFilter:function(n){el('modal-opslaan').disabled=!n;}});
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
+  if(el('modal-kies-lijst').value==='')return;
   var idx=+el('modal-kies-lijst').value;
   closeModal();
   onKies(opties[idx]);
@@ -4733,7 +4806,7 @@ function renderSysteembeheer(){
  if(el('sb-support-naam')&&document.activeElement!==el('sb-support-naam'))el('sb-support-naam').value=SUPPORT.naam||'';
  el('sb-groepen-lijst').innerHTML=GROEPEN.map(function(g,i){
   var c=sbCounts(g);
-  return '<div class="personrow">'+
+  return '<div class="personrow" data-zoek="'+esc(g+' '+(groepLocatie[g]||''))+'">'+
    '<div class="pinfo"><div class="naam">'+esc(g)+(g===huidigeGroep?' <span class="statuschip" style="background:var(--accent-bg);color:var(--accent)">Wordt nu bekeken</span>':'')+'</div>'+
    '<div class="mail">'+c.m+' medewerker'+(c.m===1?'':'s')+' · '+c.n+' naaste'+(c.n===1?'':'n')+' · '+c.c+' cliënt'+(c.c===1?'':'en')+(groepLocatie[g]?' · locatie: '+esc(groepLocatie[g]):'')+'</div></div>'+
    '<button type="button" class="small" data-sb-bekijk="'+i+'">Bekijk</button>'+
@@ -4755,6 +4828,7 @@ function renderSysteembeheer(){
  Array.prototype.forEach.call(el('sb-groepen-lijst').querySelectorAll('[data-sb-verwijder]'),function(b){
   b.addEventListener('click',function(){verwijderGroep(GROEPEN[+b.getAttribute('data-sb-verwijder')]);});
  });
+ koppelZoekveld(el('sb-groepen-zoek'),el('sb-groepen-lijst'),{itemSelector:'.personrow',leegTekst:'Geen groep met deze naam.'})();
 }
 el('sb-groep-toevoegen').addEventListener('click',function(){
  if(voegGroepToe(el('sb-nieuwe-groep').value))el('sb-nieuwe-groep').value='';
