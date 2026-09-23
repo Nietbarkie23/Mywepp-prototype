@@ -1243,6 +1243,11 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field" id="pp-clientrol-veld" hidden><label>Rol bij cliënt</label><div class="lockedfield" id="pp-clientrol-display"></div></div>
       </div>
       <p class="mini" id="pp-rollen-hint">Deze rollen komen uit de instellingen van de groep.</p>
+      <!-- Rechten overnemen gaat over rollen en rechten, dus het staat bij dat
+           kopje en niet tussen de knoppen om een account te beheren. -->
+      <div class="actions" style="justify-content:flex-start;margin:4px 0 14px;padding:0;border:0">
+        <button type="button" id="pp-rechten-overnemen" title="Geef deze persoon dezelfde rechten als een collega die hetzelfde werk doet">Rechten overnemen van een collega…</button>
+      </div>
 
       <div class="sublistlabel">Gekoppelde groepen</div>
       <div id="pp-groepen-keuze" class="groepkeuze"></div>
@@ -1251,13 +1256,15 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="sublistlabel" id="pp-lbl-contact" hidden>Contactpersoon</div>
       <div id="pp-contact-blok" hidden>
         <label class="contactcheck"><input type="checkbox" id="pp-contactpersoon">Markeren als contactpersoon voor deze groep</label>
+        <!-- ziekmelden: op verzoek weggehaald, zie ZIEKMELDEN in het script.
+             Terugzetten = deze comment weghalen en ZIEKMELDEN op true zetten.
         <label class="contactcheck" id="pp-ziek-row" hidden><input type="checkbox" id="pp-ziek">Ziek — toegang en meldingen gaan naar de andere contactpersoon</label>
+        ziekmelden -->
         <p class="mini" id="pp-contact-hint"></p>
       </div>
 
       <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
-      <div class="actions" style="justify-content:flex-start;margin:0 0 10px;gap:8px;flex-wrap:wrap">
-        <button type="button" id="pp-rechten-overnemen" title="Geef deze persoon dezelfde rechten als een collega die hetzelfde werk doet">Rechten overnemen van een collega…</button>
+      <div class="actions" id="pp-accountacties" style="justify-content:flex-start;margin:0 0 10px;gap:8px;flex-wrap:wrap">
         <button type="button" id="pp-avg-inzage">Inzage (AVG)</button>
         <!-- Blokkeren en Verwijderen gaan over een bestaand account; bij het
              aanmaken is er nog niets om te blokkeren of te verwijderen. -->
@@ -1745,12 +1752,19 @@ function contactpersonenVanGroep(){
 }
 /* Ziekmelden (status='ziek') is nog een twijfelgeval bij de klant — mogelijk
    verandert dit later nog (bv. een aparte "vervang mij tijdelijk"-actie i.p.v.
-   automatische failover), dus deze logica bewust laten staan i.p.v. verwijderen. */
+   automatische failover), dus deze logica bewust laten staan i.p.v. verwijderen.
+   Op verzoek staat de functie uit. Uit betekent ook dat een ziek-status die al
+   in de database staat nergens meer meetelt: zonder het vinkje kan niemand
+   hem nog terugzetten, en dan zouden de meldingen van die contactpersoon
+   voorgoed naar de ander gaan. De opgeslagen status blijft staan, zodat
+   aanzetten niets kwijt is. */
+var ZIEKMELDEN=false;
+function isZiek(m){return ZIEKMELDEN&&!!m&&m.status==='ziek';}
 function effectieveContactpersoon(){
  var lijst=contactpersonenVanGroep();
  var eerste=lijst.filter(function(m){return m.contactVolgorde===1;})[0]||null;
  var tweede=lijst.filter(function(m){return m.contactVolgorde===2;})[0]||null;
- if(eerste&&eerste.status==='ziek'&&tweede)return tweede;
+ if(isZiek(eerste)&&tweede)return tweede;
  return eerste||tweede||null;
 }
 /* Systeembeheer en Support horen bij geen enkele groep: de een beheert de hele
@@ -2604,16 +2618,18 @@ function zetContactBlok(p,t){
  var magWijzigen=magContactWijzigen();
  el('pp-contactpersoon').checked=!!p.contactpersoon;
  el('pp-contactpersoon').disabled=!magWijzigen;
- el('pp-ziek-row').hidden=!p.contactVolgorde;
- el('pp-ziek').checked=p.status==='ziek';
- el('pp-ziek').disabled=!magWijzigen;
+ if(el('pp-ziek-row')){
+  el('pp-ziek-row').hidden=!p.contactVolgorde;
+  el('pp-ziek').checked=p.status==='ziek';
+  el('pp-ziek').disabled=!magWijzigen;
+ }
  el('pp-contact-hint').textContent=magWijzigen?(p.contactVolgorde?('Dit is contactpersoon '+p.contactVolgorde+' van deze groep.'):''):'Alleen de huidige contactpersoon kan dit wijzigen.';
  el('pp-contactpersoon').onchange=function(){
   var ok=pasContactpersoonToe(p,this.checked);
   if(!ok)this.checked=false;
   zetContactBlok(p,t);renderContactpersonen();renderContactBanner();
  };
- el('pp-ziek').onchange=function(){
+ if(el('pp-ziek'))el('pp-ziek').onchange=function(){
   p.status=this.checked?'ziek':'actief';
   if(p._state!=='nieuw')p._state='gewijzigd';
   renderContactBanner();
@@ -2744,6 +2760,8 @@ function openProfielPersoon(id,t){
  /* Inzage (AVG) laat zien wat er over iemand is vastgelegd; bij een nieuwe
     persoon is er nog niets, dus de knop hoort alleen bij bewerken. */
  el('pp-avg-inzage').hidden=nieuw;
+ /* .actions heeft een eigen display; hidden werkt daar niet, dus via style. */
+ el('pp-accountacties').style.display=nieuw?'none':'';
  if(nieuw)el('pp-blokkade-uitleg').hidden=true;
  el('pp-titel').textContent=nieuw?('Nieuwe '+TYPELABEL[t].toLowerCase()+' aanmaken'):(naam(p)+' — volledig profiel');
  show('pp-profiel-persoon');
@@ -3139,7 +3157,7 @@ function renderContactBanner(){
  el('contact-banner-lijst').innerHTML=lijst.length? lijst.map(function(m){
   var isEff=eff&&eff.id===m.id;
   return '<span style="display:inline-flex;align-items:center;margin:0 14px 4px 0">'+esc(naam(m))+
-   (m.status==='ziek'?'<span class="statuschip ziek">Ziek</span>':'')+
+   (isZiek(m)?'<span class="statuschip ziek">Ziek</span>':'')+
    (isEff?'<span class="statuschip" style="background:var(--moss-bg);color:var(--moss)">Actief aanspreekpunt</span>':'')+
    '</span>';
  }).join('') : '<p class="empty-msg" style="padding:0">Nog geen contactpersonen aangewezen voor deze groep.</p>';
@@ -3526,7 +3544,7 @@ function controleSignalen(){
     actie:{soort:'groep',groep:g,label:'Groep openen'}});
   }
   /* 3. Enige contactpersoon is ziek: meldingen komen nergens aan. */
-  var ziek=contacten.filter(function(m){return m.status==='ziek';});
+  var ziek=contacten.filter(isZiek);
   if(contacten.length&&ziek.length===contacten.length){
    signalen.push({ernst:'hoog',groep:g,tekst:'De contactperso(o)n(en) van deze groep staan allemaal op ziek.',
     actie:{soort:'groep',groep:g,label:'Groep openen'}});
@@ -4514,7 +4532,7 @@ function contactpersonenFlow(){
  var secties=GROEPEN.map(function(g){
   var lijst=people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p.groepen.indexOf(g)>-1&&p.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
   return '<div class="sublistlabel" style="margin-top:14px">'+esc(g)+'</div>'+(lijst.length?lijst.map(function(m){
-   return '<div class="personrow" style="box-shadow:none"><div class="pinfo"><div class="naam">'+esc(naam(m))+' <span class="mini">(contactpersoon '+m.contactVolgorde+(m.status==='ziek'?', ziek':'')+')</span></div><div class="mail">'+esc(m.mail||'—')+'</div></div>'+
+   return '<div class="personrow" style="box-shadow:none"><div class="pinfo"><div class="naam">'+esc(naam(m))+' <span class="mini">(contactpersoon '+m.contactVolgorde+(isZiek(m)?', ziek':'')+')</span></div><div class="mail">'+esc(m.mail||'—')+'</div></div>'+
     '<button type="button" class="small" data-cp-open="'+m.id+'" data-cp-groep="'+esc(g)+'">Openen</button></div>';
   }).join(''):'<p class="empty-msg" style="padding:0">Geen contactpersonen.</p>');
  }).join('');

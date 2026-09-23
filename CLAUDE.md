@@ -91,6 +91,16 @@ bewerken).
 Standaardrollen staat nu onder Bewerken, Controle onder Overig. De knop Uit
 dienst is ook weggehaald (`uitdienst`); `uitDienstFlow` staat nog in de code.
 
+**Ziekmelden staat uit** (`ZIEKMELDEN=false`, `isZiek`, HTML-comment
+`ziekmelden`): geen vinkje, geen Ziek-label, geen doorschakeling naar
+contactpersoon 2, geen controlesignaal. De opgeslagen `status='ziek'` blijft in
+de database staan (live: Marieke de Vries, id 3, en rij 19) — niet zonder
+overleg aanpassen. Terugzetten = comment weg en `ZIEKMELDEN=true`.
+
+**Rechten overnemen** staat onder het kopje Rollen en rechten; de rij met
+Inzage (AVG), Toegang blokkeren en Verwijderen (`pp-accountacties`) is bij
+aanmaken helemaal weg.
+
 **Verplicht bij medewerkers en naasten:** voornaam, achternaam en e-mailadres
 (profiel, Meerdere toevoegen, Mijn profiel). Bij cliënten is het e-mailadres
 optioneel, want dat wordt zo nodig gegenereerd. Bij het aanmaken staan alleen
