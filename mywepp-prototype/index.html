@@ -4192,10 +4192,12 @@ function koppelZoekveld(input,doel,opties){
  return filter;
 }
 /* Zoekveld boven een lijst met personen die telkens opnieuw wordt opgebouwd
-   (de rechtenlijsten in een profiel). Pas vanaf ZOEK_VANAF rijen: bij een
-   handvol namen is een zoekveld alleen maar iets extra's om te lezen. De
-   zoekterm blijft staan als de lijst na een wijziging opnieuw wordt getekend. */
-var ZOEK_VANAF=5;
+   (de rechtenlijsten in een profiel). Het zoekveld staat er op verzoek van de
+   klant altijd, ook bij een korte lijst: een veld dat pas bij een lange lijst
+   verschijnt, vond niemand terug. Alleen bij een lege lijst valt er niets te
+   zoeken. De zoekterm blijft staan als de lijst na een wijziging opnieuw
+   wordt getekend. */
+var ZOEK_VANAF=0;
 var lijstZoekTermen={};
 function maakLijstZoekbaar(containerId,placeholder){
  var box=el(containerId);if(!box)return;

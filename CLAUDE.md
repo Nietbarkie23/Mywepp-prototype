@@ -104,7 +104,7 @@ de klant. Tests: `spec1.js` t/m `spec4.js` in de scratchpad.
 - Blokkeren/Verwijderen alleen bij bewerken; `verwijderVanuitProfiel`.
 - Rechten overnemen bouwt het profiel niet meer opnieuw op
   (`leesProfielConcept`/`zetProfielConceptTerug`); overzicht met Toon meer.
-- Herbruikbaar zoekveld `koppelZoekveld`, `maakLijstZoekbaar` (vanaf 6 rijen).
+- Herbruikbaar zoekveld `koppelZoekveld`, `maakLijstZoekbaar` (altijd zichtbaar, `ZOEK_VANAF=0`).
 - Titel "Gebruikersbeheer – groep" (`toonGroepInTitel`); na opslaan terug
   naar herkomst (`profielHerkomst`, `naarHerkomst`).
 - Logboek: `logActie(tekst,{soort,reden})`, kolommen `logboek.soort/reden`;
