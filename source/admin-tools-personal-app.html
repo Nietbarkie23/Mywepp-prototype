@@ -342,6 +342,8 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .grouplist .sub{font-size:13px;color:var(--ink-soft);margin:0 0 12px}
 .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .personrow[hidden]{display:none}
+.logkop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.archiefdatum{font-size:12px;color:var(--ink-soft)}
 .personrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);margin-bottom:8px;box-shadow:var(--shadow);flex-wrap:wrap}
 /* In een smalle kolom (zoals de telefoonweergave van MyWepp Personal) eiste de
    keuzelijst alle ruimte op en hield de naam nul pixels over, waardoor die
@@ -1043,7 +1045,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Gearchiveerd</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Mensen die je hebt verwijderd. Hun gegevens staan er nog, dus je kunt ze terugzetten. Na 24 maanden krijg je een seintje om ze definitief te wissen.</p></div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Mensen die je hebt verwijderd. Hun gegevens blijven de wettelijke bewaartermijn van <span id="archief-termijn">15 jaar</span> staan, dus je kunt ze terugzetten. Daarna krijg je een seintje om ze definitief te wissen.</p></div>
     <div class="panel" id="gearchiveerd-lijst" style="padding:0"></div>
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
@@ -1778,6 +1780,7 @@ function personRowToDb(p){
   wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,foto:p.foto||null,
   toegang_tot:geldigeDatum(p.toegangTot)?p.toegangTot:null,
   gearchiveerd_op:geldigeDatum(p.gearchiveerdOp)?p.gearchiveerdOp:null,
+  gearchiveerd_reden:p.gearchiveerdReden||null,
   geblokkeerd:!!p.geblokkeerd,geblokkeerd_reden:p.geblokkeerdReden||null,
   toestemming:p.toestemming||{},
   tweestaps:!!p.tweestaps,tweestaps_datum:geldigeDatum(p.tweestapsDatum)?p.tweestapsDatum:null,
@@ -1796,6 +1799,7 @@ function dbRowToPerson(r){
  if(r.foto)p.foto=r.foto;
  if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
  if(r.gearchiveerd_op)p.gearchiveerdOp=String(r.gearchiveerd_op).slice(0,10);
+ if(r.gearchiveerd_reden)p.gearchiveerdReden=r.gearchiveerd_reden;
  if(r.toestemming&&typeof r.toestemming==='object')p.toestemming=r.toestemming;
  if(r.tweestaps)p.tweestaps=true;
  if(r.tweestaps_datum)p.tweestapsDatum=String(r.tweestaps_datum).slice(0,10);
@@ -2974,7 +2978,7 @@ function wisselBlokkade(){
    'Ja, blokkade opheffen',function(){
     p.geblokkeerd=false;delete p.geblokkeerdReden;
     if(p._state!=='nieuw')p._state='gewijzigd';
-    logActie('Blokkade van '+naam(p)+' opgeheven');
+    logActie('Blokkade van '+naam(p)+' opgeheven',{soort:'Blokkade opgeheven'});
     syncToSupabase();
     openProfielPersoon(p.id,p.type);renderAll();
    });
@@ -2996,7 +3000,7 @@ function wisselBlokkade(){
   if(reden)p.geblokkeerdReden=reden; else delete p.geblokkeerdReden;
   if(p._state!=='nieuw')p._state='gewijzigd';
   closeModal();
-  logActie('Toegang van '+naam(p)+' geblokkeerd'+(reden?' — '+reden:''));
+  logActie('Toegang van '+naam(p)+' geblokkeerd',{soort:'Blokkade',reden:reden});
   syncToSupabase();
   openProfielPersoon(p.id,p.type);renderAll();
  });
@@ -3025,7 +3029,7 @@ function verwijderVanuitProfiel(){
   if(reden)p._verwijderReden=reden; else delete p._verwijderReden;
   closeModal();
   markeerVerwijderd(p.id,p.type);
-  logActie((elders?naam(p)+' klaargezet om los te koppelen van '+huidigeGroep:naam(p)+' klaargezet om te archiveren')+(reden?' — reden: '+reden:''));
+  logActie(elders?naam(p)+' klaargezet om los te koppelen van '+huidigeGroep:naam(p)+' klaargezet om te archiveren',{soort:'Verwijdering',reden:reden});
   renderAll();
   show('pp-formulier');
  });
@@ -3509,7 +3513,7 @@ function controleSignalen(){
  people.filter(bewaartermijnVerstreken).forEach(function(pp){
   var maanden=maandenSinds(pp.gearchiveerdOp);
   signalen.push({ernst:'hoog',groep:(pp.groepen||[]).join(', '),
-   tekst:naam(pp)+' staat '+maanden+' maanden in het archief. De bewaartermijn van '+BEWAARTERMIJN_MAANDEN+' maanden is verstreken; wissen of onderbouwen waarom dat niet kan.',
+   tekst:naam(pp)+' staat sinds '+datumNL(pp.gearchiveerdOp)+' in het archief. De bewaartermijn van '+bewaartermijnTekst()+' is verstreken; wissen of onderbouwen waarom dat niet kan.',
    actie:{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
  });
  /* 9. Geblokkeerde accounts: een blokkade hoort tijdelijk te zijn. Blijft hij
@@ -3937,7 +3941,7 @@ function registerRegels(){
    grondslag:'Noodzakelijk voor de uitvoering van de zorgovereenkomst en een wettelijke plicht tot zorgvuldige toegangsbeveiliging.',
    betrokkenen:tel('client')+' cliënten, '+tel('medewerker')+' medewerkers, '+tel('naaste')+' naasten, verdeeld over '+GROEPEN.length+' groepen',
    gegevens:'Naam, e-mailadres, telefoonnummer, groepskoppeling, rol en toegangsrechten, einddatum van de toegang, laatste gebruik',
-   bewaartermijn:'Actief zolang de betrokkene aan een groep is gekoppeld; daarna '+BEWAARTERMIJN_MAANDEN+' maanden in het archief',
+   bewaartermijn:'Actief zolang de betrokkene aan een groep is gekoppeld; daarna '+bewaartermijnTekst()+' in het archief',
    ontvangers:'Alleen medewerkers en naasten met een rol binnen dezelfde groep'},
   {verwerking:'Cliëntdossier in de MyWepp-app',
    doel:'Doelen, rapportages, agenda, ik-boek en geheugensteuntjes vastleggen en delen met de betrokkenen.',
@@ -3972,7 +3976,7 @@ function registerRegels(){
    grondslag:'Gerechtvaardigd belang; daarna opslagbeperking (art. 5 lid 1 sub e).',
    betrokkenen:gearchiveerd+' gearchiveerde personen',
    gegevens:'Dezelfde gegevens als bij gebruikersbeheer, plus de datum van archivering',
-   bewaartermijn:BEWAARTERMIJN_MAANDEN+' maanden; daarna meldt de controle dat wissen nodig is',
+   bewaartermijn:bewaartermijnTekst()+' na archivering; daarna meldt de controle dat wissen nodig is',
    ontvangers:'Beheerders van de betreffende groep'}
  ];
 }
@@ -5194,15 +5198,42 @@ function wieBenIk(){
  var ik=huidigeGebruiker();
  return ik?naam(ik):'Onbekend';
 }
-function logActie(tekst){
+/* ---- Audit trail ----
+   Elke regel legt vast: wie het deed (Uitgevoerd door), wat voor soort
+   wijziging het was, wanneer (Tijdstip) en, bij een blokkade of verwijdering,
+   waarom. Het soort wijziging was eerder alleen uit de zin af te leiden; bij
+   een audit wil je juist kunnen filteren op "alle verwijderingen van dit jaar".
+   Handelingen waar het soort er echt toe doet geven het expliciet mee; de rest
+   wordt uit de tekst afgeleid, net als bij oude regels uit de database die
+   nog geen soort hebben. */
+var SOORT_REGELS=[
+ [/definitief gewist/i,'Definitief wissen'],
+ [/teruggezet|terug uit de prullenbak|hersteld/i,'Herstel'],
+ [/blokkade .*opgeheven/i,'Blokkade opgeheven'],
+ [/geblokkeerd/i,'Blokkade'],
+ [/archiveren|gearchiveerd|los te koppelen|losgekoppeld|ontkoppeld|verwijder/i,'Verwijdering'],
+ [/geëxporteerd|export/i,'Export'],
+ [/doorgevoerd/i,'Doorvoeren'],
+ [/\brol\b|rollen|rechten|toegang/i,'Rechten en rollen'],
+ [/toegevoegd|aangemaakt/i,'Aanmaken'],
+ [/standaard|verplicht|gekoppeld|hernoemd|instelling/i,'Instelling']
+];
+var SOORTEN_WIJZIGING=['Aanmaken','Wijziging','Rechten en rollen','Blokkade','Blokkade opgeheven','Verwijdering','Archivering','Herstel','Definitief wissen','Doorvoeren','Instelling','Export'];
+function soortVanActie(tekst){
+ for(var i=0;i<SOORT_REGELS.length;i++){if(SOORT_REGELS[i][0].test(tekst||''))return SOORT_REGELS[i][1];}
+ return 'Wijziging';
+}
+function logActie(tekst,extra){
  if(!tekst)return;
- var regel={tijd:logboekTijd(new Date()),wie:wieBenIk(),groep:huidigeGroep,tekst:tekst};
+ extra=extra||{};
+ var regel={tijd:logboekTijd(new Date()),wie:wieBenIk(),groep:huidigeGroep,tekst:tekst,
+  soort:extra.soort||soortVanActie(tekst),reden:extra.reden?kap(String(extra.reden),200):''};
  LOGBOEK.unshift(regel);
  if(LOGBOEK.length>LOGBOEK_MAX)LOGBOEK.length=LOGBOEK_MAX;
  if(sb){
   /* Het logboek mag het opslaan van de wijziging zelf nooit blokkeren, maar
      stilzwijgend verdwijnen mag het ook niet: het is de verantwoording. */
-  try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst}]).then(
+  try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst,soort:regel.soort,reden:regel.reden||null}]).then(
    function(res){registreerOpslag('logboek',!(res&&res.error));},
    function(){registreerOpslag('logboek',false);});}
   catch(e){registreerOpslag('logboek',false);}
@@ -5217,10 +5248,11 @@ var LOGBOEK_MAX=500;
 async function laadLogboek(){
  if(!sb)return;
  try{
-  var res=await sb.from('logboek').select('tijd,wie,groep,tekst').order('tijd',{ascending:false}).limit(LOGBOEK_MAX);
+  var res=await sb.from('logboek').select('tijd,wie,groep,tekst,soort,reden').order('tijd',{ascending:false}).limit(LOGBOEK_MAX);
   if(res.error||!res.data)return;
   LOGBOEK=res.data.map(function(r){
-   return {tijd:logboekTijd(new Date(r.tijd)),wie:r.wie,groep:r.groep,tekst:r.tekst};
+   return {tijd:logboekTijd(new Date(r.tijd)),wie:r.wie,groep:r.groep,tekst:r.tekst,
+    soort:r.soort||soortVanActie(r.tekst),reden:r.reden||''};
   });
  }catch(e){/* zonder verbinding blijft het logboek van deze sessie zichtbaar */}
 }
@@ -5228,7 +5260,7 @@ el('tekst-groter').addEventListener('click',function(){zetGroteTekst(!groteTekst
 /* Het logboek loopt tot 200 regels. Zonder filter is dat bij een vraag als
    "wat is er met deze cliënt gebeurd?" niet te doorzoeken. Het filter werkt op
    de tekst én op de groep, en de export volgt wat je op dat moment ziet. */
-var logboekFilter={term:'',groep:'',van:'',tot:''};
+var logboekFilter={term:'',groep:'',van:'',tot:'',soort:''};
 /* Een logregel staat als dd-mm-jjjj uu:mm; om op periode te kunnen filteren
    hebben we er een vergelijkbare datum van nodig. */
 function logboekDatum(l){
@@ -5239,6 +5271,7 @@ function gefilterdLogboek(){
  var term=logboekFilter.term.trim().toLowerCase();
  return LOGBOEK.filter(function(l){
   if(logboekFilter.groep&&(l.groep||'')!==logboekFilter.groep)return false;
+  if(logboekFilter.soort&&(l.soort||soortVanActie(l.tekst))!==logboekFilter.soort)return false;
   /* "Wat is er in die week gebeurd?" was alleen te beantwoorden door zelf te
      scrollen; bij een verantwoordingsmiddel hoort een periode. */
   var d=logboekDatum(l);
@@ -5246,7 +5279,8 @@ function gefilterdLogboek(){
   if(logboekFilter.tot&&d&&d>logboekFilter.tot)return false;
   if(!term)return true;
   return String(l.tekst||'').toLowerCase().indexOf(term)>-1||
-         String(l.wie||'').toLowerCase().indexOf(term)>-1;
+         String(l.wie||'').toLowerCase().indexOf(term)>-1||
+         String(l.reden||'').toLowerCase().indexOf(term)>-1;
  });
 }
 function renderLogboekLijst(){
@@ -5254,8 +5288,11 @@ function renderLogboekLijst(){
  var doel=el('logboek-lijst');if(!doel)return;
  doel.innerHTML=lijst.length
   ? lijst.map(function(l){
-     return '<div class="msec"><b>'+esc(l.tijd)+' — '+esc(l.wie)+'</b><p>'+esc(l.tekst)+
-      (l.groep?' <span class="mini">('+esc(l.groep)+')</span>':'')+'</p></div>';
+     return '<div class="msec logregel"><div class="logkop"><b>'+esc(l.tijd)+'</b>'+
+      '<span class="statuschip">'+esc(l.soort||soortVanActie(l.tekst))+'</span></div>'+
+      '<p style="margin:4px 0 2px">'+esc(l.tekst)+(l.groep?' <span class="mini">('+esc(l.groep)+')</span>':'')+'</p>'+
+      '<p class="mini" style="margin:0">Uitgevoerd door: '+esc(l.wie||'onbekend')+'</p>'+
+      (l.reden?'<p class="mini" style="margin:0">Reden: '+esc(l.reden)+'</p>':'')+'</div>';
     }).join('')
   : '<div class="msec"><p>'+(LOGBOEK.length?'Geen regels die hierop passen.':'Nog geen wijzigingen vastgelegd.')+'</p></div>';
  var teller=el('logboek-teller');
@@ -5266,7 +5303,10 @@ function renderLogboekLijst(){
 /* De exportbevestiging vervangt dit venster. Zonder heropenen sta je na het
    downloaden in het niets, terwijl je in het logboek bezig was. */
 function openLogboek(behoudFilter){
- if(!behoudFilter)logboekFilter={term:'',groep:'',van:'',tot:''};
+ if(!behoudFilter)logboekFilter={term:'',groep:'',van:'',tot:'',soort:''};
+ var soorten=[''].concat(SOORTEN_WIJZIGING).map(function(x){
+  return '<option value="'+esc(x)+'">'+(x?esc(x):'Alle soorten')+'</option>';
+ }).join('');
  var groepen=[''].concat(GROEPEN).map(function(g){
   return '<option value="'+esc(g)+'">'+(g?esc(g):'Alle groepen')+'</option>';
  }).join('');
@@ -5274,7 +5314,8 @@ function openLogboek(behoudFilter){
   (LOGBOEK.length>=LOGBOEK_MAX?'Dit scherm toont de laatste '+LOGBOEK_MAX+' regels; oudere regels blijven in de database staan maar staan hier niet bij.':'')+'</p>'+
   '<div class="row"><div class="field"><label for="logboek-zoek">Zoeken</label>'+
   '<input id="logboek-zoek" maxlength="60" placeholder="Naam, cliënt of wat er gebeurde"></div>'+
-  '<div class="field"><label for="logboek-groep">Groep</label><select id="logboek-groep">'+groepen+'</select></div></div>'+
+  '<div class="field"><label for="logboek-groep">Groep</label><select id="logboek-groep">'+groepen+'</select></div>'+
+  '<div class="field"><label for="logboek-soort">Type wijziging</label><select id="logboek-soort">'+soorten+'</select></div></div>'+
   '<div class="row"><div class="field"><label for="logboek-van">Van</label><input type="date" id="logboek-van" value="'+esc(logboekFilter.van)+'"></div>'+
   '<div class="field"><label for="logboek-tot">Tot en met</label><input type="date" id="logboek-tot" value="'+esc(logboekFilter.tot)+'"></div></div>'+
   '<p class="mini" id="logboek-teller" style="margin:0 0 8px"></p>'+
@@ -5286,6 +5327,8 @@ function openLogboek(behoudFilter){
  el('logboek-van').addEventListener('change',function(){logboekFilter.van=this.value;renderLogboekLijst();});
  el('logboek-tot').addEventListener('change',function(){logboekFilter.tot=this.value;renderLogboekLijst();});
  el('logboek-groep').addEventListener('change',function(){logboekFilter.groep=this.value;renderLogboekLijst();});
+ el('logboek-soort').addEventListener('change',function(){logboekFilter.soort=this.value;renderLogboekLijst();});
+ el('logboek-soort').value=logboekFilter.soort;
  el('logboek-zoek').value=logboekFilter.term;
  el('logboek-groep').value=logboekFilter.groep;
  renderLogboekLijst();
@@ -5321,25 +5364,62 @@ function exporteerLogboek(){
  bevestigExport('logboek',lijst.length+' logboekregel(s) met namen van betrokkenen',function(){exporteerLogboekNu(lijst);openLogboek(true);});
 }
 function exporteerLogboekNu(lijst){
- var regels=[['Tijd','Wie','Groep','Wat'].map(csvVeld).join(';')];
- lijst.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.tekst].map(csvVeld).join(';'));});
+ var regels=[['Tijdstip','Uitgevoerd door','Groep','Type wijziging','Wat','Reden'].map(csvVeld).join(';')];
+ lijst.forEach(function(l){regels.push([l.tijd,l.wie,l.groep||'',l.soort||soortVanActie(l.tekst),l.tekst,l.reden||''].map(csvVeld).join(';'));});
  downloadCsv(regels,'mywepp-logboek');
  logActie(lijst.length+' logboekregel(s) geëxporteerd');
 }
 
 /* --- Gearchiveerd --- */
+/* Twee fasen van verwijderen, allebei omkeerbaar:
+   - Prullenbak: gemarkeerd, maar nog niet doorgevoerd. Er is nog niets gebeurd,
+     terugzetten haalt alleen de markering weg.
+   - Archief (soft delete): doorgevoerd. Inloggen kan niet meer, maar de
+     gegevens blijven de bewaartermijn staan en zijn terug te zetten.
+   Pas "Definitief wissen" haalt iets echt weg. */
+function prullenbakRijHtml(p){
+ var elders=blijftElders(p)&&andereGroepenVan(p).length;
+ return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+
+  ' <span class="statuschip" style="background:var(--amber-bg,#fff4e0);color:var(--amber)">Prullenbak</span></div>'+
+  '<div class="mail">'+(elders?'Wordt bij doorvoeren losgekoppeld van '+esc(huidigeGroep):'Wordt bij doorvoeren gearchiveerd')+
+  (p._verwijderReden?' · reden: '+esc(p._verwijderReden):'')+'</div></div>'+
+  '<button type="button" class="small" data-uitprullenbak="'+p.id+'">Terugzetten</button></div>';
+}
+function haalUitPrullenbak(id){
+ var p=findPerson(id);if(!p||p._state!=='verwijderd')return;
+ /* Terug naar hoe hij stond: gewijzigd als er vóór het verwijderen al iets
+    aan hem was aangepast, anders ongewijzigd. */
+ delete p._state;
+ if(wijzigingDetails(p).length)p._state='gewijzigd';
+ delete p._verwijderReden;
+ logActie(naam(p)+' terug uit de prullenbak',{soort:'Herstel'});
+ renderGearchiveerd();renderAll();
+}
 function renderGearchiveerd(){
+ if(el('archief-termijn'))el('archief-termijn').textContent=bewaartermijnTekst();
+ var prullenbak=people.filter(function(p){return p._state==='verwijderd'&&!p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
  var gearchiveerd=people.filter(function(p){return p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
- el('gearchiveerd-lijst').innerHTML=gearchiveerd.length? gearchiveerd.map(function(p){
+ var prullenbakHtml=prullenbak.length
+  ? '<div class="sublistlabel" style="margin:14px 16px 6px">Prullenbak — nog niet doorgevoerd</div><div style="padding:0 12px">'+prullenbak.map(prullenbakRijHtml).join('')+'</div>'+
+    '<div class="sublistlabel" style="margin:14px 16px 6px">Archief</div>'
+  : '';
+ el('gearchiveerd-lijst').innerHTML=prullenbakHtml+(gearchiveerd.length? gearchiveerd.map(function(p){
   var maanden=maandenSinds(p.gearchiveerdOp);
   var termijn=bewaartermijnVerstreken(p)
    ? ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Bewaartermijn verstreken</span>'
    : (maanden!==null?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">'+maanden+' maand'+(maanden===1?'':'en')+' in archief</span>':'');
-  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+termijn+'</div><div class="mail">'+esc(p.mail||'—')+'</div></div>'+
+  var datums=geldigeDatum(p.gearchiveerdOp)
+   ? '<div class="archiefdatum">Gearchiveerd op '+esc(datumNL(p.gearchiveerdOp))+' · bewaren tot '+esc(datumNL(bewaarTot(p)))+
+     (p.gearchiveerdReden?' · reden: '+esc(p.gearchiveerdReden):'')+'</div>'
+   : '';
+  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+termijn+'</div><div class="mail">'+esc(p.mail||'—')+'</div>'+datums+'</div>'+
    '<button type="button" class="small" data-avg="'+p.id+'">Inzage</button>'+
    '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button>'+
    '<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button></div>';
- }).join('') : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>';
+ }).join('') : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>');
+ Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-uitprullenbak]'),function(b){
+  b.addEventListener('click',function(){haalUitPrullenbak(+b.getAttribute('data-uitprullenbak'));});
+ });
  Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-avg]'),function(b){
   b.addEventListener('click',function(){openAvgDossier(+b.getAttribute('data-avg'));});
  });
@@ -5362,7 +5442,8 @@ function renderGearchiveerd(){
     (p.geblokkeerd?' Let op: dit account staat geblokkeerd en blijft dat.':'')+'</p>',
     'Ja, terugzetten',function(){
      p.archived=false;delete p.gearchiveerdOp;
-     logActie(naam(p)+' teruggezet uit het archief'+(aantal?' met '+aantal+' recht'+(aantal===1?'':'en'):''));
+     logActie(naam(p)+' teruggezet uit het archief'+(aantal?' met '+aantal+' recht'+(aantal===1?'':'en'):''),{soort:'Herstel'});
+     delete p.gearchiveerdReden;
      renderGearchiveerd();renderAll();
      syncToSupabase();
     });
@@ -5419,17 +5500,34 @@ function wisDefinitief(id){
  var p=findPerson(id);if(!p)return;
  var naamVal=naam(p);
  var maanden=maandenSinds(p.gearchiveerdOp);
- bevestigModal('Definitief wissen: '+naamVal,
+ /* Binnen de bewaartermijn mag wissen alleen met een onderbouwing (bijvoorbeeld
+    een gegrond verwijderverzoek onder AVG art. 17). Die reden is dan
+    verplicht en komt in het logboek; zo is achteraf te verantwoorden waarom
+    er vóór het einde van de termijn is gewist. */
+ var binnenTermijn=!bewaartermijnVerstreken(p);
+ var redenVeld='<fieldset class="admblok"><legend>Reden</legend><div class="admveld">'+
+  '<label for="modal-wis-reden">Reden'+(binnenTermijn?'<span class="verplicht">*</span>':' (optioneel)')+'</label>'+
+  '<input class="admin" id="modal-wis-reden" maxlength="200" placeholder="Bijvoorbeeld: verwijderverzoek van betrokkene"></div>'+
+  '<p class="mini veldfout" id="modal-wis-reden-fout" hidden>Geef een reden: de bewaartermijn loopt nog.</p></fieldset>';
+ openModal('<h3>'+esc('Definitief wissen: '+naamVal)+'</h3><div class="msec">'+
+  (binnenTermijn&&geldigeDatum(p.gearchiveerdOp)?'<p style="color:var(--brick)"><b>Let op:</b> de wettelijke bewaartermijn loopt nog tot '+esc(datumNL(bewaarTot(p)))+'. Wis alleen eerder als daar een gegronde reden voor is.</p>':'')+
   '<p>Alle gegevens van <b>'+esc(naamVal)+'</b> worden verwijderd: naam, contactgegevens, profielfoto, groepskoppelingen en alle rechten van en op deze persoon. Ook uit de database.</p>'+
   (p.type==='client'?'<p>Daarbij hoort ook het hele dossier: doelen, rapportages, agenda, Ik-Boek, geheugensteuntjes, instellingen en alle gesprekken over '+esc(naamVal)+'.</p>':'')+
   '<p>Dit kun je niet ongedaan maken en herstellen uit het archief kan daarna niet meer.'+
   (maanden!==null?' Deze persoon staat '+maanden+' maand'+(maanden===1?'':'en')+' in het archief.':'')+'</p>'+
-  '<p>Het logboek blijft wel bestaan. Dat is de verantwoording over wat er is gebeurd en mag niet worden gewist.</p>',
-  'Ja, definitief wissen',function(){
+  '<p>Het logboek blijft wel bestaan. Dat is de verantwoording over wat er is gebeurd en mag niet worden gewist.</p></div>'+
+  redenVeld+
+  '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
+  '<button type="button" class="danger" id="modal-bevestig">Ja, definitief wissen</button></div>');
+ el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-bevestig').addEventListener('click',function(){
+   var reden=kap(el('modal-wis-reden').value.trim(),200);
+   if(binnenTermijn&&!reden){el('modal-wis-reden-fout').hidden=false;el('modal-wis-reden').style.borderColor='var(--brick)';return;}
+   closeModal();
    verwijderVerwijzingenNaar(id);
    var sleutels=p.type==='client'?wisClientDossierLokaal(id):[];
    people=people.filter(function(x){return x.id!==id;});
-   logActie(naamVal+' definitief gewist op verzoek of vanwege de bewaartermijn'+(p.type==='client'?', inclusief het volledige dossier':''));
+   logActie(naamVal+' definitief gewist'+(binnenTermijn?' vóór het einde van de bewaartermijn':' na het verstrijken van de bewaartermijn')+(p.type==='client'?', inclusief het volledige dossier':''),{soort:'Definitief wissen',reden:reden});
    Promise.all([wisDefinitiefUitDatabase(id),p.type==='client'?wisClientDossierUitDatabase(id,sleutels):Promise.resolve(true)]).then(function(uitkomst){
     if(uitkomst.indexOf(false)>-1)openMelding('Let op','De gegevens zijn hier gewist, maar het verwijderen uit de database is niet volledig gelukt. Probeer het later opnieuw, anders blijven ze daar staan.');
    });
@@ -5447,7 +5545,21 @@ function wisDefinitief(id){
    - opslagbeperking (art. 5 lid 1 sub e): niet langer bewaren dan nodig.
    Het logboek zelf blijft juist staan: dat is de verantwoordingsplicht van
    art. 5 lid 2 en mag niet door een verwijderverzoek worden uitgewist. */
-var BEWAARTERMIJN_MAANDEN=24;
+/* Wettelijke bewaartermijn voor gearchiveerde accounts, op verzoek van de
+   klant 15 jaar. Eén constante: alle teksten, signalen en het register rekenen
+   hiermee. Let op: voor het medisch dossier zelf geldt onder de WGBO sinds
+   2020 twintig jaar; als het archief ook dossiergegevens moet dragen, moet
+   deze waarde daarop worden afgestemd. */
+var BEWAARTERMIJN_JAREN=15;
+var BEWAARTERMIJN_MAANDEN=BEWAARTERMIJN_JAREN*12;
+function bewaartermijnTekst(){return BEWAARTERMIJN_JAREN+' jaar';}
+/* Tot en met wanneer gegevens bewaard moeten blijven. */
+function bewaarTot(p){
+ var basis=geldigeDatum(p&&p.gearchiveerdOp)?p.gearchiveerdOp:vandaagISO();
+ var d=new Date(basis+'T00:00:00');
+ d.setFullYear(d.getFullYear()+BEWAARTERMIJN_JAREN);
+ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 
 function maandenSinds(iso){
  if(!geldigeDatum(iso))return null;
@@ -5830,9 +5942,14 @@ async function voerWijzigingenDoor(){
    p.groepen=p.groepen.filter(function(g){return g!==huidigeGroep;});
    ruimRechtenZonderGedeeldeGroepOp(p);
    ontkoppeld++;
+   logActie(naam(p)+' losgekoppeld van '+huidigeGroep,{soort:'Verwijdering',reden:p._verwijderReden});
   }else{
    var wasContact=p.contactVolgorde;
+   /* Soft delete: de rij blijft bestaan met archived=true en de datum, zodat
+      de bewaartermijn vanaf die dag kan lopen en herstellen mogelijk blijft. */
    p.archived=true;p.gearchiveerdOp=vandaagISO();p.contactpersoon=false;delete p.contactVolgorde;delete p.status;gearchiveerd++;
+   if(p._verwijderReden)p.gearchiveerdReden=p._verwijderReden; else delete p.gearchiveerdReden;
+   logActie(naam(p)+' gearchiveerd; bewaren tot '+datumNL(bewaarTot(p)),{soort:'Archivering',reden:p._verwijderReden});
    /* Anders blijft er een "contactpersoon 2" over zonder dat er een eerste is. */
    if(wasContact===1){
     var tweede=contactpersonenVanGroep().filter(function(x){return x.contactVolgorde===2;})[0];
@@ -5846,7 +5963,7 @@ async function voerWijzigingenDoor(){
   if(idx>-1)p.groepen[idx]=p._nieuweGroep; else p.groepen.push(p._nieuweGroep);
   verplaatst++;
  });
- people.forEach(function(p){delete p._state;delete p._nieuweGroep;});
+ people.forEach(function(p){delete p._state;delete p._nieuweGroep;delete p._verwijderReden;});
  if(nieuw||gewijzigd||ontkoppeld||gearchiveerd||verplaatst){
   var delen=[];
   if(nieuw)delen.push(nieuw+' toegevoegd');
