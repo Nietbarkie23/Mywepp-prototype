@@ -435,6 +435,9 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .hubavatar{width:52px;height:52px;border-radius:999px;flex:0 0 52px;background:linear-gradient(135deg,var(--accent),#4A78AC)}
 .hubfields{font-size:13.5px;color:var(--ink-soft);line-height:1.7}
 .hubfields b{color:var(--ink);font-weight:500}
+.hubbewerk{margin-left:auto;flex:0 0 32px}
+.hubform .field{margin-bottom:10px}
+.hubform .actions{margin-top:6px;padding-top:12px}
 .hublinks button{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:15px 22px;background:var(--surface);font-size:14.5px;font-weight:500}
 .hublinks button:last-child{border-bottom:0}
 .hublinks button:hover{background:var(--paper)}
@@ -959,13 +962,10 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="hubcard">
         <div class="hubavatar"></div>
         <div id="hub-groepnaam" style="font-size:17px;font-weight:600">—</div>
+        <button type="button" class="iconbtn hubbewerk" id="hub-bewerk" aria-label="Groepsgegevens bewerken" title="Gegevens bewerken"></button>
       </div>
       <div class="hubcard" style="display:block">
-        <div class="hubfields">
-          <div><b>Adres</b> Tomatstraat 20-1, 1332CE Almere</div>
-          <div><b>Telefoon</b> 036 96 93 555</div>
-          <div><b>E-mail</b> groep.clownvis@zomedo.nl</div>
-        </div>
+        <div class="hubfields" id="hub-gegevens"></div>
       </div>
       <div class="hubcard togglerow" style="border-top:1px solid var(--line)">
         <span>Tweestapsverificatie verplicht</span>
@@ -1882,6 +1882,7 @@ async function loadFromSupabase(){
    if(opgeslagen.digibord&&typeof opgeslagen.digibord==='object')digibordPerGroep=opgeslagen.digibord;
    if(opgeslagen.maaltijden&&typeof opgeslagen.maaltijden==='object')MAALTIJDRESERVERINGEN=opgeslagen.maaltijden;
    if(Array.isArray(opgeslagen.groep_koppelingen))groepKoppelingen=opgeslagen.groep_koppelingen.filter(Array.isArray);
+   if(opgeslagen.groep_gegevens&&typeof opgeslagen.groep_gegevens==='object')groepGegevens=opgeslagen.groep_gegevens;
    if(opgeslagen.org_default&&opgeslagen.org_default.medewerker&&opgeslagen.org_default.naaste){
     orgDefault.medewerker=vulRolCategorieenAan(opgeslagen.org_default.medewerker,'medewerker');
     orgDefault.naaste=vulRolCategorieenAan(opgeslagen.org_default.naaste,'naaste');
@@ -3325,8 +3326,67 @@ function toonKoppelingInFormulier(){
  vak.innerHTML='<b>Let op: deze groep werkt samen met '+partners.map(esc).join(' en ')+'.</b> '+
   'Voeg je hier een medewerker toe of haal je er een weg, dan gebeurt dat daar ook. Cliënten en naasten veranderen niet mee.';
 }
+/* ---- Groepsgegevens (adres, telefoon, e-mail) ----
+   Stonden vast in de pagina en waren dus voor elke groep gelijk en nergens te
+   wijzigen. Nu per groep, te bewerken via het potlood op het groepsprofiel.
+   Een groep zonder eigen gegevens toont de oude voorbeeldwaarden, zodat er
+   niets leeg komt te staan tot iemand ze invult. */
+var GROEP_STANDAARD={adres:'Tomatstraat 20-1, 1332CE Almere',tel:'036 96 93 555',mail:'groep.clownvis@zomedo.nl'};
+var groepGegevens={};
+var hubBewerken=false;
+function gegevensVan(g){
+ var eigen=groepGegevens[g]||{};
+ return {adres:eigen.adres!==undefined?eigen.adres:GROEP_STANDAARD.adres,
+  tel:eigen.tel!==undefined?eigen.tel:GROEP_STANDAARD.tel,
+  mail:eigen.mail!==undefined?eigen.mail:GROEP_STANDAARD.mail};
+}
+function renderHubGegevens(){
+ var box=el('hub-gegevens');if(!box)return;
+ var d=gegevensVan(huidigeGroep);
+ /* .iconbtn heeft display:flex, dus hidden werkt hier niet. */
+ el('hub-bewerk').style.display=hubBewerken?'none':'';
+ if(!hubBewerken){
+  box.className='hubfields';
+  box.innerHTML='<div><b>Adres</b> '+esc(d.adres||'—')+'</div><div><b>Telefoon</b> '+esc(d.tel||'—')+'</div><div><b>E-mail</b> '+esc(d.mail||'—')+'</div>';
+  return;
+ }
+ box.className='hubform';
+ box.innerHTML='<div class="field"><label for="hub-adres">Adres</label><input id="hub-adres" maxlength="120" value="'+esc(d.adres)+'"></div>'+
+  '<div class="row"><div class="field"><label for="hub-tel">Telefoon</label><input id="hub-tel" maxlength="'+MAXLEN.tel+'" value="'+esc(d.tel)+'"></div>'+
+  '<div class="field"><label for="hub-mail">E-mail</label><input id="hub-mail" maxlength="'+MAXLEN.mail+'" value="'+esc(d.mail)+'"></div></div>'+
+  '<p class="mini veldfout" id="hub-gegevens-fout" hidden></p>'+
+  '<div class="actions"><button type="button" id="hub-annuleer">Annuleren</button><button type="button" class="primary" id="hub-opslaan">Opslaan</button></div>';
+ el('hub-adres').focus();
+ el('hub-annuleer').addEventListener('click',function(){hubBewerken=false;renderHubGegevens();});
+ el('hub-opslaan').addEventListener('click',bewaarHubGegevens);
+}
+function bewaarHubGegevens(){
+ var nieuw={adres:kap(el('hub-adres').value.trim(),120),tel:kap(el('hub-tel').value.trim(),MAXLEN.tel),mail:kap(el('hub-mail').value.trim(),MAXLEN.mail)};
+ var fout='';
+ if(nieuw.tel&&!telGeldig(nieuw.tel))fout='Vul een geldig telefoonnummer in (minimaal 9 cijfers), of laat het leeg.';
+ else if(!mailGeldig(nieuw.mail))fout='Vul een geldig e-mailadres in, of laat het leeg.';
+ if(fout){el('hub-gegevens-fout').textContent=fout;el('hub-gegevens-fout').hidden=false;return;}
+ var oud=gegevensVan(huidigeGroep),veranderd=[];
+ if(oud.adres!==nieuw.adres)veranderd.push('adres');
+ if(oud.tel!==nieuw.tel)veranderd.push('telefoon');
+ if(oud.mail!==nieuw.mail)veranderd.push('e-mail');
+ hubBewerken=false;
+ if(veranderd.length){
+  groepGegevens[huidigeGroep]=nieuw;
+  logActie('Gegevens van groep "'+huidigeGroep+'" aangepast: '+veranderd.join(', '),{soort:'Instelling'});
+  syncOrganisatieData();
+ }
+ renderHubGegevens();
+ hubBevestig(veranderd.length?'Gegevens opgeslagen.':'Niets gewijzigd.');
+}
+el('hub-bewerk').innerHTML=PENCIL_SVG;
+el('hub-bewerk').addEventListener('click',function(){hubBewerken=true;renderHubGegevens();});
+renderHubGegevens();
 function verversGroepReferenties(){
  el('pp-groep-naam').textContent=huidigeGroep;
+ /* Bij een groepswissel nooit half bewerkte gegevens van de vorige groep
+    laten staan: die zouden anders bij de nieuwe groep worden opgeslagen. */
+ hubBewerken=false;renderHubGegevens();
  toonGroepInTitel();
  el('hub-groepnaam').textContent=huidigeGroep;
  if(el('hub-tweestaps'))el('hub-tweestaps').checked=eistTweestaps(huidigeGroep);
@@ -3434,6 +3494,7 @@ function hernoemGroep(g){
     if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
    });
    if(groupOverride[g]){groupOverride[nieuw]=groupOverride[g];delete groupOverride[g];}
+   if(groepGegevens[g]){groepGegevens[nieuw]=groepGegevens[g];delete groepGegevens[g];}
    /* Koppelingen staan op groepsnaam. Zonder dit viel een hernoemde groep
       stilletjes uit zijn koppeling. */
    groepKoppelingen=groepKoppelingen.map(function(k){return k.map(function(x){return x===g?nieuw:x;});});
@@ -5082,6 +5143,7 @@ async function syncOrganisatieData(){
    {sleutel:'digibord',waarde:digibordPerGroep},
    {sleutel:'maaltijden',waarde:MAALTIJDRESERVERINGEN},
    {sleutel:'groep_koppelingen',waarde:groepKoppelingen},
+   {sleutel:'groep_gegevens',waarde:groepGegevens},
    /* De standaardrollen leefden alleen in het geheugen: na een herlaad stond
       iedere groep weer op de fabrieksinstelling, ook als je net iets anders had
       ingesteld. */

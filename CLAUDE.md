@@ -101,6 +101,11 @@ overleg aanpassen. Terugzetten = comment weg en `ZIEKMELDEN=true`.
 Inzage (AVG), Toegang blokkeren en Verwijderen (`pp-accountacties`) is bij
 aanmaken helemaal weg.
 
+**Groepsgegevens** (adres, telefoon, e-mail op het groepsprofiel) zijn per
+groep te bewerken via het potlood rechtsboven (`renderHubGegevens`,
+`groepGegevens`, opslag onder `groep_gegevens`). Zonder eigen gegevens toont
+een groep de oude voorbeeldwaarden (`GROEP_STANDAARD`).
+
 **Verplicht bij medewerkers en naasten:** voornaam, achternaam en e-mailadres
 (profiel, Meerdere toevoegen, Mijn profiel). Bij cliënten is het e-mailadres
 optioneel, want dat wordt zo nodig gegenereerd. Bij het aanmaken staan alleen
