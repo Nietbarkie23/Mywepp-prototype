@@ -256,7 +256,11 @@ html[data-tekst="groot"] .intro p{font-size:15px}
 .admveld{display:flex;gap:14px;align-items:flex-start;padding:5px 0}
 .admveld>label{flex:0 0 190px;padding-top:7px;font-size:13.5px;color:var(--ink)}
 .admveld>.admin{flex:1;min-width:0;max-width:420px}
-.admveld .verplicht{color:var(--brick);margin-left:2px}
+.admveld .verplicht,.field .verplicht{color:var(--brick);margin-left:2px}
+.veldfout,.mini.veldfout{color:var(--brick);margin:4px 0 0}
+.rolvelden{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+@media (max-width:640px){.rolvelden{grid-template-columns:1fr}}
+.rolvelden select{width:100%}
 fieldset.admblok{border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 16px 14px;margin:0 0 16px}
 fieldset.admblok>legend{padding:0 6px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
 @media (max-width:640px){
@@ -1139,8 +1143,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" class="small" id="pc-foto-wijzigen">Profielfoto wijzigen</button>
       </div>
       <div class="row">
-        <div class="field"><label for="pc-voornaam">Voornaam</label><input id="pc-voornaam" maxlength="60"></div>
-        <div class="field"><label for="pc-achternaam">Achternaam</label><input id="pc-achternaam" maxlength="60"></div>
+        <div class="field"><label for="pc-voornaam">Voornaam<span class="verplicht" aria-hidden="true">*</span></label><input id="pc-voornaam" maxlength="60" required aria-required="true"><p class="mini veldfout" id="pc-voornaam-fout" hidden>Vul een voornaam in.</p></div>
+        <div class="field"><label for="pc-achternaam">Achternaam<span class="verplicht" aria-hidden="true">*</span></label><input id="pc-achternaam" maxlength="60" required aria-required="true"><p class="mini veldfout" id="pc-achternaam-fout" hidden>Achternaam is verplicht.</p></div>
       </div>
       <div class="row">
         <div class="field"><label for="pc-mail">E-mailadres</label><input id="pc-mail" maxlength="120" placeholder="Leeg = automatisch gegenereerd"><p class="mini" id="pc-mail-fout" style="color:var(--brick)" hidden></p></div>
@@ -1180,8 +1184,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <button type="button" class="small" id="pp-foto-wijzigen">Profielfoto wijzigen</button>
       </div>
       <div class="row">
-        <div class="field"><label for="pp-voornaam">Voornaam</label><input id="pp-voornaam" maxlength="60"></div>
-        <div class="field"><label for="pp-achternaam">Achternaam</label><input id="pp-achternaam" maxlength="60"></div>
+        <div class="field"><label for="pp-voornaam">Voornaam<span class="verplicht" aria-hidden="true">*</span></label><input id="pp-voornaam" maxlength="60" required aria-required="true"><p class="mini veldfout" id="pp-voornaam-fout" hidden>Vul een voornaam in.</p></div>
+        <div class="field"><label for="pp-achternaam">Achternaam<span class="verplicht" aria-hidden="true">*</span></label><input id="pp-achternaam" maxlength="60" required aria-required="true"><p class="mini veldfout" id="pp-achternaam-fout" hidden>Achternaam is verplicht.</p></div>
       </div>
       <div class="row">
         <div class="field"><label for="pp-mail">E-mailadres</label><input id="pp-mail" maxlength="120" placeholder="naam@voorbeeld.nl"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
@@ -1194,14 +1198,15 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label>Type rol</label><div class="lockedfield" id="pp-typerol-display"></div></div>
       </div>
       <div class="sublistlabel">Rollen en rechten</div>
-      <div class="row">
-        <div class="field"><label>Algemene rol (globaal)</label><div class="lockedfield" id="pp-globaal-display"></div></div>
+      <div class="rolvelden">
         <div class="field"><label>Groep</label><div class="lockedfield" id="pp-groep-display"></div></div>
+        <div class="field" id="pp-client-veld" hidden><label>Cliënt</label><div class="lockedfield" id="pp-client-display"></div></div>
+        <div class="field"><label>Algemene rol (globaal)</label><div class="lockedfield" id="pp-globaal-display"></div></div>
+        <div class="field"><label>Groepsrol</label><div class="lockedfield" id="pp-groepsrol-display"></div></div>
+        <div class="field" id="pp-locatierol-veld"><label>Locatierol</label><div class="lockedfield" id="pp-locatierol-display"></div></div>
+        <div class="field" id="pp-clientrol-veld" hidden><label>Rol bij cliënt</label><div class="lockedfield" id="pp-clientrol-display"></div></div>
       </div>
-      <div class="row">
-        <div class="field"><label>Locatierol</label><div class="lockedfield" id="pp-locatierol-display"></div></div>
-      </div>
-      <p class="mini">Deze rollen komen uit de instellingen van de groep en zijn hier niet aan te passen.</p>
+      <p class="mini" id="pp-rollen-hint">Deze rollen komen uit de instellingen van de groep.</p>
 
       <div class="sublistlabel">Gekoppelde groepen</div>
       <div id="pp-groepen-keuze" class="groepkeuze"></div>
@@ -1376,7 +1381,10 @@ var ROLLEN={
   globaal:['Medewerker met statistiekrecht','Medewerker','Vrijwilliger','Bord inlog','Geen'],
   groep:['Groep admin','Medewerker','Nieuws redacteur','Bord inlog','Geen'],
   clienten:['Medewerker met prikbord en dossier','Medewerker met prikbord','Medewerker','Bord inlog','Geen'],
-  medewerkers:['Roosteraar met bekijk recht en profiel','Roosteraar met bekijkrecht','Roosteraar','Geen']
+  medewerkers:['Roosteraar met bekijk recht en profiel','Roosteraar met bekijkrecht','Roosteraar','Geen'],
+  /* Locatierol: wat iemand mag op locatieniveau, dus over alle groepen van een
+     locatie heen (bijvoorbeeld een locatiemanager die meerdere teams aanstuurt). */
+  locatie:['Locatiemanager','Locatie admin','Medewerker locatie','Geen']
  },
  naaste:{
   globaal:['Mantelzorger','Geen'],
@@ -1385,13 +1393,29 @@ var ROLLEN={
  }
 };
 var RECHTEN={
- medewerker:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'},{k:'clienten',l:'Cliënten (alle cliënten in de groep)'},{k:'medewerkers',l:'Recht op andere medewerkers'}],
- naaste:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'}]
+ medewerker:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'},{k:'locatie',l:'Locatie'},{k:'clienten',l:'Cliënten (alle cliënten in de groep)'},{k:'medewerkers',l:'Recht op andere medewerkers'}],
+ /* Een naaste hoort altijd bij een cliënt; de rol die hij daar standaard
+    krijgt is dus net zo goed een groepsinstelling als zijn groepsrol. */
+ naaste:[{k:'globaal',l:'Globaal (algemeen)'},{k:'groep',l:'Groep'},{k:'clienten',l:'Cliënt'}]
 };
 var orgDefault={
- medewerker:{globaal:{rol:'Medewerker',opt:[]},groep:{rol:'Medewerker',opt:['Groep admin']},clienten:{rol:'Medewerker',opt:['Medewerker met prikbord']},medewerkers:{rol:'Geen',opt:[]}},
- naaste:{globaal:{rol:'Mantelzorger',opt:[]},groep:{rol:'Mantelzorger',opt:['Mantelzorger simpel']}}
+ medewerker:{globaal:{rol:'Medewerker',opt:[]},groep:{rol:'Medewerker',opt:['Groep admin']},locatie:{rol:'Medewerker locatie',opt:[]},clienten:{rol:'Medewerker',opt:['Medewerker met prikbord']},medewerkers:{rol:'Geen',opt:[]}},
+ naaste:{globaal:{rol:'Mantelzorger',opt:[]},groep:{rol:'Mantelzorger',opt:['Mantelzorger simpel']},clienten:{rol:'Mantelzorger',opt:['Mantelzorger met prikbord']}}
 };
+/* De ingebouwde standaard, los bewaard: rolcategorieën die later zijn
+   bijgekomen (locatie, cliënt bij naasten) ontbreken in standaarden die al in
+   de database stonden. Zonder aanvulling liep het rollenscherm vast op een
+   lege categorie. */
+var STANDAARD_ROLLEN=JSON.parse(JSON.stringify(orgDefault));
+function vulRolCategorieenAan(data,type){
+ if(!data||typeof data!=='object')data={};
+ RECHTEN[type].forEach(function(r){
+  var d=data[r.k];
+  if(!d||typeof d.rol!=='string')data[r.k]=JSON.parse(JSON.stringify(STANDAARD_ROLLEN[type][r.k]));
+  else if(!Array.isArray(d.opt))d.opt=[];
+ });
+ return data;
+}
 var groupOverride={};
 /* ---- Gekoppelde groepen ----
    Twee groepen op dezelfde locatie draaien in de praktijk vaak met één team:
@@ -1535,7 +1559,26 @@ initBulkTab();
 
 function effectiveFor(groep,type){
  var ov=groupOverride[groep]&&groupOverride[groep][type];
- return {data: ov?JSON.parse(JSON.stringify(ov)):JSON.parse(JSON.stringify(orgDefault[type])), overridden: !!ov};
+ var data=JSON.parse(JSON.stringify(ov||orgDefault[type]));
+ return {data: vulRolCategorieenAan(data,type), overridden: !!ov};
+}
+/* Welke rollen er voor één persoon te kiezen zijn: de standaardrol van de groep
+   plus de optionele rollen. Zonder optionele rollen is er één keuze en toont
+   het profiel een vast veld in plaats van een keuzemenu. */
+function rolKeuzes(groep,type,k){
+ var d=effectiveFor(groep,type).data[k];
+ if(!d)return [];
+ return [d.rol].concat(d.opt.filter(function(o){return o!==d.rol&&o!=='Geen'&&ROLLEN[type][k].indexOf(o)>-1;}));
+}
+function basisGroepVan(p){
+ return (p.groepen&&p.groepen.indexOf(huidigeGroep)>-1)?huidigeGroep:((p.groepen||[])[0]||huidigeGroep);
+}
+/* Een eerder gekozen rol die de groep niet meer aanbiedt valt terug op de
+   standaard; anders houdt iemand een rol die niemand meer kan toekennen. */
+function rolVan(p,k){
+ var keuzes=rolKeuzes(basisGroepVan(p),p.type,k);
+ var gekozen=(p.rollen||{})[k];
+ return keuzes.indexOf(gekozen)>-1?gekozen:(keuzes[0]||'Geen');
 }
 
 function kiesAdmintab(naamVal){
@@ -1731,7 +1774,7 @@ function personRowToDb(p){
   tweestaps:!!p.tweestaps,tweestaps_datum:geldigeDatum(p.tweestapsDatum)?p.tweestapsDatum:null,
   laatste_login:geldigeDatum(p.laatsteLogin)?p.laatsteLogin:null,
   groepen:p.groepen,client_rechten:p.clientRechten||{},
-  medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},archived:!!p.archived};
+  medewerker_rechten:p.medewerkerRechten||{},naaste_rechten:p.naasteRechten||{},rollen:p.rollen||{},archived:!!p.archived};
 }
 function dbRowToPerson(r){
  var p={id:r.id,type:r.type,voor:r.voor,achter:r.achter,mail:r.mail||'',groepen:r.groepen||[]};
@@ -1753,6 +1796,7 @@ function dbRowToPerson(r){
  if(r.client_rechten&&Object.keys(r.client_rechten).length)p.clientRechten=r.client_rechten;
  if(r.medewerker_rechten&&Object.keys(r.medewerker_rechten).length)p.medewerkerRechten=r.medewerker_rechten;
  if(r.naaste_rechten&&Object.keys(r.naaste_rechten).length)p.naasteRechten=r.naaste_rechten;
+ if(r.rollen&&typeof r.rollen==='object'&&Object.keys(r.rollen).length)p.rollen=r.rollen;
  if(r.archived)p.archived=true;
  return p;
 }
@@ -1784,10 +1828,15 @@ async function loadFromSupabase(){
    if(opgeslagen.maaltijden&&typeof opgeslagen.maaltijden==='object')MAALTIJDRESERVERINGEN=opgeslagen.maaltijden;
    if(Array.isArray(opgeslagen.groep_koppelingen))groepKoppelingen=opgeslagen.groep_koppelingen.filter(Array.isArray);
    if(opgeslagen.org_default&&opgeslagen.org_default.medewerker&&opgeslagen.org_default.naaste){
-    orgDefault.medewerker=opgeslagen.org_default.medewerker;
-    orgDefault.naaste=opgeslagen.org_default.naaste;
+    orgDefault.medewerker=vulRolCategorieenAan(opgeslagen.org_default.medewerker,'medewerker');
+    orgDefault.naaste=vulRolCategorieenAan(opgeslagen.org_default.naaste,'naaste');
    }
-   if(opgeslagen.groep_rollen&&typeof opgeslagen.groep_rollen==='object')groupOverride=opgeslagen.groep_rollen;
+   if(opgeslagen.groep_rollen&&typeof opgeslagen.groep_rollen==='object'){
+    groupOverride=opgeslagen.groep_rollen;
+    Object.keys(groupOverride).forEach(function(gr){
+     ['medewerker','naaste'].forEach(function(t){if(groupOverride[gr]&&groupOverride[gr][t])vulRolCategorieenAan(groupOverride[gr][t],t);});
+    });
+   }
    if(opgeslagen.toegangscontrole&&typeof opgeslagen.toegangscontrole==='object')TOEGANGSCONTROLE=opgeslagen.toegangscontrole;
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
@@ -1896,9 +1945,8 @@ function personenVanType(t){return people.filter(function(p){return p.type===t&&
    opduiken (zoals de verwijderde adminrollen deden). */
 function globaleRolVoor(p){
  if(p.type==='client')return '';
- var basisGroep=(p.groepen&&p.groepen.indexOf(huidigeGroep)>-1)?huidigeGroep:((p.groepen||[])[0]||huidigeGroep);
- var eff=effectiveFor(basisGroep,p.type).data;
- return eff.globaal.rol!=='Geen'?eff.globaal.rol:ROLLEN[p.type].globaal[0];
+ var r=rolVan(p,'globaal');
+ return r!=='Geen'?r:ROLLEN[p.type].globaal[0];
 }
 /* Eenmalige datacorrectie na het laden: schrijf afwijkende opgeslagen rollen recht,
    zodat de database niet met ongeldige waarden blijft staan. */
@@ -1933,6 +1981,20 @@ function mailFout(mail,negeerId){
  if(!mailGeldig(mail))return 'Dit is geen geldig e-mailadres.';
  if(mailInGebruik(mail,negeerId))return 'Dit e-mailadres is al in gebruik door iemand anders.';
  return '';
+}
+/* Een rode rand alleen zag niet iedereen, en zei niet wat er mis was: wie de
+   achternaam leeg liet dacht dat de knop het niet deed. Met null/null worden
+   de meldingen alleen gewist (bij het openen van een profiel). */
+function toonNaamFout(prefix,voor,achter){
+ var wis=voor===null&&achter===null;
+ var paren=[['voornaam',voor],['achternaam',achter]],ok=true;
+ paren.forEach(function(x){
+  var leeg=!wis&&!x[1];
+  el(prefix+'-'+x[0]).style.borderColor=leeg?'var(--brick)':'';
+  el(prefix+'-'+x[0]+'-fout').hidden=!leeg;
+  if(leeg)ok=false;
+ });
+ return ok;
 }
 function toonMailFout(inputId,foutId,tekst){
  el(inputId).style.borderColor=tekst?'var(--brick)':'';
@@ -2306,7 +2368,7 @@ function openProfielClient(id){
  el('pc-titel').textContent=naam(p)+' — volledig profiel';
  setGrootAvatar('pc-foto',p);
  el('pc-voornaam').value=p.voor;el('pc-achternaam').value=p.achter;el('pc-mail').value=p.mail||'';el('pc-tel').value=p.tel||'';
- el('pc-voornaam').style.borderColor='';el('pc-achternaam').style.borderColor='';
+ toonNaamFout('pc',null,null);
  toonMailFout('pc-mail','pc-mail-fout','');
  mailAuto.pc=!p.mail||p.mail===genereerEmail(p.voor,p.achter);
  toonToestemming(p);
@@ -2322,8 +2384,7 @@ function openProfielClient(id){
 el('pc-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
  var voor=el('pc-voornaam').value.trim(),achter=el('pc-achternaam').value.trim(),ok=true;
- el('pc-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
- el('pc-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
+ if(!toonNaamFout('pc',voor,achter))ok=false;
  var ingevuldeMail=el('pc-mail').value.trim();
  if(!toonMailFout('pc-mail','pc-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
  if(!ok)return;
@@ -2505,6 +2566,55 @@ function toonToegangHint(p){
  else if(dagen<=14){hint.textContent='Nog '+dagen+' dag'+(dagen===1?'':'en') +' toegang, tot en met '+datumNL(datum)+'.';hint.style.color='var(--amber)';}
  else {hint.textContent='Toegang tot en met '+datumNL(datum)+' ('+dagen+' dagen).';hint.style.color='';}
 }
+/* Rolvelden in het profiel. Heeft de groep voor een categorie optionele rollen,
+   dan kies je hier welke rol deze persoon krijgt; anders is er niets te kiezen
+   en blijft het een vast veld. De keuze telt pas bij Opslaan, zodat Annuleren
+   hem net als de andere velden weggooit. */
+var PROFIEL_ROLVELDEN={
+ medewerker:[['globaal','pp-globaal-display'],['groep','pp-groepsrol-display'],['locatie','pp-locatierol-display']],
+ naaste:[['globaal','pp-globaal-display'],['groep','pp-groepsrol-display'],['clienten','pp-clientrol-display']]
+};
+function toonProfielRollen(p,t){
+ var groep=basisGroepVan(p),kiesbaar=0;
+ el('pp-locatierol-veld').hidden=t!=='medewerker';
+ el('pp-clientrol-veld').hidden=t!=='naaste';
+ el('pp-client-veld').hidden=t!=='naaste';
+ if(t==='naaste'){
+  var clienten=Object.keys(p.clientRechten||{}).map(function(id){return findPerson(+id);})
+   .filter(function(c){return c&&!c.archived&&c._state!=='verwijderd';});
+  el('pp-client-display').textContent=clienten.length?clienten.map(naam).join(', '):'Nog niet gekoppeld';
+ }
+ (PROFIEL_ROLVELDEN[t]||[]).forEach(function(v){
+  var k=v[0],vak=el(v[1]),keuzes=rolKeuzes(groep,t,k),huidig=rolVan(p,k);
+  if(keuzes.length>1){
+   kiesbaar++;
+   vak.className='';
+   vak.innerHTML='<select data-rolkeuze="'+k+'" aria-label="Rol kiezen">'+keuzes.map(function(r,i){
+    return '<option value="'+esc(r)+'"'+(r===huidig?' selected':'')+'>'+esc(r)+(i===0?' (standaard)':'')+'</option>';
+   }).join('')+'</select>';
+  }else{
+   vak.className='lockedfield';
+   vak.textContent=k==='globaal'?globaleRolVoor(p):huidig;
+  }
+ });
+ el('pp-rollen-hint').textContent=kiesbaar
+  ?'Waar een keuzemenu staat, heeft de groep meer rollen. Kies welke rol deze persoon krijgt.'
+  :'Deze rollen komen uit de instellingen van de groep.';
+}
+/* Leest de gekozen rollen uit het profiel. Een keuze gelijk aan de standaard
+   wordt niet bewaard, zodat de persoon meebeweegt als de groep zijn standaard
+   later wijzigt. Geeft de lijst gewijzigde categorieën terug. */
+function leesProfielRollen(p){
+ var nieuw=JSON.parse(JSON.stringify(p.rollen||{})),gewijzigd=[];
+ Array.prototype.forEach.call(document.querySelectorAll('#pp-profiel-persoon [data-rolkeuze]'),function(sel){
+  var k=sel.getAttribute('data-rolkeuze'),standaard=rolKeuzes(basisGroepVan(p),p.type,k)[0];
+  if(sel.value===rolVan(p,k))return;
+  if(sel.value===standaard)delete nieuw[k]; else nieuw[k]=sel.value;
+  gewijzigd.push({k:k,rol:sel.value});
+ });
+ return {rollen:nieuw,gewijzigd:gewijzigd};
+}
+var ROLCATEGORIE_LABEL={globaal:'algemene rol',groep:'groepsrol',locatie:'locatierol',clienten:'rol bij cliënt'};
 function openProfielPersoon(id,t){
  var p=findPerson(id);if(!p)return;
  huidigProfielId=id;
@@ -2515,13 +2625,11 @@ function openProfielPersoon(id,t){
  toonToegangHint(p);
  toonBlokkadeKnop(p);
  toonTweestapsStatus(p);
- el('pp-voornaam').style.borderColor='';el('pp-achternaam').style.borderColor='';
+ toonNaamFout('pp',null,null);
  toonMailFout('pp-mail','pp-mail-fout','');
  el('pp-typerol-display').textContent=t==='medewerker'?'Medewerker':'Naaste';
- var effRechten=effectiveFor(huidigeGroep,t).data;
- el('pp-globaal-display').textContent=globaleRolVoor(p);
  el('pp-groep-display').textContent=huidigeGroep;
- el('pp-locatierol-display').textContent=effRechten.groep.rol;
+ toonProfielRollen(p,t);
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
  wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
  if(t==='medewerker'){
@@ -2545,8 +2653,7 @@ function openProfielPersoon(id,t){
 el('pp-persoon-opslaan').addEventListener('click',function(){
  var p=findPerson(huidigProfielId);if(!p)return;
  var voor=el('pp-voornaam').value.trim(),achter=el('pp-achternaam').value.trim(),ok=true;
- el('pp-voornaam').style.borderColor=voor?'':'var(--brick)';if(!voor)ok=false;
- el('pp-achternaam').style.borderColor=achter?'':'var(--brick)';if(!achter)ok=false;
+ if(!toonNaamFout('pp',voor,achter))ok=false;
  var ingevuldeMail=el('pp-mail').value.trim();
  if(!toonMailFout('pp-mail','pp-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
  if(!ok)return;
@@ -2562,6 +2669,12 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
    ? naam(p)+' heeft toegang tot en met '+datumNL(p.toegangTot)
    : naam(p)+' heeft weer toegang zonder einddatum');
  }
+ var rolKeuze=leesProfielRollen(p);
+ if(rolKeuze.gewijzigd.length){
+  if(Object.keys(rolKeuze.rollen).length)p.rollen=rolKeuze.rollen; else delete p.rollen;
+  p.rol=globaleRolVoor(p);
+  rolKeuze.gewijzigd.forEach(function(g){logActie(naam(p)+': '+ROLCATEGORIE_LABEL[g.k]+' gewijzigd naar "'+g.rol+'"');});
+ }
  if(p._state!=='nieuw')p._state='gewijzigd';
  renderAll();
  if(dubbelP)naamgenootMelding(dubbelP,p); else show('pp-formulier');
@@ -2572,6 +2685,7 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
 function profielGewijzigd(p,prefix){
  if(!p)return false;
  var v=el(prefix+'-voornaam').value.trim(),a=el(prefix+'-achternaam').value.trim();
+ if(prefix==='pp'&&leesProfielRollen(p).gewijzigd.length)return true;
  return cap(v)!==p.voor||cap(a)!==p.achter||
   el(prefix+'-mail').value.trim()!==(p.mail||'')||
   el(prefix+'-tel').value.trim()!==(p.tel||'')||
@@ -2605,7 +2719,10 @@ function annuleerProfiel(prefix){
 el('pc-annuleren').addEventListener('click',function(){annuleerProfiel('pc');});
 el('pp-annuleren').addEventListener('click',function(){annuleerProfiel('pp');});
 
-['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){if(this.value.trim())this.style.borderColor='';});});
+['pc-voornaam','pc-achternaam','pp-voornaam','pp-achternaam'].forEach(function(i){el(i).addEventListener('input',function(){
+ if(!this.value.trim())return;
+ this.style.borderColor='';el(i+'-fout').hidden=true;
+});});
 [['pc-mail','pc-mail-fout'],['pp-mail','pp-mail-fout']].forEach(function(paar){
  el(paar[0]).addEventListener('input',function(){toonMailFout(paar[0],paar[1],'');});
 });
@@ -5363,6 +5480,7 @@ function basisVan(p){
  b.foto=!!p.foto;
  b.toestemming=JSON.stringify(p.toestemming||{});
  RECHTVELDEN.forEach(function(v){b[v]=JSON.stringify(p[v]||{});});
+ b.rollen=JSON.stringify(p.rollen||{});
  return b;
 }
 function zetBasisVoorIedereen(){people.forEach(function(p){p._basis=basisVan(p);});}
@@ -5390,6 +5508,7 @@ function wijzigingDetails(p){
  if(erbij.length)uit.push('groep erbij: '+erbij.join(', '));
  if(eraf.length)uit.push('uit groep: '+eraf.join(', '));
  if(nu.toestemming!==oud.toestemming)uit.push('toestemming aangepast');
+ if(oud.rollen!==undefined&&nu.rollen!==oud.rollen)uit.push('rollen aangepast');
  RECHTVELDEN.forEach(function(v){
   if(nu[v]===oud[v])return;
   var a=telSleutels(oud[v]),b=telSleutels(nu[v]);
@@ -6319,8 +6438,8 @@ function renderMijnProfiel(){
  var p=MIJN_PROFIEL;
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="mp-terug">← Terug</button><b style="font-size:15px">Mijn profiel</b></div>';
  html+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:18px"><div class="hubavatar" id="mp-foto" style="width:64px;height:64px;flex:0 0 64px"></div><button type="button" class="small" id="mp-foto-wijzigen">Kies of maak foto</button></div>';
- html+='<div class="field"><label>Voornaam</label><input id="mp-voor" maxlength="60" value="'+esc(p.voor)+'"></div>';
- html+='<div class="field"><label>Achternaam</label><input id="mp-achter" maxlength="60" value="'+esc(p.achter)+'"></div>';
+ html+='<div class="field"><label for="mp-voor">Voornaam<span class="verplicht" aria-hidden="true">*</span></label><input id="mp-voor" maxlength="60" required aria-required="true" value="'+esc(p.voor)+'"></div>';
+ html+='<div class="field"><label for="mp-achter">Achternaam<span class="verplicht" aria-hidden="true">*</span></label><input id="mp-achter" maxlength="60" required aria-required="true" value="'+esc(p.achter)+'"></div>';
  html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" maxlength="25" value="'+esc(p.mobiel)+'"></div>';
  html+='<div class="field"><label>Functie</label><input id="mp-functie" maxlength="60" value="'+esc(p.functie)+'"></div>';
  html+='<div class="field"><label>Geboortedatum</label><input type="date" id="mp-geboortedatum" value="'+esc(p.geboortedatum)+'"></div>';
@@ -6346,7 +6465,11 @@ function renderMijnProfiel(){
   var mail=kap(el('mp-mail').value.trim(),MAXLEN.mail);
   var geboorte=el('mp-geboortedatum').value;
   var fout='';
-  if(!mailGeldig(mail))fout='Vul een geldig e-mailadres in.';
+  /* Een leeg naamveld werd stilzwijgend genegeerd (de oude naam bleef staan),
+     waardoor het leek alsof het opslaan gelukt was. Nu zeggen we het gewoon. */
+  if(!el('mp-voor').value.trim())fout='Vul een voornaam in.';
+  else if(!el('mp-achter').value.trim())fout='Achternaam is verplicht.';
+  else if(!mailGeldig(mail))fout='Vul een geldig e-mailadres in.';
   else if(geboorte&&(!geldigeDatum(geboorte)||geboorte>vandaagISO()))fout='Een geboortedatum in de toekomst kan niet.';
   if(fout){el('mp-bevestiging').innerHTML='<p class="mini" style="color:var(--brick);margin-top:10px">'+esc(fout)+'</p>';return;}
   p.voor=kap(el('mp-voor').value.trim(),MAXLEN.naam)||p.voor;
