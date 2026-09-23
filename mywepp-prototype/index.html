@@ -549,6 +549,10 @@ td.dot{text-align:center}
  background:var(--brick-bg);border:1px solid var(--brick-line);color:var(--brick);
  box-shadow:0 6px 22px -8px rgba(23,35,54,.35)}
 #laad-balk[hidden],#opslag-balk[hidden]{display:none}
+/* Geen verbinding is een blijvende toestand, geen voorbijgaande fout: de
+   melding staat dan bovenaan in de pagina in plaats van zwevend over de
+   knoppen onderin. */
+#laad-balk.bovenaan{position:static;max-width:none;margin:0 0 16px;box-shadow:none}
 
 #laad-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
 #opslag-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
@@ -1881,7 +1885,7 @@ function dbRowToPerson(r){
  return p;
 }
 async function loadFromSupabase(){
- if(!sb){gegevensGeladen=null;return;}
+ if(!sb){gegevensGeladen=null;toonLaadStatus();return;}
  try{
   var g=await sb.from('groepen').select('naam').order('id');
   var p=await sb.from('personen').select('*').order('id');
@@ -1962,6 +1966,20 @@ var gegevensGeladen=null;   /* null = nog bezig, true = geladen, false = mislukt
 function laadMislukt(){return !!sb&&gegevensGeladen===false;}
 function toonLaadStatus(){
  var balk=el('laad-balk');if(!balk)return;
+ /* Laadt de databasebibliotheek zelf niet (storing bij het CDN, geen
+    internet), dan is er geen verbinding en dus ook geen foutmelding van de
+    database. De app toonde dan zonder enige waarschuwing de voorbeeldgegevens
+    alsof het de echte administratie was, en bewaarde niets. */
+ if(!sb){
+  balk.hidden=false;
+  balk.classList.add('bovenaan');
+  var main=document.querySelector('main');
+  if(main&&main.firstElementChild!==balk)main.insertBefore(balk,main.firstChild);
+  balk.innerHTML='<span class="tekst"><b>Geen verbinding met de database.</b> Je ziet nu voorbeeldgegevens, niet de echte administratie. Wat je wijzigt wordt niet bewaard.</span>'+
+   '<button type="button" class="primary" id="laad-opnieuw">Pagina opnieuw laden</button>';
+  el('laad-opnieuw').addEventListener('click',function(){location.reload();});
+  return;
+ }
  balk.hidden=!laadMislukt();
  if(balk.hidden)return;
  balk.innerHTML='<span class="tekst"><b>Gegevens niet geladen.</b> Je ziet nu voorbeeldgegevens, niet de echte administratie. '+

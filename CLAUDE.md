@@ -128,8 +128,20 @@ koppelen via Groep bewerken in master gezet. Backups: van vóór de specificatie
 `backup/voor-specificaties-rollen`, van vóór het samenvoegen
 `backup/voor-merge-specificaties-en-koppelen`. Tests in de scratchpad:
 `spec1.js` t/m `spec4.js`, `combo.js`, `zoekadmin.js`, `adminbalk.js`,
-`groepkoppel.js`. Verouderd (lopen vast op op verzoek verwijderde knoppen):
-`knopflow2.js`, `regressie2.js`.
+`groepkoppel.js`. Tests die vastlopen op op verzoek verwijderde knoppen
+(Groepeer, Wie ziet wie, AVG-tab, Uit dienst, Blokkeren, Ziek) staan in
+`scratchpad/verouderd/` en draaien niet mee in de regressie.
+
+**Controleronde (hele code nagelopen)** — gevonden en opgelost, alles eerst
+aangetoond: terugpijl/kruimels lieten lege nieuwe personen achter (live id
+19-21, niet zonder overleg weghalen); `syncToSupabase` schreef niet-doorgevoerde
+nieuwe personen weg (nu pas bij doorvoeren); `cap()` maakte "de Vries" tot
+"De Vries" (`TUSSENVOEGSELS`); definitief wissen schreef opgeruimde
+verwijzingen niet weg (database weigerde het wissen van een vertegenwoordiger,
+nu ook `ON DELETE SET NULL`); zonder databasebibliotheek toonde de app zonder
+waarschuwing voorbeeldgegevens (nu melding bovenaan). Nagelopen en in orde:
+opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
+RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 
 - Rollen: categorie `locatie` (medewerker) en `clienten` = "Cliënt" (naaste)
   in `ROLLEN`/`RECHTEN`/`orgDefault`; oude opgeslagen standaarden worden
