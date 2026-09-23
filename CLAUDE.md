@@ -101,10 +101,14 @@ overleg aanpassen. Terugzetten = comment weg en `ZIEKMELDEN=true`.
 Inzage (AVG), Toegang blokkeren en Verwijderen (`pp-accountacties`) is bij
 aanmaken helemaal weg.
 
-**Groepsgegevens** (adres, telefoon, e-mail op het groepsprofiel) zijn per
-groep te bewerken via het potlood rechtsboven (`renderHubGegevens`,
-`groepGegevens`, opslag onder `groep_gegevens`). Zonder eigen gegevens toont
-een groep de oude voorbeeldwaarden (`GROEP_STANDAARD`).
+**Groepsgegevens** (naam, adres, telefoon, e-mail op het groepsprofiel) zijn
+per groep te bewerken via het potlood rechtsboven (`renderHubGegevens`,
+`groepGegevens`, opslag onder `groep_gegevens`). Het adres staat in delen
+(straat, huisnr, postcode, plaats); een oude adresregel wordt gesplitst
+(`splitsAdres`). Zonder eigen gegevens toont een groep de oude
+voorbeeldwaarden (`GROEP_STANDAARD`). Hernoemen gaat voor beide ingangen via
+`hernoemGroepOveral`, die ook tweestaps, Digibord, koppelingen en locatie
+meeneemt — een nieuwe opslag per groepsnaam moet daar ook in.
 
 **Verplicht bij medewerkers en naasten:** voornaam, achternaam en e-mailadres
 (profiel, Meerdere toevoegen, Mijn profiel). Bij cliënten is het e-mailadres

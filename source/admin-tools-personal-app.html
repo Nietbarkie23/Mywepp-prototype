@@ -436,7 +436,16 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .hubfields{font-size:13.5px;color:var(--ink-soft);line-height:1.7}
 .hubfields b{color:var(--ink);font-weight:500}
 .hubbewerk{margin-left:auto;flex:0 0 32px}
-.hubform .field{margin-bottom:10px}
+.hubgrid{display:grid;grid-template-columns:120px 1fr;gap:10px 14px;align-items:center}
+.hubgrid .hubkop{font-weight:600;color:var(--ink);font-size:13.5px}
+.hubgrid .hubkop.boven{align-self:start;padding-top:9px}
+.hubadres{display:flex;flex-direction:column;gap:8px}
+.hubrij{display:flex;align-items:center;gap:10px}
+.hubrij input{flex:1 1 auto;min-width:0}
+.hubrij input.kort{flex:0 0 90px;width:90px}
+.hubsub{font-weight:600;color:var(--ink);font-size:13px;white-space:nowrap}
+.hubrij .hubsub:first-child{flex:0 0 70px;text-align:right}
+@media (max-width:640px){.hubgrid{grid-template-columns:1fr}.hubgrid .hubkop.boven{padding-top:0}.hubrij{flex-wrap:wrap}.hubrij .hubsub:first-child{flex-basis:auto;text-align:left}}
 .hubform .actions{margin-top:6px;padding-top:12px}
 .hublinks button{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:15px 22px;background:var(--surface);font-size:14.5px;font-weight:500}
 .hublinks button:last-child{border-bottom:0}
@@ -3331,14 +3340,31 @@ function toonKoppelingInFormulier(){
    wijzigen. Nu per groep, te bewerken via het potlood op het groepsprofiel.
    Een groep zonder eigen gegevens toont de oude voorbeeldwaarden, zodat er
    niets leeg komt te staan tot iemand ze invult. */
-var GROEP_STANDAARD={adres:'Tomatstraat 20-1, 1332CE Almere',tel:'036 96 93 555',mail:'groep.clownvis@zomedo.nl'};
+var GROEP_STANDAARD={straat:'Tomatstraat',huisnr:'20-1',postcode:'1332CE',plaats:'Almere',tel:'036 96 93 555',mail:'groep.clownvis@zomedo.nl'};
+var ADRESDELEN=['straat','huisnr','postcode','plaats'];
 var groepGegevens={};
 var hubBewerken=false;
+/* Het adres stond eerst als één regel opgeslagen. Zo'n oude regel wordt hier
+   in delen gesplitst ("Straat 12, 1234AB Plaats"); lukt dat niet, dan komt de
+   hele regel bij Straat, zodat er niets verloren gaat. */
+function splitsAdres(regel){
+ var m=/^(.*?)\s+(\S+),\s*(\d{4}\s?[A-Za-z]{2})\s+(.+)$/.exec(String(regel||'').trim());
+ return m?{straat:m[1],huisnr:m[2],postcode:m[3],plaats:m[4]}:{straat:String(regel||''),huisnr:'',postcode:'',plaats:''};
+}
 function gegevensVan(g){
  var eigen=groepGegevens[g]||{};
- return {adres:eigen.adres!==undefined?eigen.adres:GROEP_STANDAARD.adres,
-  tel:eigen.tel!==undefined?eigen.tel:GROEP_STANDAARD.tel,
-  mail:eigen.mail!==undefined?eigen.mail:GROEP_STANDAARD.mail};
+ if(eigen.adres!==undefined&&eigen.straat===undefined){
+  var delen=splitsAdres(eigen.adres);
+  eigen=Object.assign({},eigen,delen);
+ }
+ var uit={};
+ ADRESDELEN.concat(['tel','mail']).forEach(function(k){uit[k]=eigen[k]!==undefined?eigen[k]:GROEP_STANDAARD[k];});
+ return uit;
+}
+function adresTekst(d){
+ var regel1=[d.straat,d.huisnr].filter(Boolean).join(' ');
+ var regel2=[d.postcode,d.plaats].filter(Boolean).join(' ');
+ return [regel1,regel2].filter(Boolean).join(', ');
 }
 function renderHubGegevens(){
  var box=el('hub-gegevens');if(!box)return;
@@ -3347,34 +3373,63 @@ function renderHubGegevens(){
  el('hub-bewerk').style.display=hubBewerken?'none':'';
  if(!hubBewerken){
   box.className='hubfields';
-  box.innerHTML='<div><b>Adres</b> '+esc(d.adres||'—')+'</div><div><b>Telefoon</b> '+esc(d.tel||'—')+'</div><div><b>E-mail</b> '+esc(d.mail||'—')+'</div>';
+  box.innerHTML='<div><b>Adres</b> '+esc(adresTekst(d)||'—')+'</div><div><b>Telefoon</b> '+esc(d.tel||'—')+'</div><div><b>E-mail</b> '+esc(d.mail||'—')+'</div>';
   return;
  }
+ /* Indeling zoals de klant hem aanleverde: labels links, het adres in
+    Straat/Huisnr en Postcode/Plaats. */
+ var veld=function(id,label,waarde,max,klasse){
+  return '<label for="'+id+'" class="hubsub">'+label+'</label><input id="'+id+'" maxlength="'+max+'" value="'+esc(waarde)+'"'+(klasse?' class="'+klasse+'"':'')+'>';
+ };
  box.className='hubform';
- box.innerHTML='<div class="field"><label for="hub-adres">Adres</label><input id="hub-adres" maxlength="120" value="'+esc(d.adres)+'"></div>'+
-  '<div class="row"><div class="field"><label for="hub-tel">Telefoon</label><input id="hub-tel" maxlength="'+MAXLEN.tel+'" value="'+esc(d.tel)+'"></div>'+
-  '<div class="field"><label for="hub-mail">E-mail</label><input id="hub-mail" maxlength="'+MAXLEN.mail+'" value="'+esc(d.mail)+'"></div></div>'+
+ box.innerHTML='<div class="hubgrid">'+
+  '<label for="hub-naam" class="hubkop">Groepsnaam: <span class="verplicht" aria-hidden="true">*</span></label>'+
+  '<input id="hub-naam" maxlength="'+MAXLEN.groep+'" required aria-required="true" value="'+esc(huidigeGroep)+'">'+
+  '<span class="hubkop boven">Adres:</span>'+
+  '<div class="hubadres">'+
+   '<div class="hubrij">'+veld('hub-straat','Straat:',d.straat,80)+veld('hub-huisnr','Huisnr:',d.huisnr,10,'kort')+'</div>'+
+   '<div class="hubrij">'+veld('hub-postcode','Postcode:',d.postcode,7,'kort')+veld('hub-plaats','Plaats:',d.plaats,60)+'</div>'+
+  '</div>'+
+  '<label for="hub-tel" class="hubkop">Telefoon:</label><input id="hub-tel" maxlength="'+MAXLEN.tel+'" value="'+esc(d.tel)+'">'+
+  '<label for="hub-mail" class="hubkop">E-mail:</label><input id="hub-mail" maxlength="'+MAXLEN.mail+'" value="'+esc(d.mail)+'">'+
+  '</div>'+
   '<p class="mini veldfout" id="hub-gegevens-fout" hidden></p>'+
   '<div class="actions"><button type="button" id="hub-annuleer">Annuleren</button><button type="button" class="primary" id="hub-opslaan">Opslaan</button></div>';
- el('hub-adres').focus();
+ el('hub-naam').focus();
  el('hub-annuleer').addEventListener('click',function(){hubBewerken=false;renderHubGegevens();});
  el('hub-opslaan').addEventListener('click',bewaarHubGegevens);
 }
 function bewaarHubGegevens(){
- var nieuw={adres:kap(el('hub-adres').value.trim(),120),tel:kap(el('hub-tel').value.trim(),MAXLEN.tel),mail:kap(el('hub-mail').value.trim(),MAXLEN.mail)};
- var fout='';
- if(nieuw.tel&&!telGeldig(nieuw.tel))fout='Vul een geldig telefoonnummer in (minimaal 9 cijfers), of laat het leeg.';
- else if(!mailGeldig(nieuw.mail))fout='Vul een geldig e-mailadres in, of laat het leeg.';
+ var waarde=function(id,max){return kap(el(id).value.trim(),max);};
+ var naamNieuw=waarde('hub-naam',MAXLEN.groep);
+ var nieuw={straat:waarde('hub-straat',80),huisnr:waarde('hub-huisnr',10),
+  postcode:waarde('hub-postcode',7).toUpperCase(),plaats:waarde('hub-plaats',60),
+  tel:waarde('hub-tel',MAXLEN.tel),mail:waarde('hub-mail',MAXLEN.mail)};
+ var oudeNaam=huidigeGroep,fout='',foutVeld='';
+ if(!naamNieuw){fout='Vul een groepsnaam in.';foutVeld='hub-naam';}
+ else if(naamNieuw!==oudeNaam&&GROEPEN.indexOf(naamNieuw)>-1){fout='Er bestaat al een groep met deze naam.';foutVeld='hub-naam';}
+ else if(nieuw.postcode&&!/^\d{4}\s?[A-Z]{2}$/.test(nieuw.postcode)){fout='Vul een postcode in als 1234AB, of laat het leeg.';foutVeld='hub-postcode';}
+ else if(nieuw.tel&&!telGeldig(nieuw.tel)){fout='Vul een geldig telefoonnummer in (minimaal 9 cijfers), of laat het leeg.';foutVeld='hub-tel';}
+ else if(!mailGeldig(nieuw.mail)){fout='Vul een geldig e-mailadres in, of laat het leeg.';foutVeld='hub-mail';}
+ ['hub-naam','hub-postcode','hub-tel','hub-mail'].forEach(function(id){el(id).style.borderColor=id===foutVeld?'var(--brick)':'';});
  if(fout){el('hub-gegevens-fout').textContent=fout;el('hub-gegevens-fout').hidden=false;return;}
- var oud=gegevensVan(huidigeGroep),veranderd=[];
- if(oud.adres!==nieuw.adres)veranderd.push('adres');
+ var oud=gegevensVan(oudeNaam),veranderd=[];
+ if(naamNieuw!==oudeNaam)veranderd.push('naam');
+ if(ADRESDELEN.some(function(k){return oud[k]!==nieuw[k];}))veranderd.push('adres');
  if(oud.tel!==nieuw.tel)veranderd.push('telefoon');
  if(oud.mail!==nieuw.mail)veranderd.push('e-mail');
  hubBewerken=false;
  if(veranderd.length){
-  groepGegevens[huidigeGroep]=nieuw;
-  logActie('Gegevens van groep "'+huidigeGroep+'" aangepast: '+veranderd.join(', '),{soort:'Instelling'});
+  groepGegevens[oudeNaam]=nieuw;
+  if(naamNieuw!==oudeNaam){
+   hernoemGroepOveral(oudeNaam,naamNieuw);
+   logActie('Groep "'+oudeNaam+'" hernoemd naar "'+naamNieuw+'"',{soort:'Instelling'});
+   syncGroepenToSupabase();
+  }
+  var rest=veranderd.filter(function(v){return v!=='naam';});
+  if(rest.length)logActie('Gegevens van groep "'+naamNieuw+'" aangepast: '+rest.join(', '),{soort:'Instelling'});
   syncOrganisatieData();
+  verversGroepReferenties();renderAll();
  }
  renderHubGegevens();
  hubBevestig(veranderd.length?'Gegevens opgeslagen.':'Niets gewijzigd.');
@@ -3416,6 +3471,31 @@ function voegGroepToe(naamVal){
    groepskeuze, los van het scherm waar je de groep bewerkt. Je koos daar dus nog
    een keer een groep, terwijl je er al in zat. Ze horen hier, bij de groep zelf. */
 var groepBewerkType='medewerker';
+/* Een groep hernoemen. Veel staat op groepsnaam opgeslagen; alles daarvan moet
+   mee, anders valt het stilletjes terug op de standaard. Eén functie voor
+   Groep bewerken en het potlood op het groepsprofiel, zodat die twee nooit
+   uit elkaar lopen. Alleen aanroepen bij een échte naamswijziging: anders wist
+   het verplaatsen naar dezelfde sleutel de waarde. */
+function hernoemGroepOveral(g,nieuw){
+ GROEPEN[GROEPEN.indexOf(g)]=nieuw;
+ people.forEach(function(p){
+  var idx=p.groepen.indexOf(g);
+  if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
+ });
+ var verhuis=function(opslag){if(opslag&&opslag[g]!==undefined){opslag[nieuw]=opslag[g];delete opslag[g];}};
+ verhuis(groupOverride);
+ verhuis(groepGegevens);
+ /* Deze twee gingen eerder verloren bij hernoemen: de groep stond daarna
+    weer op "tweestaps verplicht" en een standaard-Digibord. */
+ verhuis(groepTweestaps);
+ verhuis(digibordPerGroep);
+ verhuis(groepLocatie);
+ /* Koppelingen staan op groepsnaam. Zonder dit viel een hernoemde groep
+    stilletjes uit zijn koppeling. */
+ groepKoppelingen=groepKoppelingen.map(function(k){return k.map(function(x){return x===g?nieuw:x;});});
+ bulkSel.groepen[nieuw]=bulkSel.groepen[g]||false;delete bulkSel.groepen[g];
+ if(huidigeGroep===g)huidigeGroep=nieuw;
+}
 function hernoemGroep(g){
  groepBewerkType='medewerker';
  var werk={medewerker:effectiveFor(g,'medewerker').data,naaste:effectiveFor(g,'naaste').data};
@@ -3485,23 +3565,7 @@ function hernoemGroep(g){
   if(nieuw!==g&&GROEPEN.indexOf(nieuw)>-1){alert('Er bestaat al een groep met deze naam.');return;}
   var hernoemd=nieuw!==g;
   var locatieGewijzigd=groepLocatie[g]!==nieuweLocatie;
-  if(hernoemd){
-   /* Alles wat op groepsnaam is gesleuteld moet mee; alleen doen bij een échte
-      naamswijziging, want anders wist het verplaatsen naar dezelfde sleutel de waarde. */
-   GROEPEN[GROEPEN.indexOf(g)]=nieuw;
-   people.forEach(function(p){
-    var idx=p.groepen.indexOf(g);
-    if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
-   });
-   if(groupOverride[g]){groupOverride[nieuw]=groupOverride[g];delete groupOverride[g];}
-   if(groepGegevens[g]){groepGegevens[nieuw]=groepGegevens[g];delete groepGegevens[g];}
-   /* Koppelingen staan op groepsnaam. Zonder dit viel een hernoemde groep
-      stilletjes uit zijn koppeling. */
-   groepKoppelingen=groepKoppelingen.map(function(k){return k.map(function(x){return x===g?nieuw:x;});});
-   bulkSel.groepen[nieuw]=bulkSel.groepen[g]||false;delete bulkSel.groepen[g];
-   delete groepLocatie[g];
-   if(huidigeGroep===g)huidigeGroep=nieuw;
-  }
+  if(hernoemd)hernoemGroepOveral(g,nieuw);
   groepLocatie[nieuw]=nieuweLocatie;
   /* Standaardrollen die gelijk zijn aan de organisatiestandaard slaan we niet op
      als afwijking: anders blijft een groep straks achter als de organisatie
