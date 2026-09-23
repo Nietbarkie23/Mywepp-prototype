@@ -150,7 +150,12 @@ waarschuwing voorbeeldgegevens (nu melding bovenaan); tijdens het laden werden
 de voorbeeldgegevens bij de eerste klik over de echte database geschreven —
 nu gaat elke schrijfactie langs `opslagGeblokkeerd()` (pas schrijven als
 `gegevensGeladen===true`), met een laadmelding. supabase-js staat vast op
-2.117.1. Nagelopen en in orde:
+2.117.1. Verder: hernoemen schrijft eerst de personen weg voordat de oude
+groepsnaam verdwijnt; een verwijderde groep gaat uit zijn koppeling;
+wijzigingen die nog op de opslagvertraging (600 ms) wachten worden bij
+verbergen/sluiten direct opgeslagen (`bewaarAllesNu`, keepalive via
+`sbFetch`). Tests met de nep-database: `nepdb.js`, `rondgang-db.js`,
+`clientdata-db.js`, `hernoem-herlaad.js` (poort 8734). Nagelopen en in orde:
 opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
 RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 

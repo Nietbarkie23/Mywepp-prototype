@@ -1349,7 +1349,16 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 /* ============== SUPABASE ============== */
 var SB_URL='https://yaooauluqhhldfuwnanq.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlhb29hdWx1cWhobGRmdXduYW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzNzkzMTIsImV4cCI6MjEwNDk1NTMxMn0.d2zK5rGoJWF8jgn58vDmFsKK_DpFr3YsJ8qGWlahtR8';
-var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_URL,SB_KEY):null;
+/* Bij het sluiten van de pagina breekt de browser lopende verzoeken af. Met
+   keepalive maakt hij ze nog af; dat mag alleen voor kleine verzoeken (de
+   browser weigert keepalive boven 64 kB), dus alleen tijdens het afsluiten en
+   onder die grens. */
+var paginaSluit=false;
+function sbFetch(url,opties){
+ if(paginaSluit&&opties&&opties.body&&String(opties.body).length<60000)opties=Object.assign({},opties,{keepalive:true});
+ return fetch(url,opties);
+}
+var sb=(typeof window.supabase!=='undefined')?window.supabase.createClient(SB_URL,SB_KEY,{global:{fetch:sbFetch}}):null;
 
 function el(i){return document.getElementById(i);}
 /* Alles wat een gebruiker zelf intypt (namen, e-mail, groepsnamen, rapportages,
@@ -6601,9 +6610,22 @@ var CLIENTDATA={};
    Opslaan gebeurt met een korte vertraging en mag nooit de UI blokkeren. */
 var bewaarTimers={};
 function bewaarStraks(sleutel,fn){
- clearTimeout(bewaarTimers[sleutel]);
- bewaarTimers[sleutel]=setTimeout(fn,600);
+ if(bewaarTimers[sleutel])clearTimeout(bewaarTimers[sleutel].id);
+ bewaarTimers[sleutel]={fn:fn,id:setTimeout(function(){delete bewaarTimers[sleutel];fn();},600)};
 }
+/* Wat nog op de vertraging wacht direct opslaan. Anders ging een wijziging die
+   je vlak voor het wegklikken of herladen deed verloren: de pagina was weg
+   voordat de 600 ms om waren. Op een telefoon, waar je de app snel wegveegt,
+   is dat de normale gang van zaken. */
+function bewaarAllesNu(){
+ Object.keys(bewaarTimers).forEach(function(k){
+  var t=bewaarTimers[k];delete bewaarTimers[k];
+  clearTimeout(t.id);t.fn();
+ });
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')bewaarAllesNu();});
+window.addEventListener('pagehide',function(){paginaSluit=true;bewaarAllesNu();});
+window.addEventListener('pageshow',function(){paginaSluit=false;});
 function bewaarClientDataNu(clientId){
  if(!sb||!clientId||opslagGeblokkeerd())return;
  try{
