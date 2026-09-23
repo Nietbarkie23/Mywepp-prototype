@@ -2426,7 +2426,6 @@ function openProfielClient(id){
  el('pc-vertegenwoordiger').innerHTML=vertegenwoordigerOpties(p);
  el('pc-rechten').innerHTML=personRechtenRow(id);
  wirePersoonRechten(el('pc-rechten'),function(){updateTally();renderAcc('medewerker');renderAcc('naaste');});
- maakLijstZoekbaar('pc-rechten');
  var magVertOk=magContactWijzigen();
  el('pc-vertegenwoordiger').disabled=!magVertOk;
  el('pc-vertegenwoordiger-hint').textContent=magVertOk?'':'Alleen de huidige contactpersoon kan de wettelijke vertegenwoordiger wijzigen.';
@@ -2722,7 +2721,6 @@ function openProfielPersoon(id,t){
  el('pp-lbl-naasten').hidden=(t==='naaste');
  renderGroepenKeuze(p,'pp-groepen-keuze','pp-groepen-hint');
  zetContactBlok(p,t);
- ['pp-clienten','pp-medewerkers','pp-naasten'].forEach(function(c){maakLijstZoekbaar(c);});
  var nieuw=p._state==='nieuw';
  el('pp-blokkeer').hidden=nieuw;
  el('pp-verwijder').hidden=nieuw;
@@ -4190,31 +4188,6 @@ function koppelZoekveld(input,doel,opties){
  input._zoekFilter=filter;
  input.addEventListener('input',filter);
  return filter;
-}
-/* Zoekveld boven een lijst met personen die telkens opnieuw wordt opgebouwd
-   (de rechtenlijsten in een profiel). Het zoekveld staat er op verzoek van de
-   klant altijd, ook bij een korte lijst: een veld dat pas bij een lange lijst
-   verschijnt, vond niemand terug. Alleen bij een lege lijst valt er niets te
-   zoeken. De zoekterm blijft staan als de lijst na een wijziging opnieuw
-   wordt getekend. */
-var ZOEK_VANAF=0;
-var lijstZoekTermen={};
-function maakLijstZoekbaar(containerId,placeholder){
- var box=el(containerId);if(!box)return;
- var aantal=box.querySelectorAll('.personrow').length;
- var veldId=containerId+'-zoek',veld=el(veldId);
- if(aantal<=ZOEK_VANAF){
-  if(veld)veld.parentNode.removeChild(veld);
-  delete lijstZoekTermen[containerId];
-  return;
- }
- if(!veld){
-  box.insertAdjacentHTML('beforebegin',zoekveldHtml(veldId,placeholder||'Zoek op naam…'));
-  veld=el(veldId);
-  veld.addEventListener('input',function(){lijstZoekTermen[containerId]=veld.value;});
- }
- veld.value=lijstZoekTermen[containerId]||'';
- koppelZoekveld(veld,box,{itemSelector:'.personrow',leegTekst:'Niemand gevonden met deze naam.'})();
 }
 function kiesUitLijstModal(titel,opties,labelFn,onKies){
  if(!opties.length){
