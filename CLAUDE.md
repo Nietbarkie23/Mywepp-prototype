@@ -83,8 +83,11 @@ maandkeuze kreeg. Het logboek filtert op periode (`logboekDatum`).
 dus terug te zetten door die comment weg te halen: het scherm Bereikbaarheid
 (`bereikbaarheid`), en de knoppen Rechtensets
 (`rechtensets`) en Groepeer (`groepeer`). Die laatste twee openden allebei
-Standaardrollen, dat ook onder Overzichten staat. De AVG-knop is op die manier
-een tijd verborgen geweest en inmiddels weer teruggezet.
+Standaardrollen. Het hele kopje Overzichten is weg (`overzichten`): Wie ziet
+wie, Zoeken en AVG zijn verborgen, Groepen beheren is weggehaald (het scherm
+`admintab-groepen` bestaat nog en is alleen te bereiken via inloggen als
+systeembeheer en na Groep maken — daar zit het koppelen van groepen).
+Standaardrollen staat nu onder Bewerken, Controle onder Overig.
 
 ## Wacht op goedkeuring: tak `specificaties-rollen`
 
