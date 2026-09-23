@@ -2038,7 +2038,7 @@ function registreerOpslag(soort,gelukt){
  return gelukt;
 }
 var OPSLAGNAMEN={personen:'gebruikers en rechten',organisatie:'instituten, locaties en groepen',
- clientdata:'gegevens uit de cliënt-app',chat:'chatberichten',logboek:'het logboek'};
+ clientdata:'gegevens uit de cliënt-app',chat:'chatberichten',logboek:'het logboek',datalek:'de datalekmelding'};
 function toonOpslagStatus(){
  var balk=el('opslag-balk');if(!balk)return;
  var soorten=Object.keys(opslagMislukt);
@@ -4148,6 +4148,7 @@ async function laadDatalekken(){
 }
 function bewaarDatalek(lek){
  if(!sb)return Promise.resolve(false);
+ if(opslagGeblokkeerd())return Promise.resolve(false);
  var rij={ontdekt_op:lek.ontdekt,omschrijving:lek.omschrijving,betrokkenen:lek.betrokkenen,
   maatregelen:lek.maatregelen,gemeld_bij_ap:lek.gemeldBijAp,afgehandeld:lek.afgehandeld,wie:lek.wie,
   betrokkenen_geinformeerd:!!lek.betrokkenenGeinformeerd};
@@ -4247,7 +4248,9 @@ function openDatalekVenster(bestaand){
   logActie(bestaand?('Datalek bijgewerkt: '+wat):('Datalek vastgelegd: '+wat));
   if(!wasGemeld&&lek.gemeldBijAp)logActie('Datalek gemeld bij de Autoriteit Persoonsgegevens: '+wat);
   if(!wasGeinformeerd&&lek.betrokkenenGeinformeerd)logActie('Betrokkenen geïnformeerd over datalek: '+wat);
-  bewaarDatalek(lek);
+  /* Een datalekmelding heeft een wettelijke termijn van 72 uur; mislukt het
+     opslaan, dan moet dat zichtbaar zijn en niet stil verdwijnen. */
+  bewaarDatalek(lek).then(function(ok){registreerOpslag('datalek',ok);});
   renderDatalekken();
  });
 }
