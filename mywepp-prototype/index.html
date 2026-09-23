@@ -1377,7 +1377,18 @@ function show(id){
    account. Eén set grenzen voor allebei. */
 var MAXLEN={naam:60,mail:120,tel:25,groep:60,functie:60,titel:80,tijd:20};
 function kap(tekst,max){return String(tekst==null?'':tekst).slice(0,max);}
-function cap(s){return (s||'').trim().split(/\s+/).map(function(w){return w? w.charAt(0).toUpperCase()+w.slice(1):w;}).join(' ');}
+/* Elk woord een hoofdletter, behalve tussenvoegsels: die blijven precies zoals
+   ze zijn getypt. Eerder werd "de Vries" bij elke keer opslaan "De Vries", en
+   telde een ongewijzigd profiel daardoor als gewijzigd. Wie bewust "De" typt
+   (bijvoorbeeld een Belgische naam), houdt dat ook. */
+var TUSSENVOEGSELS=['de','der','den','van','von','het','ten','ter','te','in','op','aan','bij','uit','voor','tot','onder','over',"'t","'s","d'",'du','da','di','del','della','la','le'];
+function cap(s){return (s||'').trim().split(/\s+/).map(function(w){
+ if(!w||TUSSENVOEGSELS.indexOf(w.toLowerCase())>-1)return w;
+ /* Ook na een streepje: Jan-Willem, Smit-de Boer. */
+ return w.split('-').map(function(d){
+  return !d||TUSSENVOEGSELS.indexOf(d.toLowerCase())>-1?d:d.charAt(0).toUpperCase()+d.slice(1);
+ }).join('-');
+}).join(' ');}
 function genereerEmail(voor,achter,domein){
  function schoon(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
  var v=schoon(voor),a=schoon(achter),maxLocal=20;
@@ -2000,7 +2011,11 @@ async function syncToSupabase(){
  if(!sb)return false;
  if(laadMislukt())return false;    /* zou de voorbeeldgegevens over de echte heen schrijven */
  try{
-  var res=await sb.from('personen').upsert(people.map(personRowToDb));
+  /* Een nieuwe persoon gaat pas naar de database bij Wijzigingen doorvoeren.
+     Of iemand "nieuw" is wordt niet opgeslagen; een persoon die tussendoor
+     werd weggeschreven (dat gebeurt bij veel handelingen) was na herladen
+     dus een gewoon actief account, zonder controle en soms zonder naam. */
+  var res=await sb.from('personen').upsert(people.filter(function(p){return p._state!=='nieuw';}).map(personRowToDb));
   return registreerOpslag('personen',!res.error);
  }
  catch(e){return registreerOpslag('personen',false);}
@@ -2834,7 +2849,10 @@ function naamgenootMelding(bestaande,nieuwe){
   '<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Begrepen</button></div>');
  el('modal-snap').addEventListener('click',function(){closeModal();naarHerkomst();});
 }
-function annuleerProfiel(prefix){
+/* doel: het scherm waar de terugpijl of kruimel naartoe wil. Zonder doel
+   (de knop Annuleren) gaat het terug naar waar het profiel vandaan kwam. */
+function annuleerProfiel(prefix,doel){
+ var ga=function(){if(doel){profielHerkomst=null;show(doel);}else naarHerkomst();};
  var p=findPerson(huidigProfielId);
  var nieuwEnLeeg=p&&p._state==='nieuw';
  if(p&&(profielGewijzigd(p,prefix)||nieuwEnLeeg)){
@@ -2845,11 +2863,11 @@ function annuleerProfiel(prefix){
   el('modal-blijf').addEventListener('click',closeModal);
   el('modal-weg').addEventListener('click',function(){
    if(nieuwEnLeeg&&!p.voor&&!p.achter){people=people.filter(function(x){return x.id!==p.id;});}
-   closeModal();renderAll();naarHerkomst();
+   closeModal();renderAll();ga();
   });
   return;
  }
- naarHerkomst();
+ ga();
 }
 el('pc-annuleren').addEventListener('click',function(){annuleerProfiel('pc');});
 el('pp-annuleren').addEventListener('click',function(){annuleerProfiel('pp');});
@@ -5456,7 +5474,16 @@ document.querySelectorAll('[data-toggle]').forEach(function(b){
   if(e.key==='Enter'||e.key===' '){e.preventDefault();wissel();}
  });
 });
-document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){show(b.getAttribute('data-back'));});});
+/* De terugpijl en de kruimels in een profiel gingen direct weg, buiten
+   Annuleren om. Een net aangemaakte persoon bleef dan leeg in de lijst staan
+   en kwam zonder naam en e-mailadres in de database. Vanuit een profiel lopen
+   ze daarom via dezelfde weg als Annuleren. */
+document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){
+ var doel=b.getAttribute('data-back');
+ if(b.closest('#pp-profiel-persoon')){annuleerProfiel('pp',doel);return;}
+ if(b.closest('#pp-profiel-client')){annuleerProfiel('pc',doel);return;}
+ show(doel);
+});});
 document.querySelectorAll('[data-open]').forEach(function(b){b.addEventListener('click',function(){
  show(b.getAttribute('data-open'));
 });});
@@ -6221,6 +6248,9 @@ el('av-akkoord').addEventListener('change',checkVersturenKlaar);
    Wie in de Admin Tools werkt moest daarvoor de hele beheeromgeving uit. De
    handeling staat nu op zichzelf, zodat beide ingangen precies hetzelfde doen. */
 async function voerWijzigingenDoor(){
+ /* Vangnet: een nieuwe persoon zonder naam is nooit opgeslagen (bijvoorbeeld
+    weggeklikt via een ander tabblad). Die hoort niet als account door te gaan. */
+ people=people.filter(function(p){return !(p._state==='nieuw'&&(!p.voor||!p.achter));});
  var nieuw=people.filter(function(p){return p._state==='nieuw';}).length;
  var gewijzigd=people.filter(function(p){return p._state==='gewijzigd';}).length;
  var ontkoppeld=0,gearchiveerd=0,verplaatst=0;
