@@ -155,7 +155,15 @@ groepsnaam verdwijnt; een verwijderde groep gaat uit zijn koppeling;
 wijzigingen die nog op de opslagvertraging (600 ms) wachten worden bij
 verbergen/sluiten direct opgeslagen (`bewaarAllesNu`, keepalive via
 `sbFetch`). Tests met de nep-database: `nepdb.js`, `rondgang-db.js`,
-`clientdata-db.js`, `hernoem-herlaad.js` (poort 8734). Nagelopen en in orde:
+`clientdata-db.js`, `hernoem-herlaad.js`, `twee-beheerders.js` (poort 8734).
+
+**Meerdere beheerders tegelijk:** opslaan schrijft alleen wat deze sessie
+veranderde. Personen: per veld (`update` op id) t.o.v. `dbStandPersonen`;
+nieuwe personen in hun geheel. Instellingen: alleen gewijzigde sleutels t.o.v.
+`dbStandOrg` (`orgRijen()`). Groepen: alleen eigen mutaties (`groepMutaties`,
+`groepErbij`/`groepWeg`), nooit "wat niet in mijn lijst staat". Eén sleutel
+als `groep_gegevens` bevat alle groepen: twee beheerders die tegelijk
+verschillende groepen aanpassen overschrijven elkaar daar nog wel. Nagelopen en in orde:
 opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
 RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 

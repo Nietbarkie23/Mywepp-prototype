@@ -1940,6 +1940,9 @@ async function loadFromSupabase(){
   }
   var nieuwePeople=p.data.map(dbRowToPerson);
   people.splice.apply(people,[0,people.length].concat(nieuwePeople));
+  onthoudDbStandPersonen(people);
+  dbStandOrg={};
+  if(o&&!o.error&&o.data)o.data.forEach(function(r){dbStandOrg[r.sleutel]=JSON.stringify(r.waarde);});
   nextId=Math.max.apply(null,people.map(function(x){return x.id;}).concat([0]))+1;
   if(GROEPEN.indexOf(huidigeGroep)<0)huidigeGroep=GROEPEN[0];
   /* Groepen die uit de database komen kenden nog geen locatie of bulk-selectie. */
@@ -1948,6 +1951,10 @@ async function loadFromSupabase(){
    if(bulkSel.groepen[gr]===undefined)bulkSel.groepen[gr]=false;
   });
   verversGroepReferenties();
+  /* Instellingen die nog niet in de database stonden gelden als ongewijzigd
+     tot iemand ze echt aanpast; anders schreef de eerste opslag van elke
+     sessie ze allemaal weg, over die van een andere beheerder heen. */
+  orgRijen().forEach(function(r){if(dbStandOrg[r.sleutel]===undefined)dbStandOrg[r.sleutel]=JSON.stringify(r.waarde);});
   synchroniseerGlobaleRollen();
   await laadLogboek();
   await laadClientData();
@@ -2057,6 +2064,19 @@ async function probeerOpslagOpnieuw(){
   if(k2){k2.disabled=false;k2.textContent='Opnieuw proberen';}
  }
 }
+/* ---- Alleen wegschrijven wat deze sessie heeft veranderd ----
+   Eerst ging bij elke opslag de hele personentabel en alle instellingen mee,
+   met de stand uit het eigen geheugen. Had een tweede beheerder de pagina
+   open, dan draaide diens volgende opslag jouw wijzigingen terug, ook bij
+   mensen die hij nooit had aangeraakt (aangetoond met twee tabbladen). Nu
+   onthouden we wat er het laatst uit de database kwam of erin ging, en gaat
+   alleen mee wat daarvan afwijkt. Wijzigen twee mensen tegelijk dezelfde
+   persoon, dan wint nog steeds de laatste; dat is een echt conflict. */
+var dbStandPersonen={},dbStandOrg={};
+function onthoudDbStandPersonen(lijst){
+ dbStandPersonen={};
+ lijst.forEach(function(p){dbStandPersonen[p.id]=JSON.stringify(personRowToDb(p));});
+}
 async function syncToSupabase(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;    /* zou de voorbeeldgegevens over de echte heen schrijven */
@@ -2065,8 +2085,27 @@ async function syncToSupabase(){
      Of iemand "nieuw" is wordt niet opgeslagen; een persoon die tussendoor
      werd weggeschreven (dat gebeurt bij veel handelingen) was na herladen
      dus een gewoon actief account, zonder controle en soms zonder naam. */
-  var res=await sb.from('personen').upsert(people.filter(function(p){return p._state!=='nieuw';}).map(personRowToDb));
-  return registreerOpslag('personen',!res.error);
+  /* Bestaande personen: alleen de velden die anders zijn dan wat er het laatst
+     uit de database kwam. Een hele rij terugschrijven zette ook velden terug
+     die een ander intussen had gewijzigd. Nieuwe personen gaan in hun geheel. */
+  var nieuweRijen=[],updates=[];
+  people.filter(function(p){return p._state!=='nieuw';}).map(personRowToDb).forEach(function(r){
+   var oud=dbStandPersonen[r.id],js=JSON.stringify(r);
+   if(oud===js)return;
+   if(oud===undefined){nieuweRijen.push(r);return;}
+   var vorig=JSON.parse(oud),diff={};
+   Object.keys(r).forEach(function(k){if(JSON.stringify(r[k])!==JSON.stringify(vorig[k]))diff[k]=r[k];});
+   updates.push({rij:r,diff:diff});
+  });
+  if(!nieuweRijen.length&&!updates.length)return registreerOpslag('personen',true);
+  var fout=false;
+  if(nieuweRijen.length){
+   var res=await sb.from('personen').upsert(nieuweRijen);
+   if(res.error)fout=true; else nieuweRijen.forEach(function(r){dbStandPersonen[r.id]=JSON.stringify(r);});
+  }
+  var uitkomsten=await Promise.all(updates.map(function(u){return sb.from('personen').update(u.diff).eq('id',u.rij.id);}));
+  uitkomsten.forEach(function(res,i){if(res.error)fout=true; else dbStandPersonen[updates[i].rij.id]=JSON.stringify(updates[i].rij);});
+  return registreerOpslag('personen',!fout);
  }
  catch(e){return registreerOpslag('personen',false);}
 }
@@ -3535,6 +3574,7 @@ function voegGroepToe(naamVal){
  if(!naamVal)return false;
  if(GROEPEN.indexOf(naamVal)>-1){alert('Er bestaat al een groep met deze naam.');return false;}
  GROEPEN.push(naamVal);
+ groepErbij(naamVal);
  groepLocatie[naamVal]=LOCATIES[0]||null;
  bulkSel.groepen[naamVal]=false;
  verversGroepReferenties();
@@ -3555,6 +3595,7 @@ var groepBewerkType='medewerker';
    het verplaatsen naar dezelfde sleutel de waarde. */
 function hernoemGroepOveral(g,nieuw){
  GROEPEN[GROEPEN.indexOf(g)]=nieuw;
+ groepWeg(g);groepErbij(nieuw);
  people.forEach(function(p){
   var idx=p.groepen.indexOf(g);
   if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
@@ -3690,6 +3731,7 @@ function verwijderGroep(g){
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-bevestig').addEventListener('click',function(){
   GROEPEN.splice(GROEPEN.indexOf(g),1);
+  groepWeg(g);
   gearchiveerdeGroepen.push(g);
   /* Anders bleef de partnergroep "gekoppeld aan" een groep die niet meer
      bestaat. Een koppeling van twee valt daarmee helemaal weg. */
@@ -3713,6 +3755,7 @@ function herstelGroep(g){
  var vrijeNaam=g;
  if(GROEPEN.indexOf(vrijeNaam)>-1)vrijeNaam=g+' (hersteld)';
  GROEPEN.push(vrijeNaam);
+ groepErbij(vrijeNaam);
  groepLocatie[vrijeNaam]=LOCATIES[0]||null;
  bulkSel.groepen[vrijeNaam]=false;
  verversGroepReferenties();
@@ -5248,6 +5291,9 @@ if(el('sb-tel'))el('sb-tel').addEventListener('input',function(){
 });
 /* Eerst toevoegen, daarna pas opruimen: zo staat de tabel nooit leeg als een van
    beide stappen faalt (een delete-alles-dan-insert kon alle groepen wissen). */
+var groepMutaties={erbij:[],weg:[]};
+function groepErbij(n){groepMutaties.weg=groepMutaties.weg.filter(function(x){return x!==n;});if(groepMutaties.erbij.indexOf(n)<0)groepMutaties.erbij.push(n);}
+function groepWeg(n){groepMutaties.erbij=groepMutaties.erbij.filter(function(x){return x!==n;});if(groepMutaties.weg.indexOf(n)<0)groepMutaties.weg.push(n);}
 async function syncGroepenToSupabase(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;
@@ -5255,12 +5301,17 @@ async function syncGroepenToSupabase(){
   var bestaand=await sb.from('groepen').select('id,naam');
   if(bestaand.error||!bestaand.data)return false;
   var bestaandeNamen=bestaand.data.map(function(r){return r.naam;});
-  var toevoegen=GROEPEN.filter(function(n){return bestaandeNamen.indexOf(n)<0;});
+  /* Alleen de groepen die in deze sessie zijn aangemaakt, hernoemd of
+     verwijderd. Het verschil met de eigen lijst gebruiken verwijderde een
+     groep die een andere beheerder net had aangemaakt. Een lege tabel wordt
+     wel in één keer gevuld (eerste keer opslaan). */
+  var erbij=bestaandeNamen.length?groepMutaties.erbij:GROEPEN.slice();
+  var toevoegen=erbij.filter(function(n){return GROEPEN.indexOf(n)>-1&&bestaandeNamen.indexOf(n)<0;});
   if(toevoegen.length){
    var ins=await sb.from('groepen').insert(toevoegen.map(function(n){return {naam:n};}));
    if(ins.error)return false;
   }
-  var overbodig=bestaand.data.filter(function(r){return GROEPEN.indexOf(r.naam)<0;}).map(function(r){return r.id;});
+  var overbodig=bestaand.data.filter(function(r){return groepMutaties.weg.indexOf(r.naam)>-1&&GROEPEN.indexOf(r.naam)<0;}).map(function(r){return r.id;});
   if(overbodig.length){
    /* Eerst de personen wegschrijven, dan pas een groepsnaam weghalen. Bij
       hernoemen verwezen de personen in de database anders nog naar de oude
@@ -5271,17 +5322,16 @@ async function syncGroepenToSupabase(){
    var del=await sb.from('groepen').delete().in('id',overbodig);
    if(del.error)return false;
   }
+  groepMutaties={erbij:[],weg:[]};
   await syncOrganisatieData();
   return true;
  }catch(e){return false;}
 }
 /* Instituten, locaties en hun koppelingen leefden alleen in het geheugen en waren
    na een herlaad weg. Ze staan nu in organisatie_data (key/value). */
-async function syncOrganisatieData(){
- if(!sb)return false;
- if(opslagGeblokkeerd())return false;
- try{
-  var res=await sb.from('organisatie_data').upsert([
+/* Alle instellingen die in organisatie_data staan, als rijen. */
+function orgRijen(){
+ return [
    {sleutel:'instituten',waarde:INSTITUTEN},
    {sleutel:'locaties',waarde:LOCATIES},
    {sleutel:'locatie_instituut',waarde:locatieInstituut},
@@ -5301,7 +5351,17 @@ async function syncOrganisatieData(){
    {sleutel:'org_default',waarde:orgDefault},
    {sleutel:'groep_rollen',waarde:groupOverride},
    {sleutel:'toegangscontrole',waarde:TOEGANGSCONTROLE}
-  ],{onConflict:'sleutel'});
+  ];
+}
+async function syncOrganisatieData(){
+ if(!sb)return false;
+ if(opslagGeblokkeerd())return false;
+ try{
+  var alle=orgRijen();
+  var rijen=alle.filter(function(r){return dbStandOrg[r.sleutel]!==JSON.stringify(r.waarde);});
+  if(!rijen.length)return registreerOpslag('organisatie',true);
+  var res=await sb.from('organisatie_data').upsert(rijen,{onConflict:'sleutel'});
+  if(!res.error)rijen.forEach(function(r){dbStandOrg[r.sleutel]=JSON.stringify(r.waarde);});
   return registreerOpslag('organisatie',!res.error);
  }catch(e){return registreerOpslag('organisatie',false);}
 }
