@@ -741,7 +741,13 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="rechtensets">Rechtensets</button>
       rechtensets -->
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
+      <!-- groepeer: knop op verzoek verborgen. Niet verwijderen — hij opende
+           Standaardrollen, net als de eveneens verborgen knop Rechtensets, en
+           zijn naam sloeg op het groeperen van meerdere groepen: precies de
+           keuzerij die uit dat scherm is gehaald. Terugzetten = deze comment
+           weghalen.
       <button type="button" class="abtn" data-adm="groepeer">Groepeer</button>
+      groepeer -->
       <button type="button" class="abtn" data-adm="groepHerstellen">Groep<br>herstellen</button>
       <button type="button" class="abtn" data-adm="clientHerstellen">Cliënt<br>herstellen</button>
       <button type="button" class="abtn" data-adm="persoonHerstellen">(Non)prof.<br>herstellen</button>
@@ -5973,7 +5979,7 @@ function renderCaVandaag(){
   : '<p class="empty-msg" style="padding:10px 0">Niets ingesteld.</p>';
 
  var res=ensureMaaltijdReserveringen(caClientId);
- var aan=!!res[nu.getDate()];
+ var aan=!!res[maaltijdSleutel(nu.getFullYear(),nu.getMonth(),nu.getDate())];
  html+='<div class="sublistlabel">Maaltijd</div>';
  html+='<div class="infocard-row"><span>Eet vandaag mee</span><span style="color:'+(aan?'var(--moss)':'var(--brick)')+'">'+(aan?'ja':'nee')+'</span></div>';
 
