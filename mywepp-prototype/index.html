@@ -343,6 +343,20 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
 .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .personrow[hidden]{display:none}
 .zoekkeuze{min-width:0}
+.combo{min-width:0}
+.combo-invoer{width:100%;display:block}
+/* De lijst zweeft over de inhoud. Stond hij ertussen, dan klapte hij dicht
+   zodra je op Doorgaan klikte, schoof de knop omhoog en miste je klik. */
+.combo-veld{position:relative}
+.combo-lijst{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);max-height:230px;overflow:auto;box-shadow:var(--shadow)}
+.combo-lijst[hidden]{display:none}
+.combo-optie{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;border-radius:0;padding:8px 11px;cursor:pointer;font:inherit;font-size:13.5px;color:var(--ink)}
+.combo-optie:last-child{border-bottom:0}
+.combo-optie .combo-detail{display:block;font-size:12px;color:var(--ink-soft);margin-top:1px}
+.combo-optie.hl,.combo-optie:hover{background:var(--accent-bg)}
+.combo-optie[aria-selected="true"]{font-weight:600}
+.combo-hint{margin:5px 0 0}
+.combo-hint.fout{color:var(--brick)}
 .zoekkeuze .zoekveld,.zoekkeuze select{width:100%;display:block}
 .zoekkeuze .zoekveld{margin-bottom:6px}
 .logkop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -2903,32 +2917,30 @@ function openRechtenOvernemen(){
     opgebouwd: alleen het overzicht in dit venster verandert. Zo blijft wat je
     in het profiel al had ingevuld gewoon staan. */
  var concept=leesProfielConcept();
- var lijst=bronnen.map(function(b){
-  return '<option value="'+b.id+'">'+esc(naam(b))+' — '+telRechtenInGroep(b,doel.type)+' recht(en) in deze groep</option>';
- }).join('');
  openModal('<h3>Rechten overnemen van een collega</h3><div class="msec">'+
   '<p>Kies een collega die hetzelfde werk doet. <b>'+esc(naam(doel))+'</b> krijgt dan in <b>'+esc(huidigeGroep)+'</b> precies dezelfde rechten als die collega.</p>'+
   '<p class="mini">Rechten die de collega niet heeft, vervallen ook bij '+esc(naam(doel))+'. Andere groepen blijven zoals ze zijn.</p></div>'+
-  '<fieldset class="admblok"><legend>Collega</legend><div class="admveld"><label for="modal-bron">Overnemen van<span class="verplicht">*</span></label>'+
-  '<div class="zoekkeuze">'+zoekveldHtml('modal-bron-zoek','Zoek een collega…')+
-  '<select class="admin" id="modal-bron">'+lijst+'</select></div></div>'+
+  '<fieldset class="admblok"><legend>Collega</legend><div class="admveld"><label for="modal-bron-zoek">Overnemen van<span class="verplicht">*</span></label>'+
+  zoekKeuzeHtml('modal-bron','Typ de naam van een collega…')+'</div>'+
   '<div class="overzicht-rechten" id="modal-overzicht" aria-live="polite"></div></fieldset>'+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
   '<button type="button" class="primary" id="modal-opslaan">Rechten overnemen</button></div>');
- var uitgeklapt=false;
+ var uitgeklapt=false,bronKeuze=null;
  function toonOverzicht(){
-  var bron=findPerson(+el('modal-bron').value);
+  var bron=bronKeuze&&bronKeuze.waarde()!==null?findPerson(bronKeuze.waarde()):null;
   el('modal-opslaan').disabled=!bron;
-  el('modal-overzicht').innerHTML=bron?rechtenOverzichtHtml(doel,bron,uitgeklapt):'<p class="mini" style="margin:0">Geen collega gevonden.</p>';
+  el('modal-overzicht').innerHTML=bron?rechtenOverzichtHtml(doel,bron,uitgeklapt):'<p class="mini" style="margin:0">Kies een collega om te zien wat er verandert.</p>';
   var knop=el('modal-toonmeer');
   if(knop)knop.addEventListener('click',function(){uitgeklapt=!uitgeklapt;toonOverzicht();});
  }
- el('modal-bron').addEventListener('change',function(e){e.preventDefault();uitgeklapt=false;toonOverzicht();});
- koppelZoekveld(el('modal-bron-zoek'),el('modal-bron'),{leegTekst:'Geen collega met deze naam.',naFilter:function(){uitgeklapt=false;toonOverzicht();}});
+ bronKeuze=koppelZoekKeuze('modal-bron',bronnen.map(function(b){
+  var n=telRechtenInGroep(b,doel.type);
+  return {waarde:b.id,label:naam(b),detail:(b.mail||'geen e-mailadres')+' · '+n+' recht'+(n===1?'':'en')+' in deze groep'};
+ }),{leegTekst:'Geen collega met deze naam.',naKeuze:function(){uitgeklapt=false;toonOverzicht();}});
  toonOverzicht();
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
-  var bron=findPerson(+el('modal-bron').value);
+  var bron=bronKeuze.waarde()!==null?findPerson(bronKeuze.waarde()):null;
   if(!bron)return;
   var aantal=neemRechtenOver(doel,bron);
   closeModal();
@@ -4140,67 +4152,144 @@ el('export-iedereen').addEventListener('click',function(){
 });
 
 /* ============== ADMIN-KNOPPENBALK (uitbreiding op Admin Tools) ============== */
-/* ---- Herbruikbaar zoekveld ----
-   Eén component voor alle lijsten waarin je iemand of iets moet kiezen. Zonder
-   accenten en hoofdletters vergelijken, want "Cliënt" moet ook op "client"
-   gevonden worden. Werkt op twee soorten doelen:
-   - een <select>: de opties worden opnieuw opgebouwd (een verborgen <option>
-     werkt niet in elke browser);
-   - een container met rijen (itemSelector): niet-passende rijen gaan op hidden.
-   naFilter wordt aangeroepen na elke filterronde, zodat bijvoorbeeld een
-   overzicht naast de lijst kan meebewegen met wat er nu gekozen is. */
+/* ---- Zoeken in een lijst met rijen ----
+   Voor lijsten die op het scherm blijven staan (het groepsbeheer). Keuzes
+   maken gaat via de zoekkeuze hieronder. Zonder accenten en hoofdletters
+   vergelijken, want "Özdemir" moet ook op "ozdemir" gevonden worden. */
 function zoekTekst(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
-function zoekveldHtml(id,placeholder){
- var ph=placeholder||'Zoeken…';
- return '<input type="search" class="zoekveld" id="'+id+'" placeholder="'+esc(ph)+'" aria-label="'+esc(ph)+'" autocomplete="off">';
-}
 function koppelZoekveld(input,doel,opties){
  opties=opties||{};
  if(!input||!doel)return function(){};
  var leeg=document.createElement('p');
  leeg.className='empty-msg zoek-leeg';leeg.hidden=true;
  leeg.textContent=opties.leegTekst||'Niets gevonden.';
- var isSelect=doel.tagName==='SELECT';
- var alleOpties=isSelect?Array.prototype.map.call(doel.options,function(o){return {value:o.value,label:o.textContent};}):null;
- if(isSelect)doel.parentNode.insertBefore(leeg,doel.nextSibling); else doel.appendChild(leeg);
+ doel.appendChild(leeg);
  function filter(){
   var q=zoekTekst(input.value),n=0;
-  if(isSelect){
-   var was=doel.value;
-   var passend=alleOpties.filter(function(o){return !q||zoekTekst(o.label).indexOf(q)>-1;});
-   doel.innerHTML=passend.map(function(o){return '<option value="'+esc(o.value)+'">'+esc(o.label)+'</option>';}).join('');
-   if(passend.some(function(o){return o.value===was;}))doel.value=was;
-   n=passend.length;
-   doel.disabled=!n;
-  }else{
-   Array.prototype.forEach.call(doel.querySelectorAll(opties.itemSelector||'[data-zoek]'),function(it){
-    var bron=it.getAttribute('data-zoek')||(it.querySelector('.naam')||it).textContent;
-    var ok=!q||zoekTekst(bron).indexOf(q)>-1;
-    it.hidden=!ok;if(ok)n++;
-   });
-  }
+  Array.prototype.forEach.call(doel.querySelectorAll(opties.itemSelector||'[data-zoek]'),function(it){
+   var bron=it.getAttribute('data-zoek')||(it.querySelector('.naam')||it).textContent;
+   var ok=!q||zoekTekst(bron).indexOf(q)>-1;
+   it.hidden=!ok;if(ok)n++;
+  });
   leeg.hidden=n>0;
-  if(opties.naFilter)opties.naFilter(n);
  }
- /* Een lijst die opnieuw wordt opgebouwd koppelt opnieuw; de oude filter moet
-    er dan af, anders draaien er na tien wijzigingen tien filters tegelijk. */
+ /* De lijst wordt telkens opnieuw opgebouwd en koppelt dan opnieuw; de oude
+    filter moet er dan af, anders draaien er straks tien tegelijk. */
  if(input._zoekFilter)input.removeEventListener('input',input._zoekFilter);
  input._zoekFilter=filter;
  input.addEventListener('input',filter);
  return filter;
 }
-function kiesUitLijstModal(titel,opties,labelFn,onKies){
+/* ---- Zoekkeuze: één veld om te typen, met een lijst eronder die meeverandert ----
+   Eerst waren dat twee dingen (een zoekveld en een los keuzemenu). De lijst
+   toont naast de naam ook een detail (e-mailadres en groep, of de locatie
+   van een groep): bij twee mensen met dezelfde naam zie je zo welke je kiest.
+   Veiligheid bij naamgenoten: na het typen is er alleen vanzelf een keuze als
+   er precies één treffer is. Zijn het er meer, dan moet je er zelf één
+   aanklikken; tot die tijd staat de knop om door te gaan uit.
+   items: [{waarde,label,detail}] · opties: {start, naKeuze(waarde)} */
+function zoekKeuzeHtml(id,placeholder){
+ var ph=placeholder||'Typ om te zoeken…';
+ return '<div class="combo" id="'+id+'">'+
+  '<div class="combo-veld"><input type="text" class="admin combo-invoer" id="'+id+'-zoek" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+id+'-lijst" autocomplete="off" placeholder="'+esc(ph)+'">'+
+  '<div class="combo-lijst" id="'+id+'-lijst" role="listbox" hidden></div></div>'+
+  '<p class="mini combo-hint" id="'+id+'-hint" hidden></p></div>';
+}
+function koppelZoekKeuze(id,items,opties){
+ opties=opties||{};
+ var invoer=el(id+'-zoek'),lijst=el(id+'-lijst'),hint=el(id+'-hint');
+ var gekozen=null,treffers=items.slice(),hl=0;
+ var itemVan=function(w){return items.filter(function(x){return x.waarde===w;})[0]||null;};
+ var aantalMetLabel=function(label){return items.filter(function(x){return x.label===label;}).length;};
+ function zetHint(tekst,fout){hint.textContent=tekst||'';hint.hidden=!tekst;hint.classList.toggle('fout',!!fout);}
+ function toonGekozen(){
+  var it=itemVan(gekozen);
+  /* Het detail van de keuze blijft zichtbaar, zodat je ook na het sluiten
+     van de lijst ziet wélke Sofie Mulder je hebt. */
+  if(it)zetHint(it.detail?('Gekozen: '+it.label+' · '+it.detail):'',false);
+ }
+ function teken(){
+  lijst.innerHTML=treffers.map(function(it,i){
+   var dubbel=aantalMetLabel(it.label)>1;
+   return '<button type="button" class="combo-optie'+(i===hl?' hl':'')+'" role="option" data-idx="'+i+'" aria-selected="'+(it.waarde===gekozen)+'">'+
+    esc(it.label)+(dubbel?' <span class="statuschip">zelfde naam</span>':'')+
+    (it.detail?'<span class="combo-detail">'+esc(it.detail)+'</span>':'')+'</button>';
+  }).join('');
+  Array.prototype.forEach.call(lijst.querySelectorAll('.combo-optie'),function(b){
+   /* mousedown in plaats van click: anders sluit de blur van het invoerveld
+      de lijst voordat de klik aankomt. */
+   b.addEventListener('mousedown',function(e){e.preventDefault();kies(treffers[+b.getAttribute('data-idx')]);});
+  });
+ }
+ function open(){lijst.hidden=!treffers.length;invoer.setAttribute('aria-expanded',String(!lijst.hidden));}
+ function sluit(){lijst.hidden=true;invoer.setAttribute('aria-expanded','false');}
+ function kies(it){
+  if(!it)return;
+  gekozen=it.waarde;invoer.value=it.label;
+  sluit();toonGekozen();
+  if(opties.naKeuze)opties.naKeuze(gekozen);
+ }
+ function filter(){
+  var q=zoekTekst(invoer.value);
+  treffers=items.filter(function(it){return !q||zoekTekst(it.label+' '+(it.detail||'')).indexOf(q)>-1;});
+  hl=0;
+  gekozen=treffers.length===1?treffers[0].waarde:null;
+  teken();open();
+  if(!treffers.length)zetHint(opties.leegTekst||'Niets gevonden.',true);
+  else if(gekozen===null)zetHint('Meerdere treffers — klik de juiste aan.',false);
+  else toonGekozen();
+  if(opties.naKeuze)opties.naKeuze(gekozen);
+ }
+ invoer.addEventListener('input',filter);
+ /* Openen bij focus én bij klikken: het venster zet de cursor bij het openen
+    al in dit veld, en een klik in een veld dat al actief is geeft geen nieuwe
+    focus — dan zou de lijst dicht blijven. */
+ function openVol(){if(!lijst.hidden)return;invoer.select();treffers=items.slice();hl=0;teken();open();}
+ invoer.addEventListener('focus',openVol);
+ invoer.addEventListener('click',openVol);
+ invoer.addEventListener('blur',function(){
+  sluit();
+  var it=itemVan(gekozen);
+  if(it)invoer.value=it.label;
+ });
+ invoer.addEventListener('keydown',function(e){
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+   e.preventDefault();
+   if(lijst.hidden){open();return;}
+   hl=Math.max(0,Math.min(treffers.length-1,hl+(e.key==='ArrowDown'?1:-1)));teken();
+   var h=lijst.querySelector('.hl');if(h&&h.scrollIntoView)h.scrollIntoView({block:'nearest'});
+  }else if(e.key==='Enter'){
+   if(!lijst.hidden&&treffers[hl]){e.preventDefault();kies(treffers[hl]);}
+  }else if(e.key==='Escape'){sluit();}
+ });
+ var start=opties.start!==undefined?itemVan(opties.start):items[0];
+ if(start){gekozen=start.waarde;invoer.value=start.label;toonGekozen();}
+ return {waarde:function(){return gekozen;},kies:function(w){kies(itemVan(w));}};
+}
+/* Wat er naast een naam in een keuzelijst staat. Voor personen: soort, e-mail
+   en groep(en); voor groepen: de locatie. Genoeg om naamgenoten uit elkaar
+   te houden. */
+function standaardDetail(o){
+ if(o&&typeof o==='object'&&o.type){
+  return [TYPELABEL[o.type],o.mail||'geen e-mailadres',(o.groepen||[]).join(', ')].filter(Boolean).join(' · ');
+ }
+ if(typeof o==='string'&&GROEPEN.indexOf(o)>-1&&groepLocatie[o])return 'locatie: '+groepLocatie[o];
+ return '';
+}
+function kiesUitLijstModal(titel,opties,labelFn,onKies,detailFn){
  if(!opties.length){
   openModal('<h3>'+esc(titel)+'</h3><div class="msec"><p>Er is niets om uit te kiezen.</p></div><div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
   el('modal-snap').addEventListener('click',closeModal);
   return;
  }
- openModal('<h3>'+esc(titel)+'</h3><fieldset class="admblok"><legend>Keuze</legend><div class="admveld"><label for="modal-kies-lijst">Kies uit de lijst<span class="verplicht">*</span></label><div class="zoekkeuze">'+zoekveldHtml('modal-kies-zoek','Zoeken…')+'<select class="admin" id="modal-kies-lijst">'+opties.map(function(o,i){return '<option value="'+i+'">'+esc(labelFn(o))+'</option>';}).join('')+'</select></div></div></fieldset><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
- koppelZoekveld(el('modal-kies-zoek'),el('modal-kies-lijst'),{leegTekst:'Niets gevonden.',naFilter:function(n){el('modal-opslaan').disabled=!n;}});
+ openModal('<h3>'+esc(titel)+'</h3><fieldset class="admblok"><legend>Keuze</legend><div class="admveld"><label for="modal-kies-zoek">Kies uit de lijst<span class="verplicht">*</span></label>'+zoekKeuzeHtml('modal-kies','Typ om te zoeken…')+'</div></fieldset><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Doorgaan</button></div>');
+ var detail=detailFn||standaardDetail;
+ var keuze=koppelZoekKeuze('modal-kies',opties.map(function(o,i){return {waarde:i,label:labelFn(o),detail:detail(o)};}),
+  {naKeuze:function(w){el('modal-opslaan').disabled=(w===null);}});
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-opslaan').addEventListener('click',function(){
-  if(el('modal-kies-lijst').value==='')return;
-  var idx=+el('modal-kies-lijst').value;
+  if(keuze.waarde()===null)return;
+  var idx=keuze.waarde();
   closeModal();
   onKies(opties[idx]);
  });
