@@ -3042,12 +3042,27 @@ function hernoemGroep(g){
  groepBewerkType='medewerker';
  var werk={medewerker:effectiveFor(g,'medewerker').data,naaste:effectiveFor(g,'naaste').data};
  var partners=partnersVan(g);
- openModal('<h3>Groep bewerken</h3>'+
+ /* Koppelen gebeurt hier, bij de groep zelf. De naam van de groep die je
+    bewerkt staat in de titel en in de zin boven het keuzemenu, en die groep
+    staat zelf niet in het menu: zo koppel je nooit per ongeluk de verkeerde. */
+ var koppelOpties=GROEPEN.filter(function(x){return clusterVan(g).indexOf(x)<0;});
+ var koppelBlok='<fieldset class="admblok"><legend>Gekoppelde groep</legend>'+
+  '<p class="mini" style="margin:0 0 8px">Je bewerkt <b>'+esc(g)+'</b>. Gekoppelde groepen hebben dezelfde medewerkers; cliënten en naasten blijven per groep.</p>'+
+  (partners.length
+   ? '<p style="margin:0 0 6px">Nu gekoppeld aan: <b>'+partners.map(esc).join('</b>, <b>')+'</b></p>'+
+     '<label class="contactcheck" style="margin:0 0 10px"><input type="checkbox" id="modal-groep-ontkoppel">Koppeling van '+esc(g)+' opheffen</label>'
+   : '<p style="margin:0 0 6px">Nu niet gekoppeld.</p>')+
+  '<div class="admveld"><label for="modal-groep-koppel">Koppelen aan</label><select class="admin" id="modal-groep-koppel">'+
+   '<option value="">'+(partners.length?'Geen extra groep':'Niet koppelen')+'</option>'+
+   koppelOpties.map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join('')+
+  '</select></div></fieldset>';
+ openModal('<h3>Groep bewerken: '+esc(g)+'</h3>'+
   (partners.length?'<div class="admwaarschuwing"><b>Gekoppelde groep</b><p class="mini" style="margin:0">Deze groep deelt haar team met <b>'+partners.map(esc).join('</b>, <b>')+'</b>. Wat je hier voor medewerkers instelt, geldt alleen voor deze groep — maar de medewerkers zelf zijn dezelfde.</p></div>':'')+
   '<fieldset class="admblok"><legend>Groep</legend>'+
   '<div class="admveld"><label for="modal-groep-naam">Naam<span class="verplicht">*</span></label><input class="admin" id="modal-groep-naam" value="'+esc(g)+'"></div>'+
   '<div class="admveld"><label for="modal-groep-locatie">Locatie</label><select class="admin" id="modal-groep-locatie">'+LOCATIES.map(function(l){return '<option'+(l===groepLocatie[g]?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></div>'+
   '</fieldset>'+
+  koppelBlok+
   '<fieldset class="admblok"><legend>Standaardrollen in deze groep</legend>'+
   '<p class="mini" style="margin:0 0 10px">Wat iemand hier standaard mag. Laat je dit staan, dan volgt de groep de organisatiestandaard uit Standaardrollen.</p>'+
   '<div class="typetabs" id="modal-groep-typetabs">'+
@@ -3066,6 +3081,12 @@ function hernoemGroep(g){
   rechtenRows(el('modal-groep-rechten-inner'),groepBewerkType,werk[groepBewerkType],toonRechten);
  };
  toonRechten();
+ /* Opheffen en een nieuwe koppeling tegelijk zou twee bevestigingen achter
+    elkaar geven; één ding per keer houdt het overzichtelijk. */
+ if(el('modal-groep-ontkoppel'))el('modal-groep-ontkoppel').addEventListener('change',function(){
+  el('modal-groep-koppel').disabled=this.checked;
+  if(this.checked)el('modal-groep-koppel').value='';
+ });
  Array.prototype.forEach.call(el('modal-groep-typetabs').querySelectorAll('.typetab'),function(b){
   b.addEventListener('click',function(){
    Array.prototype.forEach.call(el('modal-groep-typetabs').querySelectorAll('.typetab'),function(x){x.classList.remove('on');});
@@ -3080,6 +3101,8 @@ function hernoemGroep(g){
  el('modal-opslaan').addEventListener('click',function(){
   var nieuw=kap(el('modal-groep-naam').value.trim(),MAXLEN.groep);
   var nieuweLocatie=el('modal-groep-locatie').value;
+  var koppelAan=el('modal-groep-koppel').value;
+  var ontkoppelen=!!(el('modal-groep-ontkoppel')&&el('modal-groep-ontkoppel').checked);
   if(!nieuw)return;
   if(nieuw!==g&&GROEPEN.indexOf(nieuw)>-1){alert('Er bestaat al een groep met deze naam.');return;}
   var hernoemd=nieuw!==g;
@@ -3093,6 +3116,9 @@ function hernoemGroep(g){
     if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
    });
    if(groupOverride[g]){groupOverride[nieuw]=groupOverride[g];delete groupOverride[g];}
+   /* Koppelingen staan op groepsnaam. Zonder dit viel een hernoemde groep
+      stilletjes uit zijn koppeling. */
+   groepKoppelingen=groepKoppelingen.map(function(k){return k.map(function(x){return x===g?nieuw:x;});});
    bulkSel.groepen[nieuw]=bulkSel.groepen[g]||false;delete bulkSel.groepen[g];
    delete groepLocatie[g];
    if(huidigeGroep===g)huidigeGroep=nieuw;
@@ -3123,6 +3149,11 @@ function hernoemGroep(g){
   if(hernoemd)logActie('Groep "'+g+'" hernoemd naar "'+nieuw+'"');
   if(locatieGewijzigd)logActie('Locatie van groep "'+nieuw+'" gewijzigd naar "'+nieuweLocatie+'"');
   if(rolwijzigingen.length)logActie('Standaardrollen van groep "'+nieuw+'" gewijzigd voor '+rolwijzigingen.join(' en '));
+  if(hernoemd)syncOrganisatieData();
+  /* Eerst is de rest opgeslagen; de koppeling vraagt daarna nog om een eigen
+     bevestiging, omdat hij medewerkers over groepen heen verplaatst. */
+  if(ontkoppelen)ontkoppelGroep(nieuw);
+  else if(koppelAan&&GROEPEN.indexOf(koppelAan)>-1)koppelGroepen(nieuw,koppelAan);
   sbBevestig(hernoemd?('Groep hernoemd naar "'+nieuw+'".')
    :(rolwijzigingen.length?('Standaardrollen van "'+nieuw+'" bijgewerkt.')
    :(locatieGewijzigd?('Locatie van "'+nieuw+'" bijgewerkt.'):('Niets gewijzigd aan "'+nieuw+'".'))));
@@ -4440,6 +4471,25 @@ function koppelGroepen(a,b){
    syncOrganisatieData();syncToSupabase();
    renderSysteembeheer();renderAll();
    el('sb-koppel-bevestiging').innerHTML='<div class="bevestiging reveal">'+esc(samen.join(' + '))+' werken nu met hetzelfde team.</div>';
+   if(el('admintab-groepen').hidden)openMelding('Groepen gekoppeld',samen.join(' + ')+' werken nu met hetzelfde team.');
+  });
+}
+/* Eén groep uit zijn koppeling halen. Bij twee groepen is dat hetzelfde als de
+   hele koppeling opheffen; bij drie of meer blijven de andere gekoppeld. */
+function ontkoppelGroep(g){
+ var i=-1;
+ groepKoppelingen.forEach(function(k,idx){if(k.indexOf(g)>-1)i=idx;});
+ if(i<0)return;
+ var cluster=groepKoppelingen[i],rest=cluster.filter(function(x){return x!==g;});
+ bevestigModal('Koppeling opheffen',
+  '<p><b>'+esc(g)+'</b> krijgt weer een eigen team en is niet meer gekoppeld aan <b>'+rest.map(esc).join('</b>, <b>')+'</b>.</p>'+
+  '<p>De medewerkers die nu in '+esc(g)+' staan, blijven daar staan. Wat stopt, is het automatisch delen: wie hierna wordt toegevoegd komt alleen in de groep waar je hem aanmaakt.</p>',
+  'Ja, opheffen',function(){
+   if(rest.length>1)groepKoppelingen[i]=rest; else groepKoppelingen.splice(i,1);
+   logActie('Koppeling opgeheven tussen '+g+' en '+rest.join(' + '));
+   syncOrganisatieData();
+   renderSysteembeheer();renderAll();
+   openMelding('Koppeling opgeheven',g+' deelt geen medewerkers meer automatisch met '+rest.join(', ')+'.');
   });
 }
 function ontkoppelCluster(i){
