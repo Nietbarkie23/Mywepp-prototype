@@ -712,6 +712,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="groepBewerken">Groep<br>bewerken</button>
       <button type="button" class="abtn" data-adm="clientBewerken">Cliënt<br>bewerken</button>
       <button type="button" class="abtn" data-adm="persoonBewerken">(Non)prof.<br>bewerken</button>
+      <!-- Standaardrollen staat bij Bewerken: je past er de rollen van groepen mee
+           aan, het is geen overzicht. -->
+      <button type="button" class="abtn tab on" data-admintab="bulk">Standaard-<br>rollen</button>
     </div>
     <div class="adminbar-group"><span class="adminbar-kop">Verwijderen</span>
       <button type="button" class="abtn danger" data-adm="instituutVerwijderen">Instituut<br>verwijderen</button>
@@ -721,16 +724,21 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn danger" data-adm="persoonVerwijderen">(Non)prof.<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="uitDienst">Uit<br>dienst</button>
     </div>
-    <div class="adminbar-group adminbar-breed"><span class="adminbar-kop">Overzichten</span>
-      <button type="button" class="abtn tab on" data-admintab="bulk">Standaard-<br>rollen</button>
-      <button type="button" class="abtn tab" data-admintab="groepen">Groepen<br>beheren</button>
-      <button type="button" class="abtn tab" data-admintab="controle">Controle <span class="countchip" id="controle-teller"></span></button>
+    <!-- overzichten: de hele groep Overzichten is op verzoek uit de balk.
+         Standaardrollen staat nu bij Bewerken en Controle bij Overig.
+         - Groepen beheren is weggehaald. Het scherm (admintab-groepen) staat nog
+           in de code, want daar zitten het koppelen van groepen en het nummer van
+           systeembeheer; die zijn zonder deze knop niet te bereiken.
+         - Wie ziet wie, Zoeken en AVG zijn verborgen. Niet verwijderen —
+           terugzetten = de knoppen hieronder uit deze comment halen en de groep
+           Overzichten weer openen.
       <button type="button" class="abtn tab" data-admintab="matrix">Wie ziet<br>wie</button>
       <button type="button" class="abtn tab" data-admintab="zoeken">Zoeken</button>
       <button type="button" class="abtn tab" data-admintab="datalek">AVG <span class="countchip" id="datalek-teller"></span></button>
-    </div>
+    overzichten -->
     <div class="adminbar-group"><span class="adminbar-kop">Overig</span>
       <button type="button" class="abtn nadruk" data-adm="doorvoeren">Wijzigingen<br>doorvoeren <span class="countchip" id="adm-wijzig-teller"></span></button>
+      <button type="button" class="abtn tab" data-admintab="controle">Controle <span class="countchip" id="controle-teller"></span></button>
       <!-- rechtensets: knop op verzoek verborgen. Niet verwijderen — hij bracht je
            naar het scherm Standaardrollen, dat ook gewoon onder Overzichten
            staat. Terugzetten = deze comment weghalen.
