@@ -86,15 +86,19 @@ dus terug te zetten door die comment weg te halen: het scherm Bereikbaarheid
 Standaardrollen. Het hele kopje Overzichten is weg (`overzichten`): Wie ziet
 wie, Zoeken en AVG zijn verborgen, Groepen beheren is weggehaald (het scherm
 `admintab-groepen` bestaat nog en is alleen te bereiken via inloggen als
-systeembeheer en na Groep maken — daar zit het koppelen van groepen).
+systeembeheer en na Groep maken; het koppelen van groepen staat nu bij Groep
+bewerken).
 Standaardrollen staat nu onder Bewerken, Controle onder Overig.
 
-## Wacht op goedkeuring: tak `specificaties-rollen`
+## Specificatie rollen en gebruikersbeheer (in master)
 
-De grote specificatie (rollen, knoppen, zoeken, audit trail) staat op tak
-`specificaties-rollen`, in vier commits (stap 1 t/m 4). Backup van daarvoor:
-`backup/voor-specificaties-rollen`. Nog niet in master — pas mergen na ja van
-de klant. Tests: `spec1.js` t/m `spec4.js` in de scratchpad.
+De grote specificatie (rollen, knoppen, zoeken, audit trail) is samen met het
+koppelen via Groep bewerken in master gezet. Backups: van vóór de specificatie
+`backup/voor-specificaties-rollen`, van vóór het samenvoegen
+`backup/voor-merge-specificaties-en-koppelen`. Tests in de scratchpad:
+`spec1.js` t/m `spec4.js`, `combo.js`, `zoekadmin.js`, `adminbalk.js`,
+`groepkoppel.js`. Verouderd (lopen vast op op verzoek verwijderde knoppen):
+`knopflow2.js`, `regressie2.js`.
 
 - Rollen: categorie `locatie` (medewerker) en `clienten` = "Cliënt" (naaste)
   in `ROLLEN`/`RECHTEN`/`orgDefault`; oude opgeslagen standaarden worden
@@ -113,9 +117,12 @@ de klant. Tests: `spec1.js` t/m `spec4.js` in de scratchpad.
   `BEWAARTERMIJN_JAREN=15`, `bewaarTot`, kolom `personen.gearchiveerd_reden`;
   vroegtijdig wissen vereist een reden. Let op: WGBO-dossiers = 20 jaar.
 
-De Supabase-kolommen (`personen.rollen`, `personen.gearchiveerd_reden`,
-`logboek.soort`, `logboek.reden`) staan al in de live database; master
-gebruikt ze niet en werkt gewoon door.
+- Groepen koppelen gebeurt bij Groep bewerken (`hernoemGroep`): de bewerkte
+  groep staat niet in het keuzemenu "Koppelen aan"; opheffen per groep met
+  `ontkoppelGroep`. Hernoemen werkt de koppeling bij.
+
+Supabase-kolommen die hiervoor zijn toegevoegd: `personen.rollen`,
+`personen.gearchiveerd_reden`, `logboek.soort`, `logboek.reden`.
 
 ## Andere takken
 
