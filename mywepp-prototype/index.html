@@ -2073,9 +2073,48 @@ async function probeerOpslagOpnieuw(){
    alleen mee wat daarvan afwijkt. Wijzigen twee mensen tegelijk dezelfde
    persoon, dan wint nog steeds de laatste; dat is een echt conflict. */
 var dbStandPersonen={},dbStandOrg={};
+var OBJECTVELDEN=['client_rechten','medewerker_rechten','naaste_rechten','rollen','toestemming'];
+var OBJECTVELD_PROP={client_rechten:'clientRechten',medewerker_rechten:'medewerkerRechten',naaste_rechten:'naasteRechten',rollen:'rollen',toestemming:'toestemming'};
 function onthoudDbStandPersonen(lijst){
  dbStandPersonen={};
  lijst.forEach(function(p){dbStandPersonen[p.id]=JSON.stringify(personRowToDb(p));});
+}
+/* ---- Nieuwe id's die niet botsen ----
+   Elke sessie deelt id's uit vanaf "hoogste bij het laden + 1". Maakten twee
+   beheerders tegelijk iemand aan, dan kregen beide personen hetzelfde id en
+   overschreef de tweede de eerste (aangetoond). Vlak voor het wegschrijven
+   vragen we daarom het hoogste id in de database op en nummeren we een nieuwe
+   persoon die daarmee botst om, inclusief alle verwijzingen naar hem. */
+function hernummerPersoon(oud,nieuw){
+ var p=findPerson(oud);if(!p)return;
+ p.id=nieuw;
+ people.forEach(function(x){
+  ['clientRechten','medewerkerRechten','naasteRechten'].forEach(function(veld){
+   if(x[veld]&&x[veld][oud]!==undefined){x[veld][nieuw]=x[veld][oud];delete x[veld][oud];}
+  });
+  if(x.wettelijkeVertegenwoordiger===oud)x.wettelijkeVertegenwoordiger=nieuw;
+ });
+ [CLIENTDATA,GEHEUGEN,CA_INSTELLINGEN,TOEGANGSCONTROLE,MAALTIJDRESERVERINGEN,MELDINGEN].forEach(function(opslag){
+  if(opslag&&opslag[oud]!==undefined){opslag[nieuw]=opslag[oud];delete opslag[oud];}
+ });
+ if(huidigProfielId===oud)huidigProfielId=nieuw;
+ if(caClientId===oud)caClientId=nieuw;
+}
+async function maakNieuweIdsVrij(){
+ var nieuw=people.filter(function(p){return p._state!=='nieuw'&&dbStandPersonen[p.id]===undefined;});
+ if(!nieuw.length)return true;
+ var res=await sb.from('personen').select('id').order('id',{ascending:false}).limit(1);
+ if(res.error)return false;
+ var hoogste=res.data&&res.data[0]?res.data[0].id:0;
+ var bezet={};people.forEach(function(p){bezet[p.id]=true;});
+ var volgende=Math.max(hoogste,nextId-1)+1;
+ nieuw.forEach(function(p){
+  if(p.id>hoogste)return;
+  while(bezet[volgende])volgende++;
+  var oud=p.id;hernummerPersoon(oud,volgende);bezet[volgende]=true;volgende++;
+ });
+ nextId=Math.max(nextId,volgende);
+ return true;
 }
 async function syncToSupabase(){
  if(!sb)return false;
@@ -2088,6 +2127,7 @@ async function syncToSupabase(){
   /* Bestaande personen: alleen de velden die anders zijn dan wat er het laatst
      uit de database kwam. Een hele rij terugschrijven zette ook velden terug
      die een ander intussen had gewijzigd. Nieuwe personen gaan in hun geheel. */
+  if(!(await maakNieuweIdsVrij()))return registreerOpslag('personen',false);
   var nieuweRijen=[],updates=[];
   people.filter(function(p){return p._state!=='nieuw';}).map(personRowToDb).forEach(function(r){
    var oud=dbStandPersonen[r.id],js=JSON.stringify(r);
@@ -2100,8 +2140,33 @@ async function syncToSupabase(){
   if(!nieuweRijen.length&&!updates.length)return registreerOpslag('personen',true);
   var fout=false;
   if(nieuweRijen.length){
-   var res=await sb.from('personen').upsert(nieuweRijen);
+   /* insert, geen upsert: een botsing die er toch doorheen komt geeft een
+      fout in plaats van stilletjes iemand te overschrijven. */
+   var res=await sb.from('personen').insert(nieuweRijen);
    if(res.error)fout=true; else nieuweRijen.forEach(function(r){dbStandPersonen[r.id]=JSON.stringify(r);});
+  }
+  /* Rechten, rolkeuze en toestemming zijn objecten per persoon. Het hele object
+     terugschrijven zette een recht dat een ander net had ingetrokken weer aan
+     (of gaf er een weg). Daarom per sleutel: alleen wat deze sessie heeft
+     toegevoegd, gewijzigd of weggehaald, toegepast op wat er nu in de database
+     staat. */
+  var objectVelden=updates.filter(function(u){return OBJECTVELDEN.some(function(k){return k in u.diff;});});
+  if(objectVelden.length){
+   var huidig=await sb.from('personen').select('id,'+OBJECTVELDEN.join(',')).in('id',objectVelden.map(function(u){return u.rij.id;}));
+   if(huidig.error)return registreerOpslag('personen',false);
+   objectVelden.forEach(function(u){
+    var db=(huidig.data||[]).filter(function(r){return r.id===u.rij.id;})[0]||{};
+    var vorig=JSON.parse(dbStandPersonen[u.rij.id]);
+    OBJECTVELDEN.forEach(function(k){
+     if(!(k in u.diff))return;
+     var samen=Object.assign({},db[k]||{}),oud=vorig[k]||{},nu=u.rij[k]||{};
+     Object.keys(nu).forEach(function(s){if(JSON.stringify(nu[s])!==JSON.stringify(oud[s]))samen[s]=nu[s];});
+     Object.keys(oud).forEach(function(s){if(!(s in nu))delete samen[s];});
+     u.diff[k]=samen;u.rij[k]=samen;
+     /* Ook in beeld de samengevoegde stand, zodat je ziet wat een ander deed. */
+     var p=findPerson(u.rij.id);if(p)p[OBJECTVELD_PROP[k]]=samen;
+    });
+   });
   }
   var uitkomsten=await Promise.all(updates.map(function(u){return sb.from('personen').update(u.diff).eq('id',u.rij.id);}));
   uitkomsten.forEach(function(res,i){if(res.error)fout=true; else dbStandPersonen[updates[i].rij.id]=JSON.stringify(updates[i].rij);});

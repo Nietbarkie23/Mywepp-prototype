@@ -163,7 +163,13 @@ nieuwe personen in hun geheel. Instellingen: alleen gewijzigde sleutels t.o.v.
 `dbStandOrg` (`orgRijen()`). Groepen: alleen eigen mutaties (`groepMutaties`,
 `groepErbij`/`groepWeg`), nooit "wat niet in mijn lijst staat". Eén sleutel
 als `groep_gegevens` bevat alle groepen: twee beheerders die tegelijk
-verschillende groepen aanpassen overschrijven elkaar daar nog wel. Nagelopen en in orde:
+verschillende groepen aanpassen overschrijven elkaar daar nog wel.
+Objectvelden (`OBJECTVELDEN`: rechten, rollen, toestemming) worden per sleutel
+samengevoegd met de actuele databasestand, zodat een ingetrokken recht niet
+door een ander wordt teruggezet. Nieuwe personen: vlak voor het wegschrijven
+wordt het hoogste id opgevraagd en botsende nieuwe id's worden omgenummerd
+(`maakNieuweIdsVrij`, `hernummerPersoon`), daarna `insert` i.p.v. `upsert`.
+Tests: `intrekken.js`, `zelfde-id.js`, `hernummer.js`. Nagelopen en in orde:
 opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
 RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 
