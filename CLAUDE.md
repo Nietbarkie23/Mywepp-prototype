@@ -31,6 +31,13 @@ NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node <test>.js 8731
 ./start-regressie.sh                                          # alles, ~45 min
 ```
 
+Met de echte databasebibliotheek testen: `scratchpad/metlib/` is een kopie van
+de pagina die `supabase.js` (2.117.1, uit het npm-pakket) lokaal laadt; serveer
+die op poort 8734 en vang de database-aanroepen af met
+`page.route('**/rest/v1/**', …)` (zie `geladen-opslaan.js`, `traagladen.js`).
+Zo is laden, opslaan en een trage of mislukte verbinding na te spelen zonder
+bij de echte database te komen. Na een wijziging de kopie opnieuw maken.
+
 Elk testscript neemt de poort als eerste argument. Let op twee vallen die al
 meermaals toesloegen:
 
@@ -139,7 +146,11 @@ nieuwe personen weg (nu pas bij doorvoeren); `cap()` maakte "de Vries" tot
 "De Vries" (`TUSSENVOEGSELS`); definitief wissen schreef opgeruimde
 verwijzingen niet weg (database weigerde het wissen van een vertegenwoordiger,
 nu ook `ON DELETE SET NULL`); zonder databasebibliotheek toonde de app zonder
-waarschuwing voorbeeldgegevens (nu melding bovenaan). Nagelopen en in orde:
+waarschuwing voorbeeldgegevens (nu melding bovenaan); tijdens het laden werden
+de voorbeeldgegevens bij de eerste klik over de echte database geschreven —
+nu gaat elke schrijfactie langs `opslagGeblokkeerd()` (pas schrijven als
+`gegevensGeladen===true`), met een laadmelding. supabase-js staat vast op
+2.117.1. Nagelopen en in orde:
 opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
 RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 

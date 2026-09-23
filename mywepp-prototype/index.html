@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyWepp">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
 <style>
 :root{
   --ink:#1D2733; --ink-soft:#66707C; --ink-faint:#98A1AB;
@@ -553,6 +553,7 @@ td.dot{text-align:center}
    melding staat dan bovenaan in de pagina in plaats van zwevend over de
    knoppen onderin. */
 #laad-balk.bovenaan{position:static;max-width:none;margin:0 0 16px;box-shadow:none}
+#laad-balk.laden{background:var(--accent-bg);border-color:var(--line-strong);color:var(--ink)}
 
 #laad-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
 #opslag-balk .tekst{flex:1;min-width:180px;color:var(--ink)}
@@ -1886,6 +1887,10 @@ function dbRowToPerson(r){
 }
 async function loadFromSupabase(){
  if(!sb){gegevensGeladen=null;toonLaadStatus();return;}
+ gegevensGeladen=null;
+ /* Pas na een korte pauze tonen: bij een snelle verbinding zou de melding
+    anders alleen even flitsen. */
+ setTimeout(function(){if(gegevensGeladen===null)toonLaadStatus();},800);
  try{
   var g=await sb.from('groepen').select('naam').order('id');
   var p=await sb.from('personen').select('*').order('id');
@@ -1964,6 +1969,13 @@ var opslagMislukt={};
    geladen — een waarschuwing alleen is te weinig, die klik je weg. */
 var gegevensGeladen=null;   /* null = nog bezig, true = geladen, false = mislukt */
 function laadMislukt(){return !!sb&&gegevensGeladen===false;}
+/* Schrijven mag pas als de echte gegevens binnen zijn. Tijdens het laden staan
+   de voorbeeldgegevens nog in het geheugen; één klik (bijvoorbeeld
+   tweestapsverificatie omzetten) schreef die dan over de echte administratie
+   heen: instellingen, personen met dezelfde id's, en het verwijderde zelfs
+   groepen die niet in de voorbeeldlijst stonden. Alle schrijfacties naar de
+   database gaan daarom langs deze ene controle. */
+function opslagGeblokkeerd(){return !!sb&&gegevensGeladen!==true;}
 function toonLaadStatus(){
  var balk=el('laad-balk');if(!balk)return;
  /* Laadt de databasebibliotheek zelf niet (storing bij het CDN, geen
@@ -1980,6 +1992,17 @@ function toonLaadStatus(){
   el('laad-opnieuw').addEventListener('click',function(){location.reload();});
   return;
  }
+ /* Tijdens het laden: rustige melding, zodat duidelijk is waarom opslaan nog
+    even niet kan. */
+ if(gegevensGeladen===null){
+  balk.hidden=false;
+  balk.classList.add('bovenaan','laden');
+  var hoofd=document.querySelector('main');
+  if(hoofd&&hoofd.firstElementChild!==balk)hoofd.insertBefore(balk,hoofd.firstChild);
+  balk.innerHTML='<span class="tekst"><b>Gegevens worden geladen…</b> Wat je nu wijzigt kan pas worden opgeslagen als dit klaar is.</span>';
+  return;
+ }
+ balk.classList.remove('bovenaan','laden');
  balk.hidden=!laadMislukt();
  if(balk.hidden)return;
  balk.innerHTML='<span class="tekst"><b>Gegevens niet geladen.</b> Je ziet nu voorbeeldgegevens, niet de echte administratie. '+
@@ -2027,7 +2050,7 @@ async function probeerOpslagOpnieuw(){
 }
 async function syncToSupabase(){
  if(!sb)return false;
- if(laadMislukt())return false;    /* zou de voorbeeldgegevens over de echte heen schrijven */
+ if(opslagGeblokkeerd())return false;    /* zou de voorbeeldgegevens over de echte heen schrijven */
  try{
   /* Een nieuwe persoon gaat pas naar de database bij Wijzigingen doorvoeren.
      Of iemand "nieuw" is wordt niet opgeslagen; een persoon die tussendoor
@@ -5215,6 +5238,7 @@ if(el('sb-tel'))el('sb-tel').addEventListener('input',function(){
    beide stappen faalt (een delete-alles-dan-insert kon alle groepen wissen). */
 async function syncGroepenToSupabase(){
  if(!sb)return false;
+ if(opslagGeblokkeerd())return false;
  try{
   var bestaand=await sb.from('groepen').select('id,naam');
   if(bestaand.error||!bestaand.data)return false;
@@ -5237,7 +5261,7 @@ async function syncGroepenToSupabase(){
    na een herlaad weg. Ze staan nu in organisatie_data (key/value). */
 async function syncOrganisatieData(){
  if(!sb)return false;
- if(laadMislukt())return false;
+ if(opslagGeblokkeerd())return false;
  try{
   var res=await sb.from('organisatie_data').upsert([
    {sleutel:'instituten',waarde:INSTITUTEN},
@@ -5566,7 +5590,7 @@ function logActie(tekst,extra){
  if(sb){
   /* Het logboek mag het opslaan van de wijziging zelf nooit blokkeren, maar
      stilzwijgend verdwijnen mag het ook niet: het is de verantwoording. */
-  try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst,soort:regel.soort,reden:regel.reden||null}]).then(
+  if(!opslagGeblokkeerd())try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst,soort:regel.soort,reden:regel.reden||null}]).then(
    function(res){registreerOpslag('logboek',!(res&&res.error));},
    function(){registreerOpslag('logboek',false);});}
   catch(e){registreerOpslag('logboek',false);}
@@ -5791,6 +5815,9 @@ el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd()
    expliciete bevestiging. */
 async function wisDefinitiefUitDatabase(id){
  if(!sb)return true;
+ /* Tijdens het laden hoort dit id bij een voorbeeldpersoon; wissen zou de
+    echte persoon met hetzelfde id raken. */
+ if(opslagGeblokkeerd())return false;
  try{var res=await sb.from('personen').delete().eq('id',id);return !res.error;}
  catch(e){return false;}
 }
@@ -5818,6 +5845,7 @@ function wisClientDossierLokaal(id){
 }
 async function wisClientDossierUitDatabase(id,sleutels){
  if(!sb)return true;
+ if(opslagGeblokkeerd())return false;
  var goed=true;
  try{
   var a=await sb.from('client_data').delete().eq('client_id',id);
@@ -6316,7 +6344,7 @@ async function voerWijzigingenDoor(){
   if(verplaatst)delen.push(verplaatst+' verplaatst');
   logActie('Wijzigingen doorgevoerd: '+delen.join(', '));
  }
- var opgeslagen=laadMislukt()?false:await syncToSupabase();
+ var opgeslagen=opslagGeblokkeerd()?false:await syncToSupabase();
  /* Vanaf nu is dit de nieuwe nulstand om tegen af te zetten. */
  zetBasisVoorIedereen();
  renderAll();
@@ -6333,8 +6361,8 @@ function doorvoerResultaatHtml(r){
  var contactpersoon=huidigeGebruiker();
  var contactzin=contactpersoon?' Bij vragen nemen we contact op met '+esc(naam(contactpersoon))+'.':'';
  var waarschuwing=r.opgeslagen?'':'<div style="background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--amber);border-radius:var(--radius);padding:12px 14px;font-size:13.5px;margin-top:10px">'+
-  (laadMislukt()
-   ? 'Let op: de gegevens waren niet geladen, dus er is bewust niets opgeslagen. Wat je hier ziet zijn voorbeeldgegevens; laad opnieuw en voer de wijziging daarna nog een keer door.'
+  (opslagGeblokkeerd()
+   ? 'Let op: de gegevens waren (nog) niet geladen, dus er is bewust niets opgeslagen. Wat je hier ziet zijn voorbeeldgegevens; laad opnieuw en voer de wijziging daarna nog een keer door.'
    : 'Let op: het opslaan in de database is niet gelukt. De wijzigingen zijn hier wel lokaal doorgevoerd — probeer het later opnieuw zodat ze ook echt bewaard blijven.')+'</div>';
  return 'Je wijzigingen ('+r.nieuw+' nieuw, '+r.gewijzigd+' gewijzigd'+(verwijderdTekst.length?', '+verwijderdTekst.join(', '):'')+') zijn direct doorgevoerd.'+contactzin+waarschuwing;
 }
@@ -6568,7 +6596,7 @@ function bewaarStraks(sleutel,fn){
  bewaarTimers[sleutel]=setTimeout(fn,600);
 }
 function bewaarClientDataNu(clientId){
- if(!sb||!clientId||laadMislukt())return;
+ if(!sb||!clientId||opslagGeblokkeerd())return;
  try{
   sb.from('client_data').upsert([{
    client_id:clientId,
@@ -6586,7 +6614,7 @@ function bewaarClientData(clientId){
  bewaarStraks('client-'+clientId,function(){bewaarClientDataNu(clientId);});
 }
 function bewaarChatThreadNu(sleutel){
- if(!sb||!sleutel||!CHATSTORE[sleutel]||laadMislukt())return;
+ if(!sb||!sleutel||!CHATSTORE[sleutel]||opslagGeblokkeerd())return;
  try{
   sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'}).then(
    function(res){registreerOpslag('chat',!(res&&res.error));},
