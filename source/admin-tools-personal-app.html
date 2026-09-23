@@ -5843,7 +5843,14 @@ function wisDefinitief(id){
    var sleutels=p.type==='client'?wisClientDossierLokaal(id):[];
    people=people.filter(function(x){return x.id!==id;});
    logActie(naamVal+' definitief gewist'+(binnenTermijn?' vóór het einde van de bewaartermijn':' na het verstrijken van de bewaartermijn')+(p.type==='client'?', inclusief het volledige dossier':''),{soort:'Definitief wissen',reden:reden});
-   Promise.all([wisDefinitiefUitDatabase(id),p.type==='client'?wisClientDossierUitDatabase(id,sleutels):Promise.resolve(true)]).then(function(uitkomst){
+   /* Eerst de opgeruimde verwijzingen van anderen wegschrijven (rechten op
+      deze persoon, wettelijk vertegenwoordiger), pas dan wissen. Andersom
+      weigerde de database het wissen zolang iemand hem als vertegenwoordiger
+      had, en bleven oude rechten op dit id in de database staan: een nieuwe
+      persoon die na herladen hetzelfde id krijgt, erfde die dan. */
+   syncToSupabase().then(function(){
+    return Promise.all([wisDefinitiefUitDatabase(id),p.type==='client'?wisClientDossierUitDatabase(id,sleutels):Promise.resolve(true)]);
+   }).then(function(uitkomst){
     if(uitkomst.indexOf(false)>-1)openMelding('Let op','De gegevens zijn hier gewist, maar het verwijderen uit de database is niet volledig gelukt. Probeer het later opnieuw, anders blijven ze daar staan.');
    });
    renderGearchiveerd();renderAll();
