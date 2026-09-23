@@ -3682,6 +3682,9 @@ function verwijderGroep(g){
  el('modal-bevestig').addEventListener('click',function(){
   GROEPEN.splice(GROEPEN.indexOf(g),1);
   gearchiveerdeGroepen.push(g);
+  /* Anders bleef de partnergroep "gekoppeld aan" een groep die niet meer
+     bestaat. Een koppeling van twee valt daarmee helemaal weg. */
+  groepKoppelingen=groepKoppelingen.map(function(k){return k.filter(function(x){return x!==g;});}).filter(function(k){return k.length>1;});
   delete groupOverride[g];
   delete bulkSel.groepen[g];
   if(huidigeGroep===g)huidigeGroep=GROEPEN[0];
@@ -5250,6 +5253,12 @@ async function syncGroepenToSupabase(){
   }
   var overbodig=bestaand.data.filter(function(r){return GROEPEN.indexOf(r.naam)<0;}).map(function(r){return r.id;});
   if(overbodig.length){
+   /* Eerst de personen wegschrijven, dan pas een groepsnaam weghalen. Bij
+      hernoemen verwezen de personen in de database anders nog naar de oude
+      naam tot iemand "Wijzigingen doorvoeren" deed; na herladen was de hele
+      groep dan uit beeld. Lukt het wegschrijven niet, dan blijft de oude naam
+      staan: liever een groep te veel dan mensen zonder groep. */
+   if(!(await syncToSupabase()))return false;
    var del=await sb.from('groepen').delete().in('id',overbodig);
    if(del.error)return false;
   }
