@@ -80,10 +80,11 @@ uit een formule. Maaltijdaanmeldingen staan op de hele datum
 maandkeuze kreeg. Het logboek filtert op periode (`logboekDatum`).
 
 **Verborgen op verzoek**, als comment in de code met een markering eromheen,
-dus terug te zetten door die comment weg te halen: de AVG-knop (`avg`), het
-scherm Bereikbaarheid (`bereikbaarheid`), en de knoppen Rechtensets
+dus terug te zetten door die comment weg te halen: het scherm Bereikbaarheid
+(`bereikbaarheid`), en de knoppen Rechtensets
 (`rechtensets`) en Groepeer (`groepeer`). Die laatste twee openden allebei
-Standaardrollen, dat ook onder Overzichten staat.
+Standaardrollen, dat ook onder Overzichten staat. De AVG-knop is op die manier
+een tijd verborgen geweest en inmiddels weer teruggezet.
 
 ## Andere takken
 
