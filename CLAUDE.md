@@ -88,7 +88,14 @@ wie, Zoeken en AVG zijn verborgen, Groepen beheren is weggehaald (het scherm
 `admintab-groepen` bestaat nog en is alleen te bereiken via inloggen als
 systeembeheer en na Groep maken; het koppelen van groepen staat nu bij Groep
 bewerken).
-Standaardrollen staat nu onder Bewerken, Controle onder Overig.
+Standaardrollen staat nu onder Bewerken, Controle onder Overig. De knop Uit
+dienst is ook weggehaald (`uitdienst`); `uitDienstFlow` staat nog in de code.
+
+**Verplicht bij medewerkers en naasten:** voornaam, achternaam en e-mailadres
+(profiel, Meerdere toevoegen, Mijn profiel). Bij cliënten is het e-mailadres
+optioneel, want dat wordt zo nodig gegenereerd. Bij het aanmaken staan alleen
+"Rechten overnemen"; Inzage (AVG), Toegang blokkeren en Verwijderen alleen bij
+bewerken.
 
 ## Specificatie rollen en gebruikersbeheer (in master)
 

@@ -750,7 +750,10 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn danger" data-adm="groepVerwijderen">Groep<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="clientVerwijderen">Cliënt<br>verwijderen</button>
       <button type="button" class="abtn danger" data-adm="persoonVerwijderen">(Non)prof.<br>verwijderen</button>
+      <!-- uitdienst: knop op verzoek weggehaald. De handeling (uitDienstFlow)
+           staat nog in de code; terugzetten = deze comment weghalen.
       <button type="button" class="abtn danger" data-adm="uitDienst">Uit<br>dienst</button>
+      uitdienst -->
     </div>
     <!-- overzichten: de hele groep Overzichten is op verzoek uit de balk.
          Standaardrollen staat nu bij Bewerken en Controle bij Overig.
@@ -1221,7 +1224,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div class="field"><label for="pp-achternaam">Achternaam<span class="verplicht" aria-hidden="true">*</span></label><input id="pp-achternaam" maxlength="60" required aria-required="true"><p class="mini veldfout" id="pp-achternaam-fout" hidden>Achternaam is verplicht.</p></div>
       </div>
       <div class="row">
-        <div class="field"><label for="pp-mail">E-mailadres</label><input id="pp-mail" maxlength="120" placeholder="naam@voorbeeld.nl"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
+        <div class="field"><label for="pp-mail">E-mailadres<span class="verplicht" aria-hidden="true">*</span></label><input id="pp-mail" maxlength="120" placeholder="naam@voorbeeld.nl" required aria-required="true"><p class="mini" id="pp-mail-fout" style="color:var(--brick)" hidden></p></div>
         <div class="field"><label for="pp-tel">Telefoonnummer</label><input id="pp-tel" maxlength="25" placeholder="06 12 34 56 78"></div>
       </div>
       <div class="row">
@@ -2738,6 +2741,9 @@ function openProfielPersoon(id,t){
  var nieuw=p._state==='nieuw';
  el('pp-blokkeer').hidden=nieuw;
  el('pp-verwijder').hidden=nieuw;
+ /* Inzage (AVG) laat zien wat er over iemand is vastgelegd; bij een nieuwe
+    persoon is er nog niets, dus de knop hoort alleen bij bewerken. */
+ el('pp-avg-inzage').hidden=nieuw;
  if(nieuw)el('pp-blokkade-uitleg').hidden=true;
  el('pp-titel').textContent=nieuw?('Nieuwe '+TYPELABEL[t].toLowerCase()+' aanmaken'):(naam(p)+' — volledig profiel');
  show('pp-profiel-persoon');
@@ -2748,7 +2754,10 @@ el('pp-persoon-opslaan').addEventListener('click',function(){
  var voor=el('pp-voornaam').value.trim(),achter=el('pp-achternaam').value.trim(),ok=true;
  if(!toonNaamFout('pp',voor,achter))ok=false;
  var ingevuldeMail=el('pp-mail').value.trim();
- if(!toonMailFout('pp-mail','pp-mail-fout',mailFout(ingevuldeMail,p.id)))ok=false;
+ /* Medewerkers en naasten loggen in met hun e-mailadres; zonder adres is er
+    een account waar niemand mee kan inloggen. (Bij cliënten wordt het adres
+    zo nodig gegenereerd, dus daar blijft het optioneel.) */
+ if(!toonMailFout('pp-mail','pp-mail-fout',ingevuldeMail?mailFout(ingevuldeMail,p.id):'Vul een e-mailadres in.'))ok=false;
  if(!ok)return;
  var dubbelP=naamgenootInGroep(p,voor,achter);
  p.voor=kap(cap(voor),MAXLEN.naam);p.achter=kap(cap(achter),MAXLEN.naam);
@@ -4540,6 +4549,7 @@ function leesImportregels(tekst,type){
   var achter=stukken.join(' ');
   var fout='';
   if(!voor||!achter)fout='vul een voor- en achternaam in';
+  else if(!mail&&type!=='client')fout='vul een e-mailadres in';
   else if(mail&&!mailGeldig(mail))fout='dit e-mailadres klopt niet';
   else if(tel&&!telGeldig(tel))fout='dit telefoonnummer klopt niet';
   else if(people.some(function(p){return !p.archived&&naam(p).toLowerCase()===(voor+' '+achter).toLowerCase()&&p.groepen.indexOf(huidigeGroep)>-1;}))
@@ -4551,7 +4561,7 @@ function leesImportregels(tekst,type){
 function importFlow(){
  var type='medewerker';
  openModal('<h3>Meerdere mensen toevoegen</h3>'+
-  '<p class="mini" style="margin:0 0 10px">Plak één persoon per regel: naam, e-mailadres, telefoonnummer. Alleen de naam is verplicht.</p>'+
+  '<p class="mini" style="margin:0 0 10px">Plak één persoon per regel: naam, e-mailadres, telefoonnummer. Naam en e-mailadres zijn verplicht; bij cliënten alleen de naam.</p>'+
   '<div class="typetabs" id="imp-typetabs">'+
    '<button type="button" class="typetab on" data-type="medewerker">Medewerker</button>'+
    '<button type="button" class="typetab" data-type="naaste">Naaste</button>'+
@@ -6921,7 +6931,7 @@ function renderMijnProfiel(){
  html+='<div class="field"><label>Mobiel nummer</label><input id="mp-mobiel" maxlength="25" value="'+esc(p.mobiel)+'"></div>';
  html+='<div class="field"><label>Functie</label><input id="mp-functie" maxlength="60" value="'+esc(p.functie)+'"></div>';
  html+='<div class="field"><label>Geboortedatum</label><input type="date" id="mp-geboortedatum" value="'+esc(p.geboortedatum)+'"></div>';
- html+='<div class="field"><label>E-mailadres</label><input id="mp-mail" maxlength="120" value="'+esc(p.mail)+'"></div>';
+ html+='<div class="field"><label for="mp-mail">E-mailadres<span class="verplicht" aria-hidden="true">*</span></label><input id="mp-mail" maxlength="120" required aria-required="true" value="'+esc(p.mail)+'"></div>';
  html+='<div class="sublistlabel">Beveiliging</div>';
  html+='<div class="togglerow"><span>Tweestapsverificatie</span>'+(p.tweestaps?'<span class="badge" style="background:var(--moss-bg);color:var(--moss);border-color:var(--moss-line)">Actief</span>':'<span class="badge">Niet actief</span>')+'</div>';
  if(p.tweestaps)html+='<p class="mini" style="margin:-4px 0 8px">Ingesteld op '+esc(p.tweestapsDatum)+'.</p>';
@@ -6947,6 +6957,7 @@ function renderMijnProfiel(){
      waardoor het leek alsof het opslaan gelukt was. Nu zeggen we het gewoon. */
   if(!el('mp-voor').value.trim())fout='Vul een voornaam in.';
   else if(!el('mp-achter').value.trim())fout='Achternaam is verplicht.';
+  else if(!mail)fout='Vul een e-mailadres in.';
   else if(!mailGeldig(mail))fout='Vul een geldig e-mailadres in.';
   else if(geboorte&&(!geldigeDatum(geboorte)||geboorte>vandaagISO()))fout='Een geboortedatum in de toekomst kan niet.';
   if(fout){el('mp-bevestiging').innerHTML='<p class="mini" style="color:var(--brick);margin-top:10px">'+esc(fout)+'</p>';return;}
