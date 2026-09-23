@@ -1082,6 +1082,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="field" style="max-width:120px"><label for="stat-jaar">Jaar</label><select id="stat-jaar"><option>2026</option><option>2025</option></select></div>
     </div></div>
     <div class="panel" style="overflow-x:auto"><table id="stat-table" style="border:0;box-shadow:none"></table></div>
+    <p class="mini" style="margin:-6px 0 14px">Deze getallen komen uit de app zelf: afspraken en rapportages uit het dossier, afmeldingen uit de maaltijdkalender, en beeld uit rapportages en het Ik-Boek. Een afspraak kent alleen dag en maand, dus die telt mee in het gekozen jaar.</p>
     <div class="panel"><div class="body" id="stat-kalender"></div></div>
     <p class="mini">Klik op een dag in de kalender voor de dagdetails per cliënt.</p>
     <div class="sublistlabel" style="margin-top:20px">MyWepp Digibord gebruik</div>
@@ -4622,11 +4623,22 @@ el('tekst-groter').addEventListener('click',function(){zetGroteTekst(!groteTekst
 /* Het logboek loopt tot 200 regels. Zonder filter is dat bij een vraag als
    "wat is er met deze cliënt gebeurd?" niet te doorzoeken. Het filter werkt op
    de tekst én op de groep, en de export volgt wat je op dat moment ziet. */
-var logboekFilter={term:'',groep:''};
+var logboekFilter={term:'',groep:'',van:'',tot:''};
+/* Een logregel staat als dd-mm-jjjj uu:mm; om op periode te kunnen filteren
+   hebben we er een vergelijkbare datum van nodig. */
+function logboekDatum(l){
+ var m=/^(\d{2})-(\d{2})-(\d{4})/.exec(l.tijd||'');
+ return m?(m[3]+'-'+m[2]+'-'+m[1]):'';
+}
 function gefilterdLogboek(){
  var term=logboekFilter.term.trim().toLowerCase();
  return LOGBOEK.filter(function(l){
   if(logboekFilter.groep&&(l.groep||'')!==logboekFilter.groep)return false;
+  /* "Wat is er in die week gebeurd?" was alleen te beantwoorden door zelf te
+     scrollen; bij een verantwoordingsmiddel hoort een periode. */
+  var d=logboekDatum(l);
+  if(logboekFilter.van&&d&&d<logboekFilter.van)return false;
+  if(logboekFilter.tot&&d&&d>logboekFilter.tot)return false;
   if(!term)return true;
   return String(l.tekst||'').toLowerCase().indexOf(term)>-1||
          String(l.wie||'').toLowerCase().indexOf(term)>-1;
@@ -4649,7 +4661,7 @@ function renderLogboekLijst(){
 /* De exportbevestiging vervangt dit venster. Zonder heropenen sta je na het
    downloaden in het niets, terwijl je in het logboek bezig was. */
 function openLogboek(behoudFilter){
- if(!behoudFilter)logboekFilter={term:'',groep:''};
+ if(!behoudFilter)logboekFilter={term:'',groep:'',van:'',tot:''};
  var groepen=[''].concat(GROEPEN).map(function(g){
   return '<option value="'+esc(g)+'">'+(g?esc(g):'Alle groepen')+'</option>';
  }).join('');
@@ -4658,12 +4670,16 @@ function openLogboek(behoudFilter){
   '<div class="row"><div class="field"><label for="logboek-zoek">Zoeken</label>'+
   '<input id="logboek-zoek" maxlength="60" placeholder="Naam, cliënt of wat er gebeurde"></div>'+
   '<div class="field"><label for="logboek-groep">Groep</label><select id="logboek-groep">'+groepen+'</select></div></div>'+
+  '<div class="row"><div class="field"><label for="logboek-van">Van</label><input type="date" id="logboek-van" value="'+esc(logboekFilter.van)+'"></div>'+
+  '<div class="field"><label for="logboek-tot">Tot en met</label><input type="date" id="logboek-tot" value="'+esc(logboekFilter.tot)+'"></div></div>'+
   '<p class="mini" id="logboek-teller" style="margin:0 0 8px"></p>'+
   '<div id="logboek-lijst"></div>'+
   '<div class="modal-actions"><button type="button" id="logboek-export">Exporteren (CSV)</button><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
  el('modal-snap').addEventListener('click',closeModal);
  el('logboek-export').addEventListener('click',exporteerLogboek);
  el('logboek-zoek').addEventListener('input',function(){logboekFilter.term=this.value;renderLogboekLijst();});
+ el('logboek-van').addEventListener('change',function(){logboekFilter.van=this.value;renderLogboekLijst();});
+ el('logboek-tot').addEventListener('change',function(){logboekFilter.tot=this.value;renderLogboekLijst();});
  el('logboek-groep').addEventListener('change',function(){logboekFilter.groep=this.value;renderLogboekLijst();});
  el('logboek-zoek').value=logboekFilter.term;
  el('logboek-groep').value=logboekFilter.groep;
@@ -5268,18 +5284,62 @@ el('av-versturen').addEventListener('click',async function(){
 
 /* --- Statistieken --- */
 var MAANDEN=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
-var STAT_KOLOMMEN=['Bezoeken','Rapportages','Afmeldingen','Foto\'s geplaatst'];
+/* De tabel stond vol met verzonnen getallen: (seed+i*3+ci*2+4)%11. Dat ziet er
+   op een scherm uit als een statistiek, maar het is er geen — je kunt er niets
+   uit opmaken en bij een demo valt het door de mand zodra iemand vraagt waar
+   een getal vandaan komt. Alle vier de kolommen komen nu uit het dossier zelf.
+   "Bezoeken" is "Afspraken" geworden, want daarvan staat er wel iets vast. */
+var STAT_KOLOMMEN=['Afspraken','Rapportages','Afmeldingen','Beeld geplaatst'];
+/* Rapportages dragen twee soorten datum: nieuwe hebben datum (jjjj-mm-dd), de
+   bestaande alleen tijd (dd-mm-jjjj uu:mm). */
+function maandVanRapportage(r){
+ if(r.datum&&geldigeDatum(r.datum)){var d=new Date(r.datum+'T00:00:00');return {jaar:d.getFullYear(),maand:d.getMonth()};}
+ var m=/^(\d{2})-(\d{2})-(\d{4})/.exec(r.tijd||'');
+ if(m)return {jaar:+m[3],maand:+m[2]-1};
+ return null;
+}
+function statistiekVoor(clientId,jaar,maand){
+ var d=CLIENTDATA[clientId];
+ var uit={afspraken:0,rapportages:0,afmeldingen:0,beeld:0};
+ if(d){
+  (d.doelen||[]).forEach(function(doel){
+   (doel.rapportages||[]).forEach(function(r){
+    var p=maandVanRapportage(r);
+    if(!p||p.jaar!==jaar||p.maand!==maand)return;
+    uit.rapportages++;
+    if(r.media||r.audio)uit.beeld++;
+   });
+  });
+  /* Een afspraak kent alleen dag en maand, geen jaar; we tellen hem mee in het
+     gekozen jaar. Dat staat ook zo in de uitleg onder de tabel. */
+  (d.agenda||[]).forEach(function(a){
+   var p=parseDatumlabel(a.datumlabel);
+   if(p&&p.maand===maand)uit.afspraken++;
+  });
+  (d.ikboek||[]).forEach(function(e){
+   var m=/^(\d{2})-(\d{2})-(\d{4})/.exec(e.tijd||'');
+   if(m&&+m[3]===jaar&&+m[2]-1===maand&&e.mediaType)uit.beeld++;
+  });
+ }
+ /* Dezelfde bron als de maaltijdkalender, ook als die nog niet is geopend. */
+ var res=ensureMaaltijdReserveringen(clientId);
+ var dagen=new Date(jaar,maand+1,0).getDate();
+ for(var dag=1;dag<=dagen;dag++)if(!res[maaltijdSleutel(jaar,maand,dag)])uit.afmeldingen++;
+ return uit;
+}
 function renderStatTable(){
  if(!el('stat-maand').options.length){
   el('stat-maand').innerHTML=MAANDEN.map(function(m,i){return '<option'+(i===8?' selected':'')+'>'+m+'</option>';}).join('');
   el('stat-maand').addEventListener('change',renderStatTable);
   el('stat-jaar').addEventListener('change',renderStatTable);
  }
- var seed=el('stat-maand').selectedIndex+el('stat-jaar').selectedIndex*12;
+ var maand=el('stat-maand').selectedIndex;
+ var jaar=parseInt(el('stat-jaar').value,10)||new Date().getFullYear();
  var clienten=personenVanType('client');
- var html='<thead><tr><th>Cliënt</th>'+STAT_KOLOMMEN.map(function(k){return '<th>'+k+'</th>';}).join('')+'</tr></thead><tbody>';
- clienten.forEach(function(p,i){
-  html+='<tr><td>'+esc(naam(p))+'</td>'+STAT_KOLOMMEN.map(function(_,ci){return '<td>'+((seed+i*3+ci*2+4)%11)+'</td>';}).join('')+'</tr>';
+ var html='<thead><tr><th>Cliënt</th>'+STAT_KOLOMMEN.map(function(k){return '<th>'+esc(k)+'</th>';}).join('')+'</tr></thead><tbody>';
+ clienten.forEach(function(p){
+  var st=statistiekVoor(p.id,jaar,maand);
+  html+='<tr><td>'+esc(naam(p))+'</td><td>'+st.afspraken+'</td><td>'+st.rapportages+'</td><td>'+st.afmeldingen+'</td><td>'+st.beeld+'</td></tr>';
  });
  html+='</tbody>';
  el('stat-table').innerHTML=clienten.length?html:'<tbody><tr><td class="empty-msg">Geen cliënten in deze groep.</td></tr></tbody>';
@@ -5326,13 +5386,31 @@ function openStatDagdetails(day,month,year){
 
 /* --- Maaltijden --- */
 var MAALTIJDRESERVERINGEN={};
+/* De aanmeldingen werden bewaard op dagnummer: {1:true,2:true,...}. Zolang het
+   scherm vastzat op september 2026 viel dat niet op, maar met een maandkeuze
+   erbij zou oktober dezelfde vinkjes tonen én overschrijven. De sleutel is nu de
+   hele datum. Oude opgeslagen dagnummers horen bij september 2026, de maand
+   waarop het scherm stond. */
+function maaltijdSleutel(jaar,maand,dag){return jaar+'-'+tweeCijfers(maand+1)+'-'+tweeCijfers(dag);}
 function ensureMaaltijdReserveringen(clientId){
- if(!MAALTIJDRESERVERINGEN[clientId]){
-  var set={};
-  for(var d=1;d<=30;d++)if((d+clientId)%3)set[d]=true;
+ var set=MAALTIJDRESERVERINGEN[clientId];
+ if(!set){
+  set={};
+  for(var d=1;d<=30;d++)if((d+clientId)%3)set[maaltijdSleutel(2026,8,d)]=true;
   MAALTIJDRESERVERINGEN[clientId]=set;
+ }else{
+  Object.keys(set).forEach(function(k){
+   if(/^\d{1,2}$/.test(k)){set[maaltijdSleutel(2026,8,+k)]=set[k];delete set[k];}
+  });
  }
- return MAALTIJDRESERVERINGEN[clientId];
+ return set;
+}
+var maaltijdJaar=2026,maaltijdMaand=8;
+function wijzigMaaltijdMaand(delta){
+ maaltijdMaand+=delta;
+ if(maaltijdMaand<0){maaltijdMaand=11;maaltijdJaar--;}
+ if(maaltijdMaand>11){maaltijdMaand=0;maaltijdJaar++;}
+ renderMaaltijdKalender();
 }
 function renderMaaltijdKalender(){
  var clienten=personenVanType('client');
@@ -5344,26 +5422,35 @@ function renderMaaltijdKalender(){
  if(!el('maaltijd-client').dataset.wired){el('maaltijd-client').addEventListener('change',renderMaaltijdKalender);el('maaltijd-client').dataset.wired='1';}
  var clientId=+el('maaltijd-client').value;
  var reserveringen=ensureMaaltijdReserveringen(clientId);
- var year=2026,month=8;
+ /* Stond vast op september 2026 terwijl de statistieken er wel een maandkeuze
+    naast hebben: je kon dus nergens naar een andere maand kijken. */
+ var year=maaltijdJaar,month=maaltijdMaand;
  var first=new Date(year,month,1), startWeekday=(first.getDay()+6)%7;
  var daysInMonth=new Date(year,month+1,0).getDate();
- var html='<div class="calmonth">'+MAANDNAMEN[month]+' '+year+'</div><div class="calgrid">';
+ var html='<div class="monthnav"><button type="button" id="maaltijd-vorige" aria-label="Vorige maand">'+PIJL_L+'</button>'+
+  '<b>'+MAANDNAMEN[month]+' '+year+'</b>'+
+  '<button type="button" id="maaltijd-volgende" aria-label="Volgende maand">'+PIJL_R+'</button></div><div class="calgrid">';
  ['Ma','Di','Wo','Do','Vr','Za','Zo'].forEach(function(dn){html+='<div class="calhead">'+dn+'</div>';});
  for(var i=0;i<startWeekday;i++)html+='<div class="calcell empty"></div>';
  for(var day=1;day<=daysInMonth;day++){
-  html+='<div class="calcell" role="button" tabindex="0" aria-pressed="'+(reserveringen[day]?'true':'false')+'" aria-label="'+day+' '+MAANDNAMEN[month]+' — '+(reserveringen[day]?'aangemeld':'afgemeld')+'" data-maaltijddag="'+day+'">'+day+'<span class="dot" style="background:'+(reserveringen[day]?'var(--moss)':'var(--brick)')+'"></span></div>';
+  var sleutel=maaltijdSleutel(year,month,day);
+  html+='<div class="calcell" role="button" tabindex="0" aria-pressed="'+(reserveringen[sleutel]?'true':'false')+'" aria-label="'+day+' '+MAANDNAMEN[month]+' — '+(reserveringen[sleutel]?'aangemeld':'afgemeld')+'" data-maaltijddag="'+day+'">'+day+'<span class="dot" style="background:'+(reserveringen[sleutel]?'var(--moss)':'var(--brick)')+'"></span></div>';
  }
  html+='</div>';
  el('maaltijd-kalender').innerHTML=html;
+ var vorige=el('maaltijd-vorige'),volgende=el('maaltijd-volgende');
+ if(vorige)vorige.addEventListener('click',function(){wijzigMaaltijdMaand(-1);});
+ if(volgende)volgende.addEventListener('click',function(){wijzigMaaltijdMaand(1);});
  var clientNaam=naam(findPerson(clientId))||'';
  Array.prototype.forEach.call(el('maaltijd-kalender').querySelectorAll('[data-maaltijddag]'),function(c){
   var day=+c.getAttribute('data-maaltijddag');
   /* Een aan- of afmelding voor een maaltijd is een echte handeling: hij werd
      alleen in het geheugen gezet, verdween bij een herlaad en stond nergens in
      het logboek. En met alleen een muisklik was de kalender niet te bedienen. */
+  var sleutel=maaltijdSleutel(year,month,day);
   var wissel=function(){
-   if(reserveringen[day])delete reserveringen[day]; else reserveringen[day]=true;
-   var aan=!!reserveringen[day];
+   if(reserveringen[sleutel])delete reserveringen[sleutel]; else reserveringen[sleutel]=true;
+   var aan=!!reserveringen[sleutel];
    c.querySelector('.dot').style.background=aan?'var(--moss)':'var(--brick)';
    c.setAttribute('aria-pressed',aan?'true':'false');
    c.setAttribute('aria-label',day+' '+MAANDNAMEN[month]+' — '+(aan?'aangemeld':'afgemeld'));
