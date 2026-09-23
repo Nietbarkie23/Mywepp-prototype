@@ -86,6 +86,34 @@ dus terug te zetten door die comment weg te halen: het scherm Bereikbaarheid
 Standaardrollen, dat ook onder Overzichten staat. De AVG-knop is op die manier
 een tijd verborgen geweest en inmiddels weer teruggezet.
 
+## Wacht op goedkeuring: tak `specificaties-rollen`
+
+De grote specificatie (rollen, knoppen, zoeken, audit trail) staat op tak
+`specificaties-rollen`, in vier commits (stap 1 t/m 4). Backup van daarvoor:
+`backup/voor-specificaties-rollen`. Nog niet in master — pas mergen na ja van
+de klant. Tests: `spec1.js` t/m `spec4.js` in de scratchpad.
+
+- Rollen: categorie `locatie` (medewerker) en `clienten` = "Cliënt" (naaste)
+  in `ROLLEN`/`RECHTEN`/`orgDefault`; oude opgeslagen standaarden worden
+  aangevuld via `vulRolCategorieenAan`. Per persoon een rolkeuze als de groep
+  optionele rollen heeft (`rolKeuzes`, `rolVan`, kolom `personen.rollen`).
+- Voor- en achternaam verplicht (`toonNaamFout`), ook in Mijn profiel.
+- Blokkeren/Verwijderen alleen bij bewerken; `verwijderVanuitProfiel`.
+- Rechten overnemen bouwt het profiel niet meer opnieuw op
+  (`leesProfielConcept`/`zetProfielConceptTerug`); overzicht met Toon meer.
+- Herbruikbaar zoekveld `koppelZoekveld`, `maakLijstZoekbaar` (vanaf 6 rijen).
+- Titel "Gebruikersbeheer – groep" (`toonGroepInTitel`); na opslaan terug
+  naar herkomst (`profielHerkomst`, `naarHerkomst`).
+- Logboek: `logActie(tekst,{soort,reden})`, kolommen `logboek.soort/reden`;
+  `soortVanActie` leidt het soort af voor oude regels.
+- Archief: prullenbak (nog niet doorgevoerd) + archief (soft delete),
+  `BEWAARTERMIJN_JAREN=15`, `bewaarTot`, kolom `personen.gearchiveerd_reden`;
+  vroegtijdig wissen vereist een reden. Let op: WGBO-dossiers = 20 jaar.
+
+De Supabase-kolommen (`personen.rollen`, `personen.gearchiveerd_reden`,
+`logboek.soort`, `logboek.reden`) staan al in de live database; master
+gebruikt ze niet en werkt gewoon door.
+
 ## Andere takken
 
 De werktakken `formulier-vereenvoudigd`, `nieuwe-functies`, `verbeterronde-2` en
