@@ -97,9 +97,14 @@ contactpersoon 2, geen controlesignaal. De opgeslagen `status='ziek'` blijft in
 de database staan (live: Marieke de Vries, id 3, en rij 19) — niet zonder
 overleg aanpassen. Terugzetten = comment weg en `ZIEKMELDEN=true`.
 
-**Rechten overnemen** staat onder het kopje Rollen en rechten; de rij met
-Inzage (AVG), Toegang blokkeren en Verwijderen (`pp-accountacties`) is bij
-aanmaken helemaal weg.
+**Rechten overnemen** staat onder het kopje Rollen en rechten. In de rij
+`pp-accountacties` staat alleen nog Inzage (AVG); die rij is bij aanmaken weg.
+**Verwijderen** staat onderaan het profiel, links naast Annuleren/Opslaan.
+
+**Toegang blokkeren** is als knop weggehaald (HTML-comment `blokkeren`,
+`wisselBlokkade` bestaat nog). Een bestaande blokkade blijft gelden en staat
+met reden in het profiel. Live geblokkeerd: Stagaire Mywepp (id 18) — niet
+zonder overleg opheffen.
 
 **Groepsgegevens** (naam, adres, telefoon, e-mail op het groepsprofiel) zijn
 per groep te bewerken via het potlood rechtsboven (`renderHubGegevens`,

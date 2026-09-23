@@ -1275,10 +1275,11 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="sublistlabel" id="pp-lbl-clienten">Recht op cliënten</div>
       <div class="actions" id="pp-accountacties" style="justify-content:flex-start;margin:0 0 10px;gap:8px;flex-wrap:wrap">
         <button type="button" id="pp-avg-inzage">Inzage (AVG)</button>
-        <!-- Blokkeren en Verwijderen gaan over een bestaand account; bij het
-             aanmaken is er nog niets om te blokkeren of te verwijderen. -->
+        <!-- blokkeren: knop op verzoek weggehaald. wisselBlokkade staat nog in de
+             code; terugzetten = deze comment weghalen. Een blokkade die al bestaat
+             blijft gelden en staat hieronder uitgelegd.
         <button type="button" id="pp-blokkeer">Toegang blokkeren</button>
-        <button type="button" id="pp-verwijder" class="danger">Verwijderen</button>
+        blokkeren -->
       </div>
       <div class="mini" id="pp-tweestaps-status" style="margin:-4px 0 10px"></div>
       <div class="mini" id="pp-blokkade-uitleg" style="margin:-4px 0 10px" hidden></div>
@@ -1288,7 +1289,11 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="sublistlabel" id="pp-lbl-naasten">Recht op naasten</div>
       <div id="pp-naasten"></div>
 
-      <div class="actions"><button type="button" id="pp-annuleren">Annuleren</button><button type="button" class="primary" id="pp-persoon-opslaan">Opslaan</button></div>
+      <!-- Verwijderen staat onderaan, los van Annuleren en Opslaan: het is de
+           laatste stap, niet iets wat je tussendoor aanklikt. Alleen bij een
+           bestaand account; bij aanmaken is er nog niets om te verwijderen. -->
+      <div class="actions"><button type="button" id="pp-verwijder" class="danger">Verwijderen</button>
+        <span style="display:flex;gap:10px;margin-left:auto"><button type="button" id="pp-annuleren">Annuleren</button><button type="button" class="primary" id="pp-persoon-opslaan">Opslaan</button></span></div>
     </div></div>
   </div>
 
@@ -2765,7 +2770,7 @@ function openProfielPersoon(id,t){
  renderGroepenKeuze(p,'pp-groepen-keuze','pp-groepen-hint');
  zetContactBlok(p,t);
  var nieuw=p._state==='nieuw';
- el('pp-blokkeer').hidden=nieuw;
+ if(el('pp-blokkeer'))el('pp-blokkeer').hidden=nieuw;
  el('pp-verwijder').hidden=nieuw;
  /* Inzage (AVG) laat zien wat er over iemand is vastgelegd; bij een nieuwe
     persoon is er nog niets, dus de knop hoort alleen bij bewerken. */
@@ -3018,9 +3023,13 @@ function toonTweestapsStatus(p){
 }
 function toonBlokkadeKnop(p){
  var knop=el('pp-blokkeer'),uitleg=el('pp-blokkade-uitleg');
- if(!knop)return;
- knop.textContent=p.geblokkeerd?'Blokkade opheffen':'Toegang blokkeren';
- knop.classList.toggle('danger',!p.geblokkeerd);
+ /* De knop kan weg zijn (op verzoek); de uitleg bij een bestaande blokkade
+    moet dan juist blijven staan, anders zie je niet waarom iemand niet kan
+    inloggen. */
+ if(knop){
+  knop.textContent=p.geblokkeerd?'Blokkade opheffen':'Toegang blokkeren';
+  knop.classList.toggle('danger',!p.geblokkeerd);
+ }
  uitleg.hidden=!p.geblokkeerd;
  if(p.geblokkeerd){
   uitleg.style.color='var(--brick)';
@@ -3063,7 +3072,7 @@ function wisselBlokkade(){
   openProfielPersoon(p.id,p.type);renderAll();
  });
 }
-el('pp-blokkeer').addEventListener('click',wisselBlokkade);
+if(el('pp-blokkeer'))el('pp-blokkeer').addEventListener('click',wisselBlokkade);
 /* Verwijderen vanuit het profiel volgt dezelfde regel als het doorvoeren:
    zit iemand ook in een andere groep, dan wordt hij alleen uit deze groep
    gehaald; is dit zijn laatste groep, dan gaat hij naar het archief. Uit het
@@ -3724,7 +3733,7 @@ function controleSignalen(){
        staan, dan moet er een besluit komen (opheffen of de persoon eruit). */
  people.filter(function(pp){return pp.geblokkeerd&&!pp.archived&&pp._state!=='verwijderd';}).forEach(function(pp){
   signalen.push({ernst:'laag',groep:(pp.groepen||[]).join(', '),
-   tekst:naam(pp)+' is geblokkeerd'+(pp.geblokkeerdReden?' ('+pp.geblokkeerdReden+')':'')+'. Hef de blokkade op of rond het af.',
+   tekst:naam(pp)+' is geblokkeerd'+(pp.geblokkeerdReden?' ('+pp.geblokkeerdReden+')':'')+'. Opheffen kan niet meer via het profiel; komt deze persoon niet terug, verwijder het account dan.',
    actie:{soort:'persoon',id:pp.id,type:pp.type,groep:(pp.groepen||[])[0]||huidigeGroep,label:'Profiel openen'}});
  });
  /* 10. Accounts die al lang niet zijn gebruikt: openstaande toegang die
