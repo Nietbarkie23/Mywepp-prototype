@@ -2939,18 +2939,22 @@ function openProfielPersoon(id,t){
  el('pp-groep-display').textContent=huidigeGroep;
  toonProfielRollen(p,t);
  el('pp-clienten').innerHTML=clientRechtenRow(p,t);
- wireClientRechten(el('pp-clienten'),t,function(){openProfielPersoon(id,t);});
+ /* Na één rechtenwijziging niet het hele profiel opnieuw opbouwen: het
+    keuzemenu toont de nieuwe waarde al. Bij een grote groep (1.200 cliënten)
+    kostte dat herbouwen ruim een seconde per keuze (gemeten). */
+ var naRecht=function(){updateTally();};
+ wireClientRechten(el('pp-clienten'),t,naRecht);
  if(t==='medewerker'){
   el('pp-lbl-medewerkers').textContent='Recht op medewerkers';
   el('pp-medewerkers').innerHTML=medewerkerPeerRow(p);
-  wireMedewerkerPeerRechten(el('pp-medewerkers'),function(){openProfielPersoon(id,t);});
+  wireMedewerkerPeerRechten(el('pp-medewerkers'),naRecht);
   el('pp-lbl-naasten').textContent='Naasten';
   el('pp-naasten').innerHTML=naasteRechtenRow(p);
-  wireNaasteRechten(el('pp-naasten'),function(){openProfielPersoon(id,t);});
+  wireNaasteRechten(el('pp-naasten'),naRecht);
  }else{
   el('pp-lbl-medewerkers').textContent='Medewerkers met recht op deze naaste';
   el('pp-medewerkers').innerHTML=medewerkerRechtenRow(p.id);
-  wireMedewerkerRechten(el('pp-medewerkers'),function(){openProfielPersoon(id,t);});
+  wireMedewerkerRechten(el('pp-medewerkers'),naRecht);
  }
  ['pp-lbl-medewerkers'].forEach(function(id2){el(id2).hidden=false;});
  el('pp-lbl-naasten').hidden=(t==='naaste');
