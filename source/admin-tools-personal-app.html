@@ -15,7 +15,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
 <style>
 :root{
-  --ink:#1D2733; --ink-soft:#66707C; --ink-faint:#98A1AB;
+  /* ink-soft en ink-faint zijn zo donker als nodig voor de contrastnorm (WCAG
+     AA, 4,5:1) op alle lichte achtergronden; het oude lichtgrijs haalde 2,4:1
+     en was voor slechtzienden nauwelijks leesbaar. */
+  --ink:#1D2733; --ink-soft:#566069; --ink-faint:#5F6975;
   --paper:#F1F4F8; --surface:#FFFFFF;
   --line:#E1E6EC; --line-strong:#C7CFDA;
   --moss:#2FAE6A; --moss-bg:#E7F7EE; --moss-line:#BEE7D2;
@@ -27,7 +30,7 @@
   --adminbar-bg:#20242B; --abtn-bg:#D9DBD6; --abtn-bg-hover:#CDD0C9; --abtn-border:#9AA0A6; --abtn-text:#1D2733;
 }
 :root[data-theme="dark"]{
-  --ink:#E9EDF2; --ink-soft:#A7B0BC; --ink-faint:#77818C;
+  --ink:#E9EDF2; --ink-soft:#A7B0BC; --ink-faint:#8F99A5;
   --paper:#12161C; --surface:#1B2029;
   --line:#2A303B; --line-strong:#3B4350;
   --moss:#6FCB9A; --moss-bg:#152820; --moss-line:#264636;
@@ -476,7 +479,7 @@ input.vastveld:focus{border-color:var(--line);box-shadow:none}
  transition:max-height .38s ease,opacity .25s ease,padding .38s ease,visibility 0s linear .38s}
 /* De kop was een div met een klikhandler: met het toetsenbord kon je de sectie
    helemaal niet openen. */
-.acc-head:focus-visible,.chead:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--radius)}
+.acc-head:focus-visible,.chead:focus-visible,.acc-head b:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--radius)}
 .acc.closed .chev{transform:rotate(-90deg)}
 
 .urow{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:9px;background:var(--surface);overflow:hidden}
@@ -983,7 +986,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       </div>
       <div class="hubcard togglerow" style="border-top:1px solid var(--line)">
         <span>Tweestapsverificatie verplicht</span>
-        <label class="toggle"><input type="checkbox" id="hub-tweestaps" checked><span class="track"></span><span class="knob"></span></label>
+        <label class="toggle"><input type="checkbox" id="hub-tweestaps" checked aria-label="Tweestapsverificatie verplicht"><span class="track"></span><span class="knob"></span></label>
       </div>
       <div class="hubcard" style="display:block;border-top:1px solid var(--line)">
         <b style="display:block;margin-bottom:6px;font-size:13.5px">Opmerking</b>
@@ -1171,7 +1174,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
     </div>
     <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Maaltijden</h1></div>
     <div class="panel">
-      <div class="togglerow" style="padding:16px 18px 0"><span>Reserveringsformulier actief</span><label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+      <div class="togglerow" style="padding:16px 18px 0"><span>Reserveringsformulier actief</span><label class="toggle"><input type="checkbox" checked aria-label="Reserveringsformulier actief"><span class="track"></span><span class="knob"></span></label></div>
       <div style="padding:16px 18px 0;display:flex;gap:12px;flex-wrap:wrap">
         <div class="field" style="max-width:200px"><label for="maaltijd-client">Cliënt</label><select id="maaltijd-client"></select></div>
       </div>
@@ -1212,8 +1215,8 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <div id="pc-groepen-keuze" class="groepkeuze"></div>
         <p class="mini" id="pc-groepen-hint"></p>
       </div>
-      <div class="sublistlabel" style="margin-top:20px">Wettelijke vertegenwoordiger</div>
-      <div class="field"><select id="pc-vertegenwoordiger"></select></div>
+      <div class="sublistlabel" style="margin-top:20px" id="pc-vertegenwoordiger-kop">Wettelijke vertegenwoordiger</div>
+      <div class="field"><select id="pc-vertegenwoordiger" aria-labelledby="pc-vertegenwoordiger-kop"></select></div>
       <p class="mini" id="pc-vertegenwoordiger-hint"></p>
       <div class="sublistlabel" style="margin-top:20px">Wie heeft recht op deze cliënt</div>
       <div id="pc-rechten"></div>
@@ -5677,15 +5680,19 @@ document.querySelectorAll('[data-toggle]').forEach(function(b){
  /* Een kop die als knop werkt, hoort zich ook als knop te gedragen: te bereiken
     met Tab, te bedienen met Enter of spatie, en hardop te zeggen of de sectie
     openstaat. */
- b.setAttribute('role','button');
- b.setAttribute('tabindex','0');
+ /* Zit er in de kop nog een eigen knop (het vraagteken), dan mag de kop zelf
+    geen knop zijn: een knop in een knop is voor schermlezers onbruikbaar.
+    Dan wordt de titel de knop; klikken op de hele kop blijft werken. */
+ var knop=b.querySelector('button')?(b.querySelector('b')||b):b;
+ knop.setAttribute('role','button');
+ knop.setAttribute('tabindex','0');
  var lichaam=doel&&(doel.querySelector('.acc-body')||doel.querySelector('.cbody'));
  if(lichaam){
   if(!lichaam.id)lichaam.id=doelId+'-body';
-  b.setAttribute('aria-controls',lichaam.id);
+  knop.setAttribute('aria-controls',lichaam.id);
  }
  var meld=function(){
-  if(doel)b.setAttribute('aria-expanded',doel.classList.contains('closed')?'false':'true');
+  if(doel)knop.setAttribute('aria-expanded',doel.classList.contains('closed')?'false':'true');
  };
  meld();
  var wissel=function(){
@@ -5694,8 +5701,8 @@ document.querySelectorAll('[data-toggle]').forEach(function(b){
   meld();
  };
  b.addEventListener('click',wissel);
- b.addEventListener('keydown',function(e){
-  if(e.key==='Enter'||e.key===' '){e.preventDefault();wissel();}
+ knop.addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();wissel();}
  });
 });
 /* De terugpijl en de kruimels in een profiel gingen direct weg, buiten

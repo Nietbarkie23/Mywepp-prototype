@@ -38,6 +38,11 @@ die op poort 8734 en vang de database-aanroepen af met
 Zo is laden, opslaan en een trage of mislukte verbinding na te spelen zonder
 bij de echte database te komen. Na een wijziging de kopie opnieuw maken.
 
+Toegankelijkheid meten: `axe-scan.js` (overzicht per regel) en `axe-kleur2.js`
+(contrast per kleurpaar) gebruiken axe-core uit `scratchpad/axe/` (via npm).
+Animaties worden tijdens de meting uitgezet; anders meet axe een scherm
+halverwege het invagen en meldt het onterecht te weinig contrast.
+
 Elk testscript neemt de poort als eerste argument. Let op twee vallen die al
 meermaals toesloegen:
 
