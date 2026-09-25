@@ -204,7 +204,11 @@ alles lezen, personen aanmaken/wissen, rechten geven en logregels vervalsen.
 Tegen overspoelen (in de database, migraties `rate_limit_*`):
 `public.check_request` draait als `pgrst.db_pre_request` vóór elk API-verzoek en
 telt schrijfverzoeken per IP in `private.verzoeken`; boven 2000 per twee minuten
-volgt HTTP 429 (de app toont dan "Niet opgeslagen"). Een fout in de teller laat
+volgt HTTP 429 (de app toont dan "Niet opgeslagen"). Tegen een aanval vanaf veel
+adressen telt dezelfde functie ook alle adressen samen (rij `*alle*`, grens 5000
+per twee minuten): onder zo'n aanval kan ook een echte gebruiker even niet
+opslaan, maar de database blijft heel. Per tabel een bovengrens op het aantal
+rijen (trigger `tabelgrootte`, `bewaak_tabelgrootte`, geschat via `pg_class`). Een fout in de teller laat
 het verzoek door, zodat de app nooit door de teller platgaat. Leesverzoeken zijn
 zo niet te begrenzen. Elke tabel heeft een trigger `rijgrootte`
 (`bewaak_rijgrootte`) die te grote rijen weigert. Uitzetten:
