@@ -97,11 +97,13 @@ dus terug te zetten door die comment weg te halen: het scherm Bereikbaarheid
 (`bereikbaarheid`), en de knoppen Rechtensets
 (`rechtensets`) en Groepeer (`groepeer`). Die laatste twee openden allebei
 Standaardrollen. Het hele kopje Overzichten is weg (`overzichten`): Wie ziet
-wie, Zoeken en AVG zijn verborgen, Groepen beheren is weggehaald (het scherm
+wie en Zoeken zijn verborgen, Groepen beheren is weggehaald (het scherm
 `admintab-groepen` bestaat nog en is alleen te bereiken via inloggen als
 systeembeheer en na Groep maken; het koppelen van groepen staat nu bij Groep
 bewerken).
-Standaardrollen staat nu onder Bewerken, Controle onder Overig. De knop Uit
+Standaardrollen staat nu onder Bewerken, Controle onder Overig. AVG
+(datalekkenregister, verwerkingsregister, export) staat op verzoek weer terug,
+onder Overig naast Controle. De knop Uit
 dienst is ook weggehaald (`uitdienst`); `uitDienstFlow` staat nog in de code.
 
 **Ziekmelden staat uit** (`ZIEKMELDEN=false`, `isZiek`, HTML-comment

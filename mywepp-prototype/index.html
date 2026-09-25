@@ -782,16 +782,19 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
          - Groepen beheren is weggehaald. Het scherm (admintab-groepen) staat nog
            in de code, want daar zitten het koppelen van groepen en het nummer van
            systeembeheer; die zijn zonder deze knop niet te bereiken.
-         - Wie ziet wie, Zoeken en AVG zijn verborgen. Niet verwijderen —
+         - Wie ziet wie en Zoeken zijn verborgen. Niet verwijderen —
            terugzetten = de knoppen hieronder uit deze comment halen en de groep
-           Overzichten weer openen.
+           Overzichten weer openen. AVG staat op verzoek weer terug, onder Overig.
       <button type="button" class="abtn tab" data-admintab="matrix">Wie ziet<br>wie</button>
       <button type="button" class="abtn tab" data-admintab="zoeken">Zoeken</button>
-      <button type="button" class="abtn tab" data-admintab="datalek">AVG <span class="countchip" id="datalek-teller"></span></button>
     overzichten -->
     <div class="adminbar-group"><span class="adminbar-kop">Overig</span>
       <button type="button" class="abtn nadruk" data-adm="doorvoeren">Wijzigingen<br>doorvoeren <span class="countchip" id="adm-wijzig-teller"></span></button>
       <button type="button" class="abtn tab" data-admintab="controle">Controle <span class="countchip" id="controle-teller"></span></button>
+      <!-- AVG terug op verzoek: achter deze knop zitten het datalekkenregister, het
+           verwerkingsregister en de export van wie toegang heeft; zonder knop waren
+           die nergens meer te bereiken. -->
+      <button type="button" class="abtn tab" data-admintab="datalek">AVG <span class="countchip" id="datalek-teller"></span></button>
       <!-- rechtensets: knop op verzoek verborgen. Niet verwijderen — hij bracht je
            naar het scherm Standaardrollen, dat ook gewoon onder Overzichten
            staat. Terugzetten = deze comment weghalen.
