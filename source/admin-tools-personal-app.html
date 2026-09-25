@@ -5441,6 +5441,29 @@ async function syncOrganisatieData(){
   var alle=orgRijen();
   var rijen=alle.filter(function(r){return dbStandOrg[r.sleutel]!==JSON.stringify(r.waarde);});
   if(!rijen.length)return registreerOpslag('organisatie',true);
+  /* Veel instellingen staan per groep in één object (adres, tweestaps,
+     Digibord, standaardrollen per groep). Het hele object terugschrijven wiste
+     wat een andere beheerder intussen bij een andere groep had aangepast
+     (aangetoond). Voor objecten dus per onderdeel samenvoegen met wat er nu in
+     de database staat; lijsten gaan nog in hun geheel. */
+  var objecten=rijen.filter(function(r){return r.waarde&&typeof r.waarde==='object'&&!Array.isArray(r.waarde);});
+  if(objecten.length){
+   var huidig=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',objecten.map(function(r){return r.sleutel;}));
+   if(huidig.error)return registreerOpslag('organisatie',false);
+   objecten.forEach(function(r){
+    var db=((huidig.data||[]).filter(function(x){return x.sleutel===r.sleutel;})[0]||{}).waarde;
+    if(!db||typeof db!=='object'||Array.isArray(db))return;
+    var vorig=dbStandOrg[r.sleutel]?JSON.parse(dbStandOrg[r.sleutel]):{};
+    if(!vorig||typeof vorig!=='object'||Array.isArray(vorig))vorig={};
+    var samen=Object.assign({},db);
+    Object.keys(r.waarde).forEach(function(k){if(JSON.stringify(r.waarde[k])!==JSON.stringify(vorig[k]))samen[k]=r.waarde[k];});
+    Object.keys(vorig).forEach(function(k){if(!(k in r.waarde))delete samen[k];});
+    /* Het object in het geheugen zelf bijwerken, zodat ook in beeld komt wat
+       een ander deed. */
+    Object.keys(r.waarde).forEach(function(k){delete r.waarde[k];});
+    Object.assign(r.waarde,samen);
+   });
+  }
   var res=await sb.from('organisatie_data').upsert(rijen,{onConflict:'sleutel'});
   if(!res.error)rijen.forEach(function(r){dbStandOrg[r.sleutel]=JSON.stringify(r.waarde);});
   return registreerOpslag('organisatie',!res.error);

@@ -161,9 +161,11 @@ verbergen/sluiten direct opgeslagen (`bewaarAllesNu`, keepalive via
 veranderde. Personen: per veld (`update` op id) t.o.v. `dbStandPersonen`;
 nieuwe personen in hun geheel. Instellingen: alleen gewijzigde sleutels t.o.v.
 `dbStandOrg` (`orgRijen()`). Groepen: alleen eigen mutaties (`groepMutaties`,
-`groepErbij`/`groepWeg`), nooit "wat niet in mijn lijst staat". Eén sleutel
-als `groep_gegevens` bevat alle groepen: twee beheerders die tegelijk
-verschillende groepen aanpassen overschrijven elkaar daar nog wel.
+`groepErbij`/`groepWeg`), nooit "wat niet in mijn lijst staat". Instellingen
+die als object zijn opgeslagen (per groep: `groep_gegevens`, `groep_tweestaps`,
+`digibord`, `groep_rollen`, …) worden per onderdeel samengevoegd met de
+databasestand (`org-samen.js`); lijsten (instituten, koppelingen) gaan nog in
+hun geheel.
 Objectvelden (`OBJECTVELDEN`: rechten, rollen, toestemming) worden per sleutel
 samengevoegd met de actuele databasestand, zodat een ingetrokken recht niet
 door een ander wordt teruggezet. Nieuwe personen: vlak voor het wegschrijven
