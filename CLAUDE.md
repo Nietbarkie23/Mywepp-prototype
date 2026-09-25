@@ -191,6 +191,23 @@ naar `page.on('request')`, niet naar de nep-database (`clientdata-db.js`). Nagel
 opslaan/laden van alle velden, alle schermen op 390px, XSS op 27 schermen,
 RLS-policies. Open punt: alle policies staan op `true` (geen inlog).
 
+**Pentest en overbelasting.** Aangetoond en opgelost: XSS via de chattijd
+(`renderCaChatList`) en via een rolnaam uit `org_default` (`vulRolCategorieenAan`
+accepteert alleen rollen uit `ROLLEN`), CSV-injectie in exports (`csvVeld` zet
+een apostrof voor `= + - @`), Escape in een zoekkeuze sloot het hele venster,
+reactieknoppen crashten zonder `reacties`-object. Tests: `xss-rest.js`,
+`xss-rol.js`, `csv-injectie.js`, `modal-toets.js`, `te-veel.js` (poort 8734).
+Nog open en alleen met inlog op te lossen: met de publieke sleutel kan iedereen
+alles lezen, personen aanmaken/wissen, rechten geven en logregels vervalsen.
+Tegen overspoelen (in de database, migraties `rate_limit_*`):
+`public.check_request` draait als `pgrst.db_pre_request` vóór elk API-verzoek en
+telt schrijfverzoeken per IP in `private.verzoeken`; boven 2000 per twee minuten
+volgt HTTP 429 (de app toont dan "Niet opgeslagen"). Een fout in de teller laat
+het verzoek door, zodat de app nooit door de teller platgaat. Leesverzoeken zijn
+zo niet te begrenzen. Elke tabel heeft een trigger `rijgrootte`
+(`bewaak_rijgrootte`) die te grote rijen weigert. Uitzetten:
+`alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`.
+
 - Rollen: categorie `locatie` (medewerker) en `clienten` = "Cliënt" (naaste)
   in `ROLLEN`/`RECHTEN`/`orgDefault`; oude opgeslagen standaarden worden
   aangevuld via `vulRolCategorieenAan`. Per persoon een rolkeuze als de groep

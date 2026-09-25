@@ -1514,8 +1514,12 @@ function vulRolCategorieenAan(data,type){
  if(!data||typeof data!=='object')data={};
  RECHTEN[type].forEach(function(r){
   var d=data[r.k];
-  if(!d||typeof d.rol!=='string')data[r.k]=JSON.parse(JSON.stringify(STANDAARD_ROLLEN[type][r.k]));
-  else if(!Array.isArray(d.opt))d.opt=[];
+  /* Alleen rollen die de app kent. Een rolnaam komt uit de database en belandde
+     ongefilterd in de pagina; een verzonnen "rol" met HTML erin voerde code
+     uit (aangetoond). */
+  var bekend=ROLLEN[type][r.k];
+  if(!d||typeof d.rol!=='string'||bekend.indexOf(d.rol)<0)data[r.k]=JSON.parse(JSON.stringify(STANDAARD_ROLLEN[type][r.k]));
+  else d.opt=Array.isArray(d.opt)?d.opt.filter(function(o){return bekend.indexOf(o)>-1;}):[];
  });
  return data;
 }
@@ -1584,7 +1588,7 @@ function rechtenRows(container,type,data,onchange){
    '<div class="rechtgrid">'+
     '<div class="field"><label>Standaardrol</label>'+
      '<div class="roldrop'+(roleOpen?' open':'')+'" data-role="'+r.k+'">'+
-      '<button type="button" class="roldrop-btn">'+cur.rol+CHEVRON_SVG+'</button>'+
+      '<button type="button" class="roldrop-btn">'+esc(cur.rol)+CHEVRON_SVG+'</button>'+
       '<div class="roldrop-menu"'+(roleOpen?'':' hidden')+'>'+ROLLEN[type][r.k].map(function(rol){
        return '<button type="button" class="roldrop-item'+(rol===cur.rol?' on':'')+'" data-rol="'+rol+'">'+rol+'</button>';
       }).join('')+'</div>'+
@@ -4656,7 +4660,11 @@ function koppelZoekKeuze(id,items,opties){
    var h=lijst.querySelector('.hl');if(h&&h.scrollIntoView)h.scrollIntoView({block:'nearest'});
   }else if(e.key==='Enter'){
    if(!lijst.hidden&&treffers[hl]){e.preventDefault();kies(treffers[hl]);}
-  }else if(e.key==='Escape'){sluit();}
+  }else if(e.key==='Escape'&&!lijst.hidden){
+   /* Eerst alleen de lijst dicht. Anders sloot dezelfde toets ook het hele
+      venster, en was alles wat je daarin had ingevuld weg. */
+   e.preventDefault();e.stopPropagation();sluit();
+  }
  });
  var start=opties.start!==undefined?itemVan(opties.start):items[0];
  if(start){gekozen=start.waarde;invoer.value=start.label;toonGekozen();}
@@ -5898,7 +5906,15 @@ function bevestigExport(wat,omschrijving,onJa){
   'Ja, exporteren',onJa);
 }
 /* Bij een audit of incident wil je het logboek buiten de app kunnen aanleveren. */
-function csvVeld(waarde){return '"'+String(waarde==null?'':waarde).replace(/"/g,'""')+'"';}
+/* Een cel die begint met = + - @ (of tab/return) voert Excel uit als formule.
+   Via een naam of reden kon zo een link of opdracht in de export belanden
+   (CSV-injectie, aangetoond). Zo'n cel krijgt een apostrof ervoor: Excel toont
+   dan gewoon de tekst. */
+function csvVeld(waarde){
+ var t=String(waarde==null?'':waarde);
+ if(/^[=+\-@\t\r]/.test(t))t="'"+t;
+ return '"'+t.replace(/"/g,'""')+'"';
+}
 /* BOM zodat Excel de accenten goed leest. */
 function downloadCsv(regels,bestandsnaam){
  var blob=new Blob(['\ufeff'+regels.join('\r\n')],{type:'text/csv;charset=utf-8;'});
@@ -7644,6 +7660,9 @@ function wireMediaThumbs(container){
  });
 }
 function emojiRowHtml(attrName,attrValuePrefix,item){
+ /* Gegevens uit de database hebben niet altijd een reacties-object; zonder
+    deze regel liep het hele scherm vast. */
+ if(!item.reacties||typeof item.reacties!=='object')item.reacties={};
  return '<div class="emojirow">'+EMOJIS.map(function(e){
   var selected=item.mijnReactie===e;
   var disabled=item.mijnReactie&&!selected;
@@ -8094,7 +8113,9 @@ function renderCaChatList(){
   var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg),last=th.berichten[th.berichten.length-1];
   return '<div class="chatlist-row" data-openchat="'+t.key+'">'+avatarHtmlSized(th.naam,38)+
    '<div class="ctxt"><b>'+esc(th.naam)+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+esc(t.inactief?'Kan nu niet inloggen — alleen teruglezen':(last?last.van+': '+last.tekst:'Nog geen berichten'))+'</span></div>'+
-   '<span class="ctime">'+(last?last.tijd:'')+'</span></div>';
+   /* De tijd komt uit de database en ging zonder esc() de pagina in (XSS,
+      aangetoond); sinds het echte tijdstip toonde de lijst hem ook ruw. */
+   '<span class="ctime">'+(last?esc(chatTijd(last.tijd)):'')+'</span></div>';
  }).join('');
  html+='<button type="button" class="addbtn-row" id="ca-nieuw-gesprek">+ Nieuw gesprek</button>';
  el('ca-body').innerHTML=html;
