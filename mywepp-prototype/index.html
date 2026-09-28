@@ -2076,7 +2076,7 @@ function registreerOpslag(soort,gelukt){
  toonOpslagStatus();
  return gelukt;
 }
-var OPSLAGNAMEN={personen:'gebruikers en rechten',organisatie:'instituten, locaties en groepen',
+var OPSLAGNAMEN={personen:'gebruikers en rechten',groepen:'de groepenlijst',organisatie:'instituten, locaties en groepen',
  clientdata:'gegevens uit de cliënt-app',chat:'chatberichten',logboek:'het logboek',datalek:'de datalekmelding'};
 function toonOpslagStatus(){
  var balk=el('opslag-balk');if(!balk)return;
@@ -2093,6 +2093,7 @@ async function probeerOpslagOpnieuw(){
  var knop=el('opslag-opnieuw');
  if(knop){knop.disabled=true;knop.textContent='Bezig…';}
  if(opslagMislukt.personen)await syncToSupabase();
+ if(opslagMislukt.groepen)await syncGroepenToSupabase();
  if(opslagMislukt.organisatie)await syncOrganisatieData();
  if(opslagMislukt.clientdata&&typeof caClientId!=='undefined'&&caClientId)bewaarClientDataNu(caClientId);
  if(opslagMislukt.chat&&typeof caChatKey!=='undefined'&&caChatKey)bewaarChatThreadNu(caChatKey);
@@ -5558,9 +5559,16 @@ if(el('sb-tel'))el('sb-tel').addEventListener('input',function(){
 var groepMutaties={erbij:[],weg:[]};
 function groepErbij(n){groepMutaties.weg=groepMutaties.weg.filter(function(x){return x!==n;});if(groepMutaties.erbij.indexOf(n)<0)groepMutaties.erbij.push(n);}
 function groepWeg(n){groepMutaties.erbij=groepMutaties.erbij.filter(function(x){return x!==n;});if(groepMutaties.weg.indexOf(n)<0)groepMutaties.weg.push(n);}
+/* Mislukte het wegschrijven van de groepenlijst, dan bleef dat stil: geen
+   Niet opgeslagen-balk en geen Opnieuw proberen, terwijl bij Groep verwijderen
+   de personen al zonder groep in de database stonden (aangetoond met
+   groep-opslagfout.cjs). De mutaties blijven staan tot het wel lukt. */
 async function syncGroepenToSupabase(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;
+ return registreerOpslag('groepen',await schrijfGroepenWeg());
+}
+async function schrijfGroepenWeg(){
  try{
   var bestaand=await sb.from('groepen').select('id,naam');
   if(bestaand.error||!bestaand.data)return false;
