@@ -258,6 +258,17 @@ Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
 - Groepen koppelen gebeurt bij Groep bewerken (`hernoemGroep`): de bewerkte
   groep staat niet in het keuzemenu "Koppelen aan"; opheffen per groep met
   `ontkoppelGroep`. Hernoemen werkt de koppeling bij.
+- Groep verwijderen (`verwijderGroep`) blokkeert niet meer bij mensen erin:
+  de groep gaat uit koppelingen en bij iedereen eraf, rechten zonder gedeelde
+  groep worden opgeruimd. Wie alleen in die groep zat, staat onder Overig ›
+  Zonder groep (`zonderGroepFlow`, teller `zondergroep-teller`): verplaatsen,
+  naar het archief, of gearchiveerd terugzetten. Groep herstellen zet mensen,
+  rechten en vertegenwoordigers terug uit `groepOntkoppeld` (organisatie_data
+  `groep_ontkoppeld`). Tests: `groep-verwijderen.cjs`,
+  `groep-verwijderen-db.cjs`, `groep-verwijderen-ui.cjs`.
+- MyWepp Personal, Info-scherm: rollen van betrokkenen staan vast (tekst, geen
+  keuzelijst; `personRechtenRow(id,true)`). Wijzigen alleen via Gebruikers
+  beheren. Test: `rollen-vast.cjs`.
 
 Supabase-kolommen die hiervoor zijn toegevoegd: `personen.rollen`,
 `personen.gearchiveerd_reden`, `logboek.soort`, `logboek.reden`.
