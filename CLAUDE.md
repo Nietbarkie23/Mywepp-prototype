@@ -204,6 +204,11 @@ accepteert alleen rollen uit `ROLLEN`), CSV-injectie in exports (`csvVeld` zet
 een apostrof voor `= + - @`), Escape in een zoekkeuze sloot het hele venster,
 reactieknoppen crashten zonder `reacties`-object. Tests: `xss-rest.js`,
 `xss-rol.js`, `csv-injectie.js`, `modal-toets.js`, `te-veel.js` (poort 8734).
+Later (28-09, gevonden door Codex, patroon op acht plekken): waarden uit het
+JSON-dossier (`client_data`, chat) zijn niet op type afgedwongen. Reactietellers
+gaan door `veiligeTeller`, en id's van doelen, rapportages, agenda, Ik-Boek,
+geheugen, chatgesprekken en -berichten door `esc()` in hun data-attribuut.
+Tests: `xss-json.cjs`, `knoppen-ids.cjs`.
 Nog open en alleen met inlog op te lossen: met de publieke sleutel kan iedereen
 alles lezen, personen aanmaken/wissen, rechten geven en logregels vervalsen.
 Tegen overspoelen (in de database, migraties `rate_limit_*`):
@@ -218,6 +223,10 @@ het verzoek door, zodat de app nooit door de teller platgaat. Leesverzoeken zijn
 zo niet te begrenzen. Elke tabel heeft een trigger `rijgrootte`
 (`bewaak_rijgrootte`) die te grote rijen weigert. Uitzetten:
 `alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`.
+De oude kopie `public.check_request` is weg (migratie
+`oude_public_check_request_weg`): die was via `/rest/v1/rpc/` door iedereen
+aan te roepen. Definitie bewaard in de scratchpad
+(`terugzetten-public-check_request.sql`).
 Verder (migratie `beveiliging_rechten_controles_historie`): anon/authenticated
 hebben geen TRUNCATE meer en geen wijzig-/wisrecht op het logboek; nieuwe
 tabellen staan niet meer automatisch open. Controles op `type` en lengtes van
