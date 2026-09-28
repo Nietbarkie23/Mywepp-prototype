@@ -1391,6 +1391,10 @@ function esc(s){
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
   .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+/* Reactietellers staan in het JSON-dossier en zijn dus niet door de database op
+   type gecontroleerd. Een tekst als teller werd als HTML uitgevoerd (XSS,
+   aangetoond); alleen een positief geheel getal telt. */
+function veiligeTeller(v){var n=Number(v);return Number.isInteger(n)&&n>0?Math.min(n,99999):0;}
 var verzondenTimer=null;
 function show(id){
  clearTimeout(verzondenTimer);
@@ -7206,9 +7210,9 @@ function renderCaGeheugen(){
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-geheugen-terug">← Terug</button><b style="font-size:15px">Geheugen</b></div>';
  html+='<p class="mini" style="margin:0 0 12px">Herinneringen die deze cliënt op zijn/haar telefoon of Digibord te zien krijgt.</p>';
  html+=g.items.map(function(it){
-  return '<div class="doelcard"><div class="dtop"><b>'+esc(it.titel)+'</b><label class="toggle"><input type="checkbox" data-geh-actief="'+it.id+'" '+(it.actief?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>'+
+  return '<div class="doelcard"><div class="dtop"><b>'+esc(it.titel)+'</b><label class="toggle"><input type="checkbox" data-geh-actief="'+esc(it.id)+'" '+(it.actief?'checked':'')+'><span class="track"></span><span class="knob"></span></label></div>'+
    '<p class="mini" style="margin:0">'+esc(it.tijd)+' · '+esc(it.dagen)+'</p>'+
-   '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="small" data-geh-verwijder="'+it.id+'">Verwijderen</button></div></div>';
+   '<div class="actions end" style="border:0;padding-top:8px;margin-top:6px"><button type="button" class="small" data-geh-verwijder="'+esc(it.id)+'">Verwijderen</button></div></div>';
  }).join('');
  html+='<button type="button" class="addbtn-row" id="ca-geheugen-nieuw">+ Herinnering toevoegen</button>';
  el('ca-body').innerHTML=html;
@@ -7669,24 +7673,28 @@ function emojiRowHtml(attrName,attrValuePrefix,item){
  return '<div class="emojirow">'+EMOJIS.map(function(e){
   var selected=item.mijnReactie===e;
   var disabled=item.mijnReactie&&!selected;
-  return '<button type="button" class="'+(selected?'selected ':'')+(disabled?'disabled':'')+'" '+attrName+'="'+attrValuePrefix+'|'+e+'">'+e+(item.reacties[e]?'<span class="ecount">'+item.reacties[e]+'</span>':'')+'</button>';
+  return '<button type="button" class="'+(selected?'selected ':'')+(disabled?'disabled':'')+'" '+attrName+'="'+esc(attrValuePrefix)+'|'+e+'">'+e+(veiligeTeller(item.reacties[e])?'<span class="ecount">'+veiligeTeller(item.reacties[e])+'</span>':'')+'</button>';
  }).join('')+'</div>';
 }
 function toggleReactie(item,emoji){
  bewaarStraks('reactie-'+caClientId,function(){bewaarClientData(caClientId);});
  if(item.mijnReactie===emoji){
-  item.reacties[emoji]=Math.max(0,(item.reacties[emoji]||1)-1);
+  item.reacties[emoji]=Math.max(0,(veiligeTeller(item.reacties[emoji])||1)-1);
   if(!item.reacties[emoji])delete item.reacties[emoji];
   item.mijnReactie=null;
  }else if(!item.mijnReactie){
-  item.reacties[emoji]=(item.reacties[emoji]||0)+1;
+  item.reacties[emoji]=veiligeTeller(item.reacties[emoji])+1;
   item.mijnReactie=emoji;
  }
 }
+/* Id's van doelen, rapportages, agenda, Ik-Boek, geheugen en chat staan in het
+   JSON-dossier: de database dwingt daar geen getal af. Een id met een
+   aanhalingsteken brak uit het data-attribuut en voerde code uit (XSS,
+   aangetoond), dus ook id's gaan door esc(). */
 function rapportCardHtml(doel,r){
  return '<div class="rapport"><div class="rmeta"><span>'+esc(r.auteur)+' · '+esc(r.tijd)+(r.dienst?' · '+esc(r.dienst):'')+'</span><span style="display:flex;gap:4px">'+
-  '<button type="button" class="iconbtn tiny" data-editrapport="'+doel.id+'|'+r.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
-  '<button type="button" class="iconbtn tiny danger" data-delrapport="'+doel.id+'|'+r.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
+  '<button type="button" class="iconbtn tiny" data-editrapport="'+esc(doel.id+'|'+r.id)+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+  '<button type="button" class="iconbtn tiny danger" data-delrapport="'+esc(doel.id+'|'+r.id)+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
  '</span></div>'+esc(r.tekst)+
   (r.media?mediaThumbHtml('foto','linear-gradient(135deg,#3E7CA6,#8C6A45)',doel.titel+' — '+r.tijd):'')+
   (r.audio?audioBarHtml(doel.titel+' — '+r.tijd):'')+
@@ -7706,11 +7714,11 @@ function renderCaDoelen(){
  }else{
   html+=d.doelen.map(function(doel){
    return '<div class="doelcard"><div class="dtop"><b>'+esc(doel.titel)+'</b><div style="display:flex;gap:6px;align-items:center">'+
-    '<button type="button" class="iconbtn tiny" data-editdoel="'+doel.id+'" aria-label="Doel hernoemen">'+PENCIL_SVG+'</button>'+
-    '<button type="button" class="iconbtn tiny danger" data-deldoel="'+doel.id+'" aria-label="Doel verwijderen">'+TRASH_SVG+'</button>'+
-    '<button type="button" class="small" data-newrapport="'+doel.id+'">+ Rapportage</button></div></div>'+
+    '<button type="button" class="iconbtn tiny" data-editdoel="'+esc(doel.id)+'" aria-label="Doel hernoemen">'+PENCIL_SVG+'</button>'+
+    '<button type="button" class="iconbtn tiny danger" data-deldoel="'+esc(doel.id)+'" aria-label="Doel verwijderen">'+TRASH_SVG+'</button>'+
+    '<button type="button" class="small" data-newrapport="'+esc(doel.id)+'">+ Rapportage</button></div></div>'+
     (doel.rapportages.length? doel.rapportages.slice().reverse().map(function(r){return rapportCardHtml(doel,r);}).join('') : '<p class="empty-msg" style="padding-top:6px">Nog geen rapportages.</p>')+
-    '<div id="newrapport-'+doel.id+'"></div>'+
+    '<div id="newrapport-'+esc(doel.id)+'"></div>'+
    '</div>';
   }).join('');
   html+='<button type="button" class="addbtn-row" id="ca-nieuw-doel">+ Nieuw doel</button>';
@@ -7891,7 +7899,7 @@ function agendaCardHtml(a){
   if(voornamen.length)extra.push('👤 '+esc(voornamen.join(', ')));
  }
  return '<div class="agendacard">'+
-  '<input type="checkbox" data-klaar="'+a.id+'" '+(a.klaar?'checked':'')+' style="width:auto;flex:0 0 auto" aria-label="Klaar">'+
+  '<input type="checkbox" data-klaar="'+esc(a.id)+'" '+(a.klaar?'checked':'')+' style="width:auto;flex:0 0 auto" aria-label="Klaar">'+
   '<div class="adate">'+esc(a.datumlabel)+'</div><div class="atxt"><b'+(a.klaar?' style="text-decoration:line-through;opacity:.55"':'')+'>'+esc(a.titel)+'</b><span>'+esc(a.tijd)+(a.media?' · met foto':'')+'</span>'+
   (a.locatie?'<div class="mapthumb" data-mediatype="foto" data-gradient="linear-gradient(135deg,#4A6FA5,#5A8A6E)" data-caption="'+esc(a.locatie)+'">🗺️ '+esc(a.locatie)+'</div>':'')+
   (extra.length?'<span style="display:block;margin-top:2px">'+extra.join(' · ')+'</span>':'')+'</div></div>';
@@ -8004,8 +8012,8 @@ function renderCaIkboek(){
  var d=ensureClientData(caClientId);
  var html=d.ikboek.length? d.ikboek.slice().reverse().map(function(e){
   return '<div class="ikboekcard"><div class="imeta"><span>'+esc(e.tijd)+'</span><span style="display:flex;gap:4px">'+
-   (caClientweergave?'':'<button type="button" class="iconbtn tiny" data-editikboek="'+e.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
-   '<button type="button" class="iconbtn tiny danger" data-delikboek="'+e.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>')+
+   (caClientweergave?'':'<button type="button" class="iconbtn tiny" data-editikboek="'+esc(e.id)+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+   '<button type="button" class="iconbtn tiny danger" data-delikboek="'+esc(e.id)+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>')+
   '</span></div>'+esc(e.tekst)+
    (e.mediaType?mediaThumbHtml(e.mediaType,'linear-gradient(135deg,#4A6FA5,#5A8A6E)','Ik-Boek — '+e.tijd):'')+
    emojiRowHtml('data-ikreact',e.id,e)+
@@ -8114,7 +8122,7 @@ function renderCaChatList(){
  var threads=chatThreadsForClient(caClientId);
  var html=threads.map(function(t){
   var th=ensureThread(t.key,t.naam,t.groep,t.defaultLeden,t.leeg),last=th.berichten[th.berichten.length-1];
-  return '<div class="chatlist-row" data-openchat="'+t.key+'">'+avatarHtmlSized(th.naam,38)+
+  return '<div class="chatlist-row" data-openchat="'+esc(t.key)+'">'+avatarHtmlSized(th.naam,38)+
    '<div class="ctxt"><b>'+esc(th.naam)+(t.groep?' ('+th.leden.length+')':'')+'</b><span>'+esc(t.inactief?'Kan nu niet inloggen — alleen teruglezen':(last?last.van+': '+last.tekst:'Nog geen berichten'))+'</span></div>'+
    /* De tijd komt uit de database en ging zonder esc() de pagina in (XSS,
       aangetoond); sinds het echte tijdstip toonde de lijst hem ook ruw. */
@@ -8184,8 +8192,8 @@ function renderCaChatThread(){
  html+='<div id="ca-chat-berichten">'+th.berichten.map(function(m){
   var mine=isMijnBericht(m);
   var acties=mine?'<span style="display:flex;gap:2px;align-items:center;margin-right:4px">'+
-   '<button type="button" class="iconbtn tiny" data-editmsg="'+m.id+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
-   '<button type="button" class="iconbtn tiny danger" data-delmsg="'+m.id+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
+   '<button type="button" class="iconbtn tiny" data-editmsg="'+esc(m.id)+'" aria-label="Bewerken">'+PENCIL_SVG+'</button>'+
+   '<button type="button" class="iconbtn tiny danger" data-delmsg="'+esc(m.id)+'" aria-label="Verwijderen">'+TRASH_SVG+'</button>'+
   '</span>':'';
   var tijd=chatTijd(m.tijd);
   return '<div class="msgrow'+(mine?' mine':'')+'">'+acties+'<div class="bubble">'+(!mine?'<b style="font-size:11px;display:block;opacity:.7">'+esc(m.van)+'</b>':'')+esc(m.tekst)+(m.bewerkt?' <span style="font-size:10px;opacity:.65">(bewerkt)</span>':'')+
