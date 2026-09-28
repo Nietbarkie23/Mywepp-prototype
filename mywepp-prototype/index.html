@@ -812,6 +812,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <button type="button" class="abtn" data-adm="rechtensets">Rechtensets</button>
       rechtensets -->
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
+      <button type="button" class="abtn" data-adm="zonderGroep">Zonder<br>groep <span class="countchip" id="zondergroep-teller"></span></button>
       <!-- groepeer: knop op verzoek verborgen. Niet verwijderen — hij opende
            Standaardrollen, net als de eveneens verborgen knop Rechtensets, en
            zijn naam sloeg op het groeperen van meerdere groepen: precies de
@@ -1957,6 +1958,7 @@ async function loadFromSupabase(){
    if(opgeslagen.locatie_instituut)locatieInstituut=opgeslagen.locatie_instituut;
    if(opgeslagen.groep_locatie)groepLocatie=opgeslagen.groep_locatie;
    if(Array.isArray(opgeslagen.gearchiveerde_groepen))gearchiveerdeGroepen=opgeslagen.gearchiveerde_groepen;
+   if(opgeslagen.groep_ontkoppeld&&typeof opgeslagen.groep_ontkoppeld==='object'&&!Array.isArray(opgeslagen.groep_ontkoppeld))groepOntkoppeld=opgeslagen.groep_ontkoppeld;
    if(opgeslagen.systeembeheer&&typeof opgeslagen.systeembeheer.tel==='string')SYSTEEMBEHEER.tel=opgeslagen.systeembeheer.tel;
    if(opgeslagen.groep_tweestaps&&typeof opgeslagen.groep_tweestaps==='object')groepTweestaps=opgeslagen.groep_tweestaps;
    if(opgeslagen.beoordeelde_signalen&&typeof opgeslagen.beoordeelde_signalen==='object')beoordeeldeSignalen=opgeslagen.beoordeelde_signalen;
@@ -3535,6 +3537,7 @@ function toonGroepInTitel(){
 function renderAll(){
  toonGroepInTitel();
  ['client','medewerker','naaste'].forEach(renderAcc);renderContactpersonen();renderContactBanner();renderAccountSelect();updateTally();
+ zetZonderGroepTeller();
  toonKoppelingInFormulier();
  toonAdminWie();
  if(el('admintab-controle')&&!el('admintab-controle').hidden)renderControle();
@@ -3675,6 +3678,34 @@ function verversGroepReferenties(){
  toonKoppelingInFormulier();
 }
 var gearchiveerdeGroepen=[];
+/* Per verwijderde groep: wie erin zat en welke rechten en vertegenwoordigers
+   bij het verwijderen zijn opgeruimd. Zonder dit kwam bij Groep herstellen een
+   lege groep terug en was iedereen zijn rollen kwijt. */
+var groepOntkoppeld={};
+function rechtenMomentopname(){
+ var m={};
+ people.forEach(function(p){
+  var r={};
+  RECHTVELDEN.forEach(function(v){if(p[v]&&Object.keys(p[v]).length)r[v]=JSON.parse(JSON.stringify(p[v]));});
+  if(p.wettelijkeVertegenwoordiger)r.vertegenwoordiger=p.wettelijkeVertegenwoordiger;
+  m[p.id]=r;
+ });
+ return m;
+}
+/* Wat er in de momentopname stond en nu weg is. */
+function opgeruimdSinds(voor){
+ var weg={};
+ Object.keys(voor).forEach(function(id){
+  var p=findPerson(+id);if(!p)return;
+  RECHTVELDEN.forEach(function(v){
+   Object.keys(voor[id][v]||{}).forEach(function(k){
+    if(!p[v]||!(k in p[v])){weg[id]=weg[id]||{};weg[id][v]=weg[id][v]||{};weg[id][v][k]=voor[id][v][k];}
+   });
+  });
+  if(voor[id].vertegenwoordiger&&!p.wettelijkeVertegenwoordiger){weg[id]=weg[id]||{};weg[id].vertegenwoordiger=voor[id].vertegenwoordiger;}
+ });
+ return weg;
+}
 /* De schakelaar "Tweestapsverificatie verplicht" zei alleen "opgeslagen" maar
    bewaarde niets en deed niets. Nu staat het per groep vast, zodat de controle
    kan melden wie er niet aan voldoet. */
@@ -3831,16 +3862,32 @@ function hernoemGroep(g){
    :(locatieGewijzigd?('Locatie van "'+nieuw+'" bijgewerkt.'):('Niets gewijzigd aan "'+nieuw+'".'))));
  });
 }
+/* Een groep met mensen erin kon niet weg: eerst moest je iedereen een voor een
+   ontkoppelen of verplaatsen. Op verzoek gaat dat nu in een keer. De groep
+   verdwijnt uit koppelingen en bij iedereen die erin zat. Wie ook in een andere
+   groep zit, houdt die; wie alleen in deze groep zat blijft bestaan en komt in
+   Zonder groep, waar de beheerder zelf beslist (verwijderen of verplaatsen).
+   Niemand verdwijnt dus ongemerkt. */
 function verwijderGroep(g){
- var c=sbCounts(g);
- if(c.m+c.n+c.c>0){
-  alert('Deze groep heeft nog '+(c.m+c.n+c.c)+' gekoppelde perso(o)n(en) en kan niet verwijderd worden. Ontkoppel of verplaats hen eerst.');
-  return;
- }
  if(GROEPEN.length<=1){alert('Er moet minimaal één groep overblijven.');return;}
- openModal('<h3>Groep verwijderen</h3><div class="msec"><p>Weet je zeker dat je de groep "'+esc(g)+'" wilt verwijderen? Je kunt haar daarna terugzetten via "Groep herstellen".</p></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="danger" id="modal-bevestig">Verwijderen</button></div>');
- el('modal-annuleer').addEventListener('click',closeModal);
- el('modal-bevestig').addEventListener('click',function(){
+ var inGroep=people.filter(function(p){return !p.archived&&p.groepen.indexOf(g)>-1;});
+ var zonder=inGroep.filter(function(p){return p.groepen.length===1;});
+ var elders=inGroep.length-zonder.length;
+ var partners=partnersVan(g);
+ var tekst='<p>Weet je zeker dat je de groep <b>'+esc(g)+'</b> wilt verwijderen? Je kunt haar daarna terugzetten via "Groep herstellen".</p>'+
+  (inGroep.length?'<p>De groep wordt bij '+inGroep.length+' perso'+(inGroep.length===1?'on':'nen')+' weggehaald'+
+   (elders?'; '+elders+' daarvan blij'+(elders===1?'ft':'ven')+' in hun andere groep':'')+'.</p>':'')+
+  (zonder.length?'<p><b>'+zonder.length+' perso'+(zonder.length===1?'on zit':'nen zitten')+' alleen in deze groep.</b> Die '+(zonder.length===1?'komt':'komen')+' onder Overig › Zonder groep te staan. Daar verwijder of verplaats je '+(zonder.length===1?'hem':'hen')+' zelf.</p>':'')+
+  (partners.length?'<p>De koppeling met <b>'+partners.map(esc).join('</b>, <b>')+'</b> vervalt.</p>':'');
+ bevestigModal('Groep verwijderen',tekst,'Ja, verwijderen',function(){
+  var voor=rechtenMomentopname();
+  inGroep.forEach(function(p){
+   p.groepen=p.groepen.filter(function(x){return x!==g;});
+   /* Rechten op iemand met wie je geen groep meer deelt, horen niet te blijven
+      staan: dezelfde opruiming als bij losmaken uit een groep. */
+   ruimRechtenZonderGedeeldeGroepOp(p);
+  });
+  groepOntkoppeld[g]={personen:inGroep.map(function(p){return p.id;}),opgeruimd:opgeruimdSinds(voor)};
   GROEPEN.splice(GROEPEN.indexOf(g),1);
   groepWeg(g);
   gearchiveerdeGroepen.push(g);
@@ -3851,12 +3898,15 @@ function verwijderGroep(g){
   delete bulkSel.groepen[g];
   if(huidigeGroep===g)huidigeGroep=GROEPEN[0];
   verversGroepReferenties();
-  closeModal();
   renderSysteembeheer();
   renderAll();
-  syncGroepenToSupabase();
-  logActie('Groep "'+g+'" verwijderd');
-  sbBevestig('Groep "'+g+'" verwijderd.');
+  /* syncGroepenToSupabase schrijft eerst de personen weg en haalt dan pas de
+     groep uit de database; de tweede ronde vangt een groep die nog niet in de
+     database stond. */
+  syncGroepenToSupabase().then(function(){return syncToSupabase();});
+  logActie('Groep "'+g+'" verwijderd'+(inGroep.length?'; ontkoppeld bij '+inGroep.length+' perso'+(inGroep.length===1?'on':'nen')+(zonder.length?', '+zonder.length+' zonder groep':''):''),{soort:'Verwijdering'});
+  if(zonder.length)openMelding('Groep verwijderd','"'+g+'" is verwijderd. '+zonder.length+' perso'+(zonder.length===1?'on staat':'nen staan')+' nu onder Overig › Zonder groep.');
+  else sbBevestig('Groep "'+g+'" verwijderd.');
  });
 }
 function herstelGroep(g){
@@ -3869,9 +3919,35 @@ function herstelGroep(g){
  groepErbij(vrijeNaam);
  groepLocatie[vrijeNaam]=LOCATIES[0]||null;
  bulkSel.groepen[vrijeNaam]=false;
+ /* Wie er bij het verwijderen in zat, komt terug, met de rechten en
+    vertegenwoordigers die toen zijn opgeruimd. Alleen waar beide personen er nog
+    zijn en weer een groep delen: een recht op iemand die intussen is
+    gearchiveerd of elders zit, komt niet ongemerkt terug. */
+ var bewaard=groepOntkoppeld[g]||{},terug=0,rechtenTerug=0;
+ (Array.isArray(bewaard)?bewaard:(bewaard.personen||[])).forEach(function(id){
+  var p=findPerson(id);
+  if(p&&!p.archived&&p.groepen.indexOf(vrijeNaam)<0){p.groepen.push(vrijeNaam);terug++;}
+ });
+ var opgeruimd=bewaard.opgeruimd||{};
+ Object.keys(opgeruimd).forEach(function(id){
+  var p=findPerson(+id);if(!p||p.archived)return;
+  RECHTVELDEN.forEach(function(v){
+   Object.keys(opgeruimd[id][v]||{}).forEach(function(k){
+    var ander=findPerson(+k);
+    if(!ander||ander.archived||!deeltGroepMet(p,ander))return;
+    p[v]=p[v]||{};
+    if(!(k in p[v])){p[v][k]=opgeruimd[id][v][k];rechtenTerug++;}
+   });
+  });
+  var vt=findPerson(opgeruimd[id].vertegenwoordiger);
+  if(vt&&!vt.archived&&!p.wettelijkeVertegenwoordiger&&deeltGroepMet(p,vt)){p.wettelijkeVertegenwoordiger=vt.id;rechtenTerug++;}
+ });
+ delete groepOntkoppeld[g];
  verversGroepReferenties();
  renderSysteembeheer();
- syncGroepenToSupabase();
+ renderAll();
+ syncGroepenToSupabase().then(function(){return syncToSupabase();});
+ if(terug)logActie(terug+' perso'+(terug===1?'on':'nen')+(rechtenTerug?' en '+rechtenTerug+' recht'+(rechtenTerug===1?'':'en'):'')+' terug in groep "'+vrijeNaam+'" na herstellen',{soort:'Herstel'});
 }
 
 /* ============== CONTROLE: signalen over alle groepen heen ==============
@@ -4894,6 +4970,78 @@ function persoonHerstelFlow(){
   show('pp-gearchiveerd');
  });
 }
+/* ---- Zonder groep ----
+   Na het verwijderen van een groep houden mensen die alleen daarin zaten geen
+   groep over. Elk ander scherm werkt per groep, dus hier zijn ze de enige plek
+   waar ze nog te zien zijn: verplaatsen naar een groep, of naar het archief.
+   Ook gearchiveerden zonder groep staan hier, anders zou het archief ze kwijt
+   zijn (dat toont alleen per groep). */
+function zonderGroep(){
+ return people.filter(function(p){return p._state!=='nieuw'&&(!p.groepen||!p.groepen.length);});
+}
+function zetZonderGroepTeller(){
+ var t=el('zondergroep-teller');
+ if(t)t.textContent=zonderGroep().filter(function(p){return !p.archived;}).length||'';
+}
+var TYPENAAM={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
+function zonderGroepFlow(){
+ var lijst=zonderGroep(),actief=lijst.filter(function(p){return !p.archived;}),archief=lijst.filter(function(p){return p.archived;});
+ var groepOpties=GROEPEN.map(function(g){return '<option value="'+esc(g)+'">'+esc(g)+'</option>';}).join('');
+ var rij=function(p,knoppen,extra){
+  return '<div class="personrow" style="box-shadow:none">'+avatarHtml(naam(p),fotoVan(p))+
+   '<div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">('+esc(TYPENAAM[p.type]||p.type)+')</span></div><div class="mail">'+esc(extra||p.mail||'')+'</div></div>'+
+   '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+knoppen+'</div></div>';
+ };
+ var html='<h3>Zonder groep</h3>'+
+  '<p class="mini" style="margin:0 0 10px">Mensen die geen groep meer hebben, bijvoorbeeld omdat hun groep is verwijderd. Verplaats ze naar een groep of verwijder ze.</p>';
+ html+=actief.length?actief.map(function(p){
+  return rij(p,'<select data-zg-groep="'+p.id+'" aria-label="Groep voor '+esc(naam(p))+'">'+groepOpties+'</select>'+
+   '<button type="button" class="small" data-zg-plaats="'+p.id+'">Toevoegen</button>'+
+   '<button type="button" class="small danger" data-zg-archief="'+p.id+'">Verwijderen</button>');
+ }).join(''):'<p class="empty-msg">Iedereen zit in een groep.</p>';
+ if(archief.length){
+  html+='<div class="sublistlabel" style="margin-top:14px">Gearchiveerd, zonder groep</div>'+archief.map(function(p){
+   return rij(p,'<select data-zg-groep="'+p.id+'" aria-label="Groep voor '+esc(naam(p))+'">'+groepOpties+'</select>'+
+    '<button type="button" class="small" data-zg-terug="'+p.id+'">Terugzetten</button>',
+    geldigeDatum(p.gearchiveerdOp)?'Gearchiveerd op '+datumNL(p.gearchiveerdOp)+' · bewaren tot '+datumNL(bewaarTot(p)):'Gearchiveerd');
+  }).join('');
+ }
+ openModal(html+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+ var groepVoor=function(id){var s=document.querySelector('[data-zg-groep="'+id+'"]');return s?s.value:'';};
+ var klaar=function(){renderAll();syncToSupabase();zonderGroepFlow();};
+ Array.prototype.forEach.call(document.querySelectorAll('[data-zg-plaats]'),function(b){
+  b.addEventListener('click',function(){
+   var p=findPerson(+b.getAttribute('data-zg-plaats')),g=groepVoor(p&&p.id);if(!p||!g)return;
+   p.groepen=[g];
+   logActie(naam(p)+' zonder groep toegevoegd aan '+g);
+   klaar();
+  });
+ });
+ Array.prototype.forEach.call(document.querySelectorAll('[data-zg-terug]'),function(b){
+  b.addEventListener('click',function(){
+   var p=findPerson(+b.getAttribute('data-zg-terug')),g=groepVoor(p&&p.id);if(!p||!g)return;
+   p.archived=false;delete p.gearchiveerdOp;delete p.gearchiveerdReden;p.groepen=[g];
+   logActie(naam(p)+' teruggezet uit het archief in '+g,{soort:'Herstel'});
+   klaar();
+  });
+ });
+ Array.prototype.forEach.call(document.querySelectorAll('[data-zg-archief]'),function(b){
+  b.addEventListener('click',function(){
+   var p=findPerson(+b.getAttribute('data-zg-archief'));if(!p)return;
+   bevestigModal('Verwijderen',
+    '<p><b>'+esc(naam(p))+'</b> gaat naar het archief. Na de bewaartermijn kan het dossier definitief weg; tot die tijd kun je hem hier terugzetten.</p>',
+    'Ja, verwijderen',function(){
+     /* Zelfde soft delete als bij doorvoeren: de rij blijft, met datum, zodat
+        de bewaartermijn loopt en terugzetten kan. */
+     p.archived=true;p.gearchiveerdOp=vandaagISO();p.contactpersoon=false;delete p.contactVolgorde;delete p.status;
+     verwijderVerwijzingenNaar(p.id);
+     logActie(naam(p)+' gearchiveerd (zonder groep); bewaren tot '+datumNL(bewaarTot(p)),{soort:'Archivering'});
+     klaar();
+    });
+  });
+ });
+}
 function contactpersonenFlow(){
  var secties=GROEPEN.map(function(g){
   var lijst=people.filter(function(p){return p.type==='medewerker'&&!p.archived&&p.groepen.indexOf(g)>-1&&p.contactVolgorde;}).sort(function(a,b){return a.contactVolgorde-b.contactVolgorde;});
@@ -5165,6 +5313,7 @@ var ADMIN_TOOLBAR_ACTIES={
  persoonVerwijderen:persoonVerwijderenFlow,
  rechtensets:function(){showView('admin');kiesAdmintab('bulk');},
  contactpersonen:contactpersonenFlow,
+ zonderGroep:zonderGroepFlow,
  groepeer:function(){showView('admin');kiesAdmintab('bulk');},
  groepHerstellen:groepHerstellenFlow,
  clientHerstellen:persoonHerstelFlow,
@@ -5455,6 +5604,7 @@ function orgRijen(){
    {sleutel:'locatie_instituut',waarde:locatieInstituut},
    {sleutel:'groep_locatie',waarde:groepLocatie},
    {sleutel:'gearchiveerde_groepen',waarde:gearchiveerdeGroepen},
+   {sleutel:'groep_ontkoppeld',waarde:groepOntkoppeld},
    {sleutel:'systeembeheer',waarde:SYSTEEMBEHEER},
    {sleutel:'groep_tweestaps',waarde:groepTweestaps},
    {sleutel:'beoordeelde_signalen',waarde:beoordeeldeSignalen},
