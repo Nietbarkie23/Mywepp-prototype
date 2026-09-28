@@ -114,7 +114,7 @@ dienst is ook weggehaald (`uitdienst`); `uitDienstFlow` staat nog in de code.
 **Ziekmelden staat uit** (`ZIEKMELDEN=false`, `isZiek`, HTML-comment
 `ziekmelden`): geen vinkje, geen Ziek-label, geen doorschakeling naar
 contactpersoon 2, geen controlesignaal. De opgeslagen `status='ziek'` blijft in
-de database staan (live: Marieke de Vries, id 3, en rij 19) — niet zonder
+de database staan (live: Marieke de Vries, id 3) — niet zonder
 overleg aanpassen. Terugzetten = comment weg en `ZIEKMELDEN=true`.
 
 **Rechten overnemen** staat onder het kopje Rollen en rechten. In de rij
@@ -154,7 +154,7 @@ koppelen via Groep bewerken in master gezet. Backups: van vóór de specificatie
 
 **Controleronde (hele code nagelopen)** — gevonden en opgelost, alles eerst
 aangetoond: terugpijl/kruimels lieten lege nieuwe personen achter (live id
-19-21, niet zonder overleg weghalen); `syncToSupabase` schreef niet-doorgevoerde
+19-21, op 28-09 met akkoord gewist; 30 dagen terug te halen uit `private.historie`); `syncToSupabase` schreef niet-doorgevoerde
 nieuwe personen weg (nu pas bij doorvoeren); `cap()` maakte "de Vries" tot
 "De Vries" (`TUSSENVOEGSELS`); definitief wissen schreef opgeruimde
 verwijzingen niet weg (database weigerde het wissen van een vertegenwoordiger,
