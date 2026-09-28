@@ -2016,6 +2016,11 @@ async function loadFromSupabase(){
    dat merk je pas als iemand toegang blijkt te hebben die je had ingetrokken.
    Zonder database (de demo-stand) is er niets om over te melden. */
 var opslagMislukt={};
+/* Logboekregels en datalekmeldingen die niet in de database kwamen. Opnieuw
+   proberen had er niets om opnieuw te versturen: de balk bleef staan en na
+   herladen was de regel weg (aangetoond door Codex, stille-opslag-audit.cjs).
+   Alleen in het geheugen, nooit in localStorage: het zijn gevoelige gegevens. */
+var nogTeVersturen={logboek:[],datalek:[]};
 /* ---- Niet geladen betekent: niet opslaan ----
    De voorbeeldgegevens hebben dezelfde id's als de eerste rijen in de database.
    Lukte het laden niet, dan stond de app vol met die voorbeelden zonder dat
@@ -2089,11 +2094,24 @@ function toonOpslagStatus(){
   '<button type="button" class="primary" id="opslag-opnieuw">Opnieuw proberen</button>';
  el('opslag-opnieuw').addEventListener('click',probeerOpslagOpnieuw);
 }
+/* Een voor een opnieuw versturen; wat weer mislukt blijft in de rij staan. */
+async function verstuurOpnieuw(soort,verstuur){
+ var rij=nogTeVersturen[soort].slice();nogTeVersturen[soort]=[];
+ for(var i=0;i<rij.length;i++){
+  var ok=false;try{ok=await verstuur(rij[i]);}catch(e){}
+  if(!ok)nogTeVersturen[soort].push(rij[i]);
+ }
+ registreerOpslag(soort,nogTeVersturen[soort].length===0);
+}
 async function probeerOpslagOpnieuw(){
  var knop=el('opslag-opnieuw');
  if(knop){knop.disabled=true;knop.textContent='Bezig…';}
  if(opslagMislukt.personen)await syncToSupabase();
  if(opslagMislukt.groepen)await syncGroepenToSupabase();
+ if(opslagMislukt.logboek)await verstuurOpnieuw('logboek',function(r){
+  return sb.from('logboek').insert([r]).then(function(res){return !(res&&res.error);},function(){return false;});
+ });
+ if(opslagMislukt.datalek)await verstuurOpnieuw('datalek',bewaarDatalek);
  if(opslagMislukt.organisatie)await syncOrganisatieData();
  if(opslagMislukt.clientdata&&typeof caClientId!=='undefined'&&caClientId)bewaarClientDataNu(caClientId);
  if(opslagMislukt.chat&&typeof caChatKey!=='undefined'&&caChatKey)bewaarChatThreadNu(caChatKey);
@@ -4435,7 +4453,10 @@ function openDatalekVenster(bestaand){
   if(!wasGeinformeerd&&lek.betrokkenenGeinformeerd)logActie('Betrokkenen geïnformeerd over datalek: '+wat);
   /* Een datalekmelding heeft een wettelijke termijn van 72 uur; mislukt het
      opslaan, dan moet dat zichtbaar zijn en niet stil verdwijnen. */
-  bewaarDatalek(lek).then(function(ok){registreerOpslag('datalek',ok);});
+  bewaarDatalek(lek).then(function(ok){
+   if(!ok&&nogTeVersturen.datalek.indexOf(lek)<0)nogTeVersturen.datalek.push(lek);
+   registreerOpslag('datalek',ok);
+  });
   renderDatalekken();
  });
 }
@@ -5968,10 +5989,12 @@ function logActie(tekst,extra){
  if(sb){
   /* Het logboek mag het opslaan van de wijziging zelf nooit blokkeren, maar
      stilzwijgend verdwijnen mag het ook niet: het is de verantwoording. */
-  if(!opslagGeblokkeerd())try{sb.from('logboek').insert([{wie:regel.wie,groep:regel.groep,tekst:tekst,soort:regel.soort,reden:regel.reden||null}]).then(
-   function(res){registreerOpslag('logboek',!(res&&res.error));},
-   function(){registreerOpslag('logboek',false);});}
-  catch(e){registreerOpslag('logboek',false);}
+  var logRij={wie:regel.wie,groep:regel.groep,tekst:tekst,soort:regel.soort,reden:regel.reden||null};
+  var logMislukt=function(){nogTeVersturen.logboek.push(logRij);registreerOpslag('logboek',false);};
+  if(!opslagGeblokkeerd())try{sb.from('logboek').insert([logRij]).then(
+   function(res){if(res&&res.error)logMislukt();else registreerOpslag('logboek',true);},
+   logMislukt);}
+  catch(e){logMislukt();}
  }
 }
 /* Het logboek haalde er 100 regels uit terwijl het geheugen er 200 hield: het
@@ -6280,10 +6303,17 @@ function wisDefinitief(id){
       weigerde de database het wissen zolang iemand hem als vertegenwoordiger
       had, en bleven oude rechten op dit id in de database staan: een nieuwe
       persoon die na herladen hetzelfde id krijgt, erfde die dan. */
+   /* Eerst het dossier, pas daarna de persoon. Tegelijk wissen liet bij een
+      storing op client_data een dossier met gezondheidsgegevens achter zonder
+      persoon, dat via de app niet meer te vinden en dus niet meer te wissen
+      was. Nu blijft bij elke storing de persoon in het archief staan, en kan
+      het wissen daar opnieuw. */
    syncToSupabase().then(function(){
-    return Promise.all([wisDefinitiefUitDatabase(id),p.type==='client'?wisClientDossierUitDatabase(id,sleutels):Promise.resolve(true)]);
-   }).then(function(uitkomst){
-    if(uitkomst.indexOf(false)>-1)openMelding('Let op','De gegevens zijn hier gewist, maar het verwijderen uit de database is niet volledig gelukt. Probeer het later opnieuw, anders blijven ze daar staan.');
+    return p.type==='client'?wisClientDossierUitDatabase(id,sleutels):true;
+   }).then(function(dossierWeg){
+    return dossierWeg?wisDefinitiefUitDatabase(id):false;
+   }).then(function(gelukt){
+    if(!gelukt)openMelding('Niet volledig gewist','De gegevens zijn hier weggehaald, maar het wissen uit de database is niet gelukt. Herlaad de pagina: '+naamVal+' staat dan nog in het archief en daar kun je het definitief wissen opnieuw doen.');
    });
    renderGearchiveerd();renderAll();
   });
