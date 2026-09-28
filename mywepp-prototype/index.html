@@ -11,9 +11,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyWepp">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js"></script>
+<!-- Bibliotheek en lettertype staan op onze eigen server. Van een CDN of van
+     Google laden gaf een ander bedrijf de mogelijkheid code in de pagina te
+     zetten, en Google kreeg het IP-adres van elke bezoeker (AVG).
+     supabase.js = @supabase/supabase-js 2.117.1, dist/umd, ongewijzigd uit npm.
+     Lettertype = @fontsource/inter 5.3.0 (SIL OFL). -->
+<script src="/supabase.js"></script>
 <style>
+@font-face{font-family:'Inter';font-style:normal;font-display:swap;font-weight:400;src:url(/fonts/inter-latin-400-normal.woff2) format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-display:swap;font-weight:500;src:url(/fonts/inter-latin-500-normal.woff2) format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-display:swap;font-weight:600;src:url(/fonts/inter-latin-600-normal.woff2) format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-display:swap;font-weight:700;src:url(/fonts/inter-latin-700-normal.woff2) format('woff2');}
 :root{
   /* ink-soft en ink-faint zijn zo donker als nodig voor de contrastnorm (WCAG
      AA, 4,5:1) op alle lichte achtergronden; het oude lichtgrijs haalde 2,4:1

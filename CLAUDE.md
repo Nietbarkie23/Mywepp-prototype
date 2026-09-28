@@ -26,17 +26,22 @@ JS, Supabase als opslag, Vercel als hosting.
 Testscripts staan in de scratchpad van de sessie, niet in de repo.
 
 ```
-python3 -m http.server 8731 --directory mywepp-prototype/     # testserver
+./maak-kopieen.sh                                             # na elke wijziging
+python3 -m http.server 8731 --directory zonderlib/            # zonder bibliotheek
+python3 -m http.server 8734 --directory metlib/               # met bibliotheek
+node vercelserver.js 8735                                     # achter vercel.json
 NODE_PATH=/opt/node22/lib/node_modules /opt/node22/bin/node <test>.js 8731
 ./start-regressie.sh                                          # alles, ~45 min
 ```
 
-Met de echte databasebibliotheek testen: `scratchpad/metlib/` is een kopie van
-de pagina die `supabase.js` (2.117.1, uit het npm-pakket) lokaal laadt; serveer
-die op poort 8734 en vang de database-aanroepen af met
-`page.route('**/rest/v1/**', …)` (zie `geladen-opslaan.js`, `traagladen.js`).
-Zo is laden, opslaan en een trage of mislukte verbinding na te spelen zonder
-bij de echte database te komen. Na een wijziging de kopie opnieuw maken.
+De bibliotheek (`supabase.js`) en het lettertype (`fonts/`) staan sinds de
+beveiligingsronde naast de pagina. Daarom zijn er drie testkopieën
+(`maak-kopieen.sh`): `zonderlib/` (8731) zonder bibliotheek, dus met
+voorbeeldgegevens, zoals de meeste tests verwachten; `metlib/` (8734) met de echte
+bibliotheek, waarbij de database met `page.route('**/rest/v1/**', …)` wordt
+afgevangen (zie `geladen-opslaan.js`, `traagladen.js`, `nepdb.js`); en
+`vercelserver.js` (8735), die de rewrites en headers uit `vercel.json` naspeelt
+(`csp-zelfgehost.js`). `start-regressie.sh` kiest de poort per test.
 
 Toegankelijkheid meten: `axe-scan.js` (overzicht per regel) en `axe-kleur2.js`
 (contrast per kleurpaar) gebruiken axe-core uit `scratchpad/axe/` (via npm).
@@ -202,7 +207,7 @@ reactieknoppen crashten zonder `reacties`-object. Tests: `xss-rest.js`,
 Nog open en alleen met inlog op te lossen: met de publieke sleutel kan iedereen
 alles lezen, personen aanmaken/wissen, rechten geven en logregels vervalsen.
 Tegen overspoelen (in de database, migraties `rate_limit_*`):
-`public.check_request` draait als `pgrst.db_pre_request` vóór elk API-verzoek en
+`beveiliging.check_request` (eigen schema, niet via de API aan te roepen) draait als `pgrst.db_pre_request` vóór elk API-verzoek en
 telt schrijfverzoeken per IP in `private.verzoeken`; boven 2000 per twee minuten
 volgt HTTP 429 (de app toont dan "Niet opgeslagen"). Tegen een aanval vanaf veel
 adressen telt dezelfde functie ook alle adressen samen (rij `*alle*`, grens 5000
@@ -213,6 +218,16 @@ het verzoek door, zodat de app nooit door de teller platgaat. Leesverzoeken zijn
 zo niet te begrenzen. Elke tabel heeft een trigger `rijgrootte`
 (`bewaak_rijgrootte`) die te grote rijen weigert. Uitzetten:
 `alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`.
+Verder (migratie `beveiliging_rechten_controles_historie`): anon/authenticated
+hebben geen TRUNCATE meer en geen wijzig-/wisrecht op het logboek; nieuwe
+tabellen staan niet meer automatisch open. Controles op `type` en lengtes van
+velden. Wissen van meer dan een handvol rijen in één verzoek wordt geweigerd
+(`massaverwijdering`: personen 5, groepen 10, client_data 5, chat 50). Wat
+gewist of overschreven wordt, bewaart `bewaar_historie` 30 dagen in
+`private.historie`, met IP, om vandalisme terug te kunnen draaien.
+Site: geen CDN en geen Google Fonts meer. De bibliotheek en het lettertype
+Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
+`'self'` en de database toe.
 
 - Rollen: categorie `locatie` (medewerker) en `clienten` = "Cliënt" (naaste)
   in `ROLLEN`/`RECHTEN`/`orgDefault`; oude opgeslagen standaarden worden
