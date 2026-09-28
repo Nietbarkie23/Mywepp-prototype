@@ -266,6 +266,14 @@ Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
   rechten en vertegenwoordigers terug uit `groepOntkoppeld` (organisatie_data
   `groep_ontkoppeld`). Tests: `groep-verwijderen.cjs`,
   `groep-verwijderen-db.cjs`, `groep-verwijderen-ui.cjs`.
+- Mislukt opslaan is nooit stil: ook de groepenlijst (`registreerOpslag('groepen')`),
+  en Opnieuw proberen verstuurt logboekregels en datalekmeldingen opnieuw
+  (`nogTeVersturen`, `verstuurOpnieuw`, alleen in het geheugen). Definitief
+  wissen wist eerst het dossier en pas daarna de persoon, zodat bij een storing
+  de persoon in het archief blijft om opnieuw te wissen. Nog open: echt
+  in één keer wissen vraagt een databasefunctie (transactie); opslag bij het
+  sluiten van de pagina kan een fout niet meer tonen. Tests:
+  `groep-opslagfout.cjs`, `stille-opslag-na.cjs`, `paneel-sluiten.cjs`.
 - MyWepp Personal, Info-scherm: rollen van betrokkenen staan vast (tekst, geen
   keuzelijst; `personRechtenRow(id,true)`). Wijzigen alleen via Gebruikers
   beheren. Test: `rollen-vast.cjs`.
