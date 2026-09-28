@@ -828,8 +828,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
   <section class="panel admscherm" id="adm-scherm" hidden>
     <div class="head"><h2 id="adm-scherm-titel">Handeling</h2>
-      <span class="sub" id="adm-scherm-stap"></span>
-      <button type="button" class="small" id="adm-scherm-sluiten">Sluiten</button></div>
+      <span class="sub" id="adm-scherm-stap"></span></div>
     <div class="body" id="adm-scherm-body"></div>
   </section>
 
@@ -1733,10 +1732,8 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-admintab]'),functi
 /* "Groep bewerken" stond twee keer in de balk: als handeling (naam en locatie)
    en als overzicht (standaardrollen van één groep afwijken). Dat tweede hoort
    bij de standaardrollen en is daar nu vandaan te bereiken. */
-el('adm-scherm-sluiten').addEventListener('click',function(){
- el('modal-card').innerHTML='';
- admPaneelUit();
-});
+/* Geen eigen Sluiten-knop in de kop van het paneel: elke handeling heeft
+   onderaan al Annuleren of Sluiten, dus die knop deed hetzelfde twee keer. */
 
 /* ============== VIEW SWITCH ============== */
 var ALLVIEWS=['view-admin','view-personal','view-clientapp'];
