@@ -269,6 +269,18 @@ deze stap: `backup/voor-strengere-csp`.
 - Groepen koppelen gebeurt bij Groep bewerken (`hernoemGroep`): de bewerkte
   groep staat niet in het keuzemenu "Koppelen aan"; opheffen per groep met
   `ontkoppelGroep`. Hernoemen werkt de koppeling bij.
+- Gekoppelde groepen delen hun medewerkers, ook bij weghalen: een medewerker
+  uit één groep van het cluster halen haalt hem uit het hele cluster
+  (`groepenWeg`, `teamVan`), verplaatsen en Zonder groep zetten hem in het hele
+  team van de nieuwe groep (`groepenBij`), herstellen vult het team aan
+  (`vulKoppelingAan`). Cliënten en naasten blijven per groep. Test:
+  `team-koppeling.js`.
+- **`invarianten.js <poort> <seed> <stappen> <aantal>`** (8734): willekeurige
+  reeksen beheerhandelingen met na elke stap en na herladen vaste regels
+  (niemand verwijst naar een niet-bestaande groep, iedereen is vindbaar, geen
+  rechten op verdwenen mensen of zonder gedeelde groep, koppelingen kloppen,
+  database = scherm). Vond de twee fouten hierboven; bij een melding eerst
+  checken of het de test is (verborgen knoppen met dezelfde data-attributen).
 - Groep verwijderen (`verwijderGroep`) blokkeert niet meer bij mensen erin:
   de groep gaat uit koppelingen en bij iedereen eraf, rechten zonder gedeelde
   groep worden opgeruimd. Wie alleen in die groep zat, staat onder Overig ›

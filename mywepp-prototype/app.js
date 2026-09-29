@@ -1172,13 +1172,26 @@ function bevestigModal(titel,htmlTekst,knopLabel,onJa){
  el('modal-annuleer').addEventListener('click',closeModal);
  el('modal-bevestig').addEventListener('click',function(){closeModal();onJa();});
 }
-/* De groepen waar iemand ook nog in zit, dus zonder de groep waar je nu werkt. */
+/* Gekoppelde groepen delen hun medewerkers ("haal je er een weg, dan gebeurt
+   dat daar ook"). Een medewerker uit de huidige groep halen haalt hem dus uit
+   het hele cluster; anders klopte het gedeelde team niet meer (aangetoond met
+   invarianten.js). Cliënten en naasten blijven per groep. */
+function teamVan(g){return clusterVan(g).filter(function(x){return GROEPEN.indexOf(x)>-1;});}
+function groepenWeg(p){
+ var weg=p.type==='medewerker'?teamVan(huidigeGroep):[huidigeGroep];
+ return weg.filter(function(g){return (p.groepen||[]).indexOf(g)>-1;});
+}
+/* In welke groepen iemand komt als hij in groep g wordt gezet. */
+function groepenBij(p,g){return p.type==='medewerker'?teamVan(g):[g];}
+/* De groepen waar iemand ook nog in zit, dus zonder de groep waar je nu werkt
+   (en, bij een medewerker, zonder de groepen die daaraan gekoppeld zijn). */
 function andereGroepenVan(p){
- return (p.groepen||[]).filter(function(g){return g!==huidigeGroep;});
+ var weg=groepenWeg(p);
+ return (p.groepen||[]).filter(function(g){return g!==huidigeGroep&&weg.indexOf(g)<0;});
 }
 /* Dezelfde voorwaarde die het doorvoeren gebruikt om te kiezen tussen ontkoppelen
    en archiveren, zodat waarschuwing, label en uitkomst niet uit elkaar lopen. */
-function blijftElders(p){return (p.groepen||[]).length>1;}
+function blijftElders(p){return andereGroepenVan(p).length>0;}
 /* Iemand uit een groep halen terwijl hij elders nog gekoppeld is, is iets heel
    anders dan iemand verwijderen: hij blijft gewoon bestaan, inclusief rechten.
    Zonder deze waarschuwing lijkt het alsof je iemand weggooit. */
@@ -3727,7 +3740,7 @@ function zonderGroepFlow(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-zg-plaats]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-zg-plaats')),g=groepVoor(p&&p.id);if(!p||!g)return;
-   p.groepen=[g];
+   p.groepen=groepenBij(p,g);
    logActie(naam(p)+' zonder groep toegevoegd aan '+g);
    klaar();
   });
@@ -3735,7 +3748,7 @@ function zonderGroepFlow(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-zg-terug]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-zg-terug')),g=groepVoor(p&&p.id);if(!p||!g)return;
-   p.archived=false;delete p.gearchiveerdOp;delete p.gearchiveerdReden;delete p.archiefSoort;p.groepen=[g];
+   p.archived=false;delete p.gearchiveerdOp;delete p.gearchiveerdReden;delete p.archiefSoort;p.groepen=groepenBij(p,g);
    logActie(naam(p)+' teruggezet uit het archief in '+g,{soort:'Herstel'});
    klaar();
   });
@@ -4946,6 +4959,8 @@ function koppelArchiefKnoppen(lijst,terug){
     (p.geblokkeerd?' Let op: dit account staat geblokkeerd en blijft dat.':'')+'</p>',
     'Ja, terugzetten',function(){
      p.archived=false;delete p.gearchiveerdOp;delete p.archiefSoort;
+     /* Is zijn groep intussen gekoppeld, dan hoort hij in het hele team. */
+     vulKoppelingAan(p);
      logActie(naam(p)+' teruggezet uit het archief'+(aantal?' met '+aantal+' recht'+(aantal===1?'':'en'):''),{soort:'Herstel'});
      delete p.gearchiveerdReden;
      renderGearchiveerd();renderAll();
@@ -5245,7 +5260,7 @@ function openAvgDossier(id){
 /* "wordt verwijderd" klopte niet voor iemand die aan meerdere groepen hangt: die
    wordt alleen losgekoppeld. Het scherm zegt nu wat er echt gebeurt. */
 function wijzigingLabel(p){
- if(p._state==='verwijderd'&&blijftElders(p))return 'alleen uit '+huidigeGroep;
+ if(p._state==='verwijderd'&&blijftElders(p))return 'alleen uit '+groepenWeg(p).join(', ');
  return STATE_LABEL[p._state];
 }
 /* ---- Wat laat iemand achter die vertrekt? ----
@@ -5480,12 +5495,14 @@ async function voerWijzigingenDoor(){
  var gewijzigd=people.filter(function(p){return p._state==='gewijzigd';}).length;
  var ontkoppeld=0,gearchiveerd=0,verplaatst=0;
  people.filter(function(p){return p._state==='verwijderd';}).forEach(function(p){
-  if(p.groepen.length>1){
-   /* Blijft elders bestaan, maar de toegang binnen deze groep vervalt. */
-   p.groepen=p.groepen.filter(function(g){return g!==huidigeGroep;});
+  if(blijftElders(p)){
+   /* Blijft elders bestaan, maar de toegang binnen deze groep (en haar
+      gekoppelde groepen) vervalt. */
+   var weg=groepenWeg(p);
+   p.groepen=p.groepen.filter(function(g){return weg.indexOf(g)<0;});
    ruimRechtenZonderGedeeldeGroepOp(p);
    ontkoppeld++;
-   logActie(naam(p)+' losgekoppeld van '+huidigeGroep,{soort:'Verwijdering',reden:p._verwijderReden});
+   logActie(naam(p)+' losgekoppeld van '+weg.join(', '),{soort:'Verwijdering',reden:p._verwijderReden});
   }else{
    var wasContact=p.contactVolgorde;
    /* Soft delete: de rij blijft bestaan met archived=true en de datum, zodat
@@ -5503,8 +5520,14 @@ async function voerWijzigingenDoor(){
   }
  });
  people.filter(function(p){return p._nieuweGroep;}).forEach(function(p){
+  /* Een medewerker verlaat het hele team van de huidige groep en komt in het
+     hele team van de nieuwe groep. */
+  var weg=groepenWeg(p),erbij=groepenBij(p,p._nieuweGroep);
   var idx=p.groepen.indexOf(huidigeGroep);
-  if(idx>-1)p.groepen[idx]=p._nieuweGroep; else p.groepen.push(p._nieuweGroep);
+  var rest=p.groepen.filter(function(g){return weg.indexOf(g)<0&&erbij.indexOf(g)<0;});
+  if(idx>-1)rest.splice(Math.min(idx,rest.length),0,p._nieuweGroep); else rest.push(p._nieuweGroep);
+  erbij.forEach(function(g){if(rest.indexOf(g)<0)rest.push(g);});
+  p.groepen=rest;
   verplaatst++;
  });
  people.forEach(function(p){delete p._state;delete p._nieuweGroep;delete p._verwijderReden;delete p._doorBeheer;});
