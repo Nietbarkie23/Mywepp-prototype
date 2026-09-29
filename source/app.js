@@ -4330,6 +4330,33 @@ function orgRijen(){
    {sleutel:'toegangscontrole',waarde:TOEGANGSCONTROLE}
   ];
 }
+/* Wat deze sessie aan een lijst veranderde (t.o.v. de stand bij laden of de
+   laatste opslag), toegepast op wat er nu in de database staat. */
+function voegLijstSamen(db,vorig,mijn){
+ var sleutel=function(x){return JSON.stringify(x);};
+ var inVorig={},inMijn={};
+ vorig.forEach(function(x){inVorig[sleutel(x)]=true;});
+ mijn.forEach(function(x){inMijn[sleutel(x)]=true;});
+ var samen=db.filter(function(x){return !(inVorig[sleutel(x)]&&!inMijn[sleutel(x)]);});
+ var al={};samen.forEach(function(x){al[sleutel(x)]=true;});
+ mijn.forEach(function(x){if(!inVorig[sleutel(x)]&&!al[sleutel(x)]){samen.push(x);al[sleutel(x)]=true;}});
+ return samen;
+}
+/* Koppelingen zijn groepjes groepen. Na samenvoegen kan een groep in twee
+   groepjes staan (A koppelde G1-G2, B tegelijk G2-G3); die horen dan bij elkaar. */
+function voegClustersSamen(lijst){
+ var uit=[];
+ lijst.forEach(function(k){
+  if(!Array.isArray(k))return;
+  var nieuw=k.slice();
+  uit=uit.filter(function(u){
+   if(u.some(function(g){return nieuw.indexOf(g)>-1;})){u.forEach(function(g){if(nieuw.indexOf(g)<0)nieuw.push(g);});return false;}
+   return true;
+  });
+  uit.push(nieuw);
+ });
+ return uit.filter(function(k){return k.length>1;});
+}
 async function syncOrganisatieData(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;
@@ -4358,6 +4385,25 @@ async function syncOrganisatieData(){
        een ander deed. */
     Object.keys(r.waarde).forEach(function(k){delete r.waarde[k];});
     Object.assign(r.waarde,samen);
+   });
+  }
+  /* Lijsten (instituten, locaties, koppelingen, verwijderde groepen) gingen in
+     hun geheel terug: sloegen twee beheerders tegelijk iets op, dan verdween
+     wat de eerste had toegevoegd (aangetoond, lijsten-samen.js). Nu alleen
+     wat deze sessie toevoegde of weghaalde, toegepast op wat er nu in de
+     database staat. */
+  var lijsten=rijen.filter(function(r){return Array.isArray(r.waarde);});
+  if(lijsten.length){
+   var nu=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',lijsten.map(function(r){return r.sleutel;}));
+   if(nu.error)return registreerOpslag('organisatie',false);
+   lijsten.forEach(function(r){
+    var db=((nu.data||[]).filter(function(x){return x.sleutel===r.sleutel;})[0]||{}).waarde;
+    if(!Array.isArray(db))return;
+    var vorig=dbStandOrg[r.sleutel]?JSON.parse(dbStandOrg[r.sleutel]):[];
+    if(!Array.isArray(vorig))vorig=[];
+    var samen=voegLijstSamen(db,vorig,r.waarde);
+    if(r.sleutel==='groep_koppelingen')samen=voegClustersSamen(samen);
+    r.waarde.length=0;Array.prototype.push.apply(r.waarde,samen);
    });
   }
   var res=await sb.from('organisatie_data').upsert(rijen,{onConflict:'sleutel'});

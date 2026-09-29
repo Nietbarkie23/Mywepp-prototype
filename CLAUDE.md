@@ -181,8 +181,10 @@ nieuwe personen in hun geheel. Instellingen: alleen gewijzigde sleutels t.o.v.
 `groepErbij`/`groepWeg`), nooit "wat niet in mijn lijst staat". Instellingen
 die als object zijn opgeslagen (per groep: `groep_gegevens`, `groep_tweestaps`,
 `digibord`, `groep_rollen`, …) worden per onderdeel samengevoegd met de
-databasestand (`org-samen.js`); lijsten (instituten, koppelingen) gaan nog in
-hun geheel.
+databasestand (`org-samen.js`). Lijsten (instituten, locaties, koppelingen,
+verwijderde groepen) ook: alleen wat deze sessie toevoegde of weghaalde wordt op
+de databasestand toegepast (`voegLijstSamen`); overlappende koppelingen worden
+één groepje (`voegClustersSamen`). Test: `lijsten-samen.js`.
 Objectvelden (`OBJECTVELDEN`: rechten, rollen, toestemming) worden per sleutel
 samengevoegd met de actuele databasestand, zodat een ingetrokken recht niet
 door een ander wordt teruggezet. Nieuwe personen: vlak voor het wegschrijven
