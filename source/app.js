@@ -352,6 +352,9 @@ function kiesAdmintab(naamVal){
  var btn=document.querySelector('[data-admintab="'+naamVal+'"]');
  if(btn){btn.classList.add('on');btn.setAttribute('aria-current','true');}
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
+ /* De kop "Standaardrollen voor groepen" hoort alleen bij dat scherm; hij
+    stond boven Controle, AVG en de rest ook. */
+ if(el('admin-intro'))el('admin-intro').hidden=(naamVal!=='bulk');
  if(naamVal==='groepen')renderSysteembeheer();
  if(naamVal==='controle')renderControle();
  if(naamVal==='matrix')renderMatrix();
@@ -4430,7 +4433,7 @@ function admPaneelUit(){
   el('modal-overlay').appendChild(kaart);
   kaart.setAttribute('aria-modal','true');
  }
- if(el('admin-intro'))el('admin-intro').hidden=false;
+ if(el('admin-intro'))el('admin-intro').hidden=!(el('admintab-bulk')&&!el('admintab-bulk').hidden);
  admActieNaam='';
  if(typeof wisActieveAdmKnop==='function')wisActieveAdmKnop();
  var actief=document.querySelector('[data-admintab].on');
