@@ -813,7 +813,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       rechtensets -->
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
       <button type="button" class="abtn" data-adm="zonderGroep">Zonder<br>groep <span class="countchip" id="zondergroep-teller"></span></button>
-      <button type="button" class="abtn tab" data-admintab="verwijderd">Verwijderde<br>cliënten <span class="countchip" id="verwijderd-teller"></span></button>
+      <button type="button" class="abtn tab" data-admintab="verwijderd">Verwijderd<br>via beheer <span class="countchip" id="verwijderd-teller"></span></button>
       <!-- groepeer: knop op verzoek verborgen. Niet verwijderen — hij opende
            Standaardrollen, net als de eveneens verborgen knop Rechtensets, en
            zijn naam sloeg op het groeperen van meerdere groepen: precies de
@@ -928,9 +928,9 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
 
   <section id="admintab-verwijderd" hidden>
     <div class="panel">
-      <div class="head"><h2>Verwijderde cliënten</h2><span class="sub">Alleen zichtbaar in de Admin Tools</span></div>
+      <div class="head"><h2>Verwijderd via beheer</h2><span class="sub">Alleen zichtbaar in de Admin Tools</span></div>
       <div class="body">
-        <p class="note">Cliënten die je via de Admin Tools hebt verwijderd. Ze staan hier, niet in het archief dat medewerkers in hun groep zien. De gegevens blijven de bewaartermijn van <span id="verwijderd-termijn">15 jaar</span> staan, dus je kunt ze terugzetten of, met een reden, eerder definitief wissen.</p>
+        <p class="note">Cliënten, medewerkers en naasten die je via de Admin Tools hebt verwijderd. Ze staan hier, niet in het archief dat medewerkers in hun groep zien. De gegevens blijven de bewaartermijn van <span id="verwijderd-termijn">15 jaar</span> staan, dus je kunt ze terugzetten of, met een reden, eerder definitief wissen.</p>
         <div id="verwijderd-lijst"></div>
       </div>
     </div>
@@ -4059,7 +4059,7 @@ function controleSignalen(){
   var maanden=maandenSinds(pp.gearchiveerdOp);
   signalen.push({ernst:'hoog',groep:(pp.groepen||[]).join(', '),
    tekst:naam(pp)+' staat sinds '+datumNL(pp.gearchiveerdOp)+' in het archief. De bewaartermijn van '+bewaartermijnTekst()+' is verstreken; wissen of onderbouwen waarom dat niet kan.',
-   actie:doorBeheer(pp)?{soort:'verwijderd',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Verwijderde cliënten openen'}
+   actie:doorBeheer(pp)?{soort:'verwijderd',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Verwijderd via beheer openen'}
                        :{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
  });
  /* 9. Geblokkeerde accounts: een blokkade hoort tijdelijk te zijn. Blijft hij
@@ -4994,6 +4994,10 @@ function persoonVerwijderenFlow(){
    huidigeGroep=g;verversGroepReferenties();renderAll();
    kiesUitLijstModal('Wie wil je verwijderen?',personenVanType(t),naam,function(p){
     markeerVerwijderd(p.id,t);
+    /* Net als bij cliënten: verwijderd door de beheerder, dus in de eigen lijst
+       van de Admin Tools en niet in het archief van de groep. */
+    if(p._state==='verwijderd')p._doorBeheer=true;
+    zetVerwijderdTeller();
     verwijderPersoonBevestiging(p);
    });
   });
@@ -6183,7 +6187,7 @@ function haalUitPrullenbak(id){
  renderGearchiveerd();renderAll();
 }
 /* Wat de beheerder via de Admin Tools verwijderde, hoort niet in het archief
-   dat medewerkers in hun groep zien. Dat staat in Verwijderde cliënten. */
+   dat medewerkers in hun groep zien. Dat staat in Verwijderd via beheer. */
 function doorBeheer(p){return !!(p._doorBeheer||p.archiefSoort==='beheer');}
 function archiefRijHtml(p,metGroep){
  var maanden=maandenSinds(p.gearchiveerdOp);
@@ -6245,11 +6249,11 @@ function renderGearchiveerd(){
   : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>');
  koppelArchiefKnoppen(el('gearchiveerd-lijst'));
 }
-/* ---- Verwijderde cliënten (alleen Admin Tools) ----
+/* ---- Verwijderd via beheer (alleen Admin Tools) ----
    Over alle groepen heen: wat de beheerder heeft klaargezet maar nog niet is
    doorgevoerd, en wat daarna gearchiveerd is. */
 function verwijderdeClienten(){
- return people.filter(function(p){return p.type==='client'&&doorBeheer(p)&&(p.archived||p._state==='verwijderd');});
+ return people.filter(function(p){return doorBeheer(p)&&(p.archived||p._state==='verwijderd');});
 }
 function zetVerwijderdTeller(){
  var t=el('verwijderd-teller');
@@ -6269,7 +6273,7 @@ function renderVerwijderdeClienten(){
   }).join('');
   html+='<div class="sublistlabel" style="margin-top:14px">Verwijderd</div>';
  }
- html+=weg.length?weg.map(function(p){return archiefRijHtml(p,true);}).join(''):'<p class="empty-msg">Nog geen cliënten verwijderd via de Admin Tools.</p>';
+ html+=weg.length?weg.map(function(p){return archiefRijHtml(p,true);}).join(''):'<p class="empty-msg">Nog niemand verwijderd via de Admin Tools.</p>';
  el('verwijderd-lijst').innerHTML=html;
  koppelArchiefKnoppen(el('verwijderd-lijst'));
 }

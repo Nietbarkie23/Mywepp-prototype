@@ -274,8 +274,8 @@ Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
   in één keer wissen vraagt een databasefunctie (transactie); opslag bij het
   sluiten van de pagina kan een fout niet meer tonen. Tests:
   `groep-opslagfout.cjs`, `stille-opslag-na.cjs`, `paneel-sluiten.cjs`.
-- Cliënt verwijderen via de Admin Tools komt in een eigen lijst, Overig ›
-  Verwijderde cliënten (`admintab-verwijderd`, `renderVerwijderdeClienten`,
+- Cliënt of (non)prof. verwijderen via de Admin Tools komt in een eigen lijst,
+  Overig › Verwijderd via beheer (`admintab-verwijderd`, `renderVerwijderdeClienten`,
   teller `verwijderd-teller`), en niet in het archief dat medewerkers per groep
   zien (`renderGearchiveerd` slaat `doorBeheer(p)` over). Tijdens het klaarzetten
   `p._doorBeheer`, na doorvoeren kolom `personen.archief_soort='beheer'`
