@@ -586,6 +586,7 @@ async function loadFromSupabase(){
   /* Een lege tabel is iets anders dan een mislukte vraag: bij leeg mag de app
      gewoon beginnen, bij een fout juist niet. */
   if(g.error||p.error||!p.data){gegevensGeladen=false;toonLaadStatus();return;}
+  groepenTabelWasLeeg=!(g.data&&g.data.length);
   if(!p.data.length){gegevensGeladen=true;toonLaadStatus();return;}
   if(g.data&&g.data.length){GROEPEN.splice.apply(GROEPEN,[0,GROEPEN.length].concat(g.data.map(function(x){return x.naam;})));}
   if(o&&!o.error&&o.data){
@@ -4432,7 +4433,13 @@ if(el('sb-tel'))el('sb-tel').addEventListener('input',function(){
    beide stappen faalt (een delete-alles-dan-insert kon alle groepen wissen). */
 var groepMutaties={erbij:[],weg:[]};
 function groepErbij(n){groepMutaties.weg=groepMutaties.weg.filter(function(x){return x!==n;});if(groepMutaties.erbij.indexOf(n)<0)groepMutaties.erbij.push(n);}
-function groepWeg(n){groepMutaties.erbij=groepMutaties.erbij.filter(function(x){return x!==n;});if(groepMutaties.weg.indexOf(n)<0)groepMutaties.weg.push(n);}
+function groepWeg(n){
+ /* Een groep die deze sessie zelf nog maar net aanmaakte (nog niet in de
+    database) weer weghalen, hoeft in de database niets te verwijderen. */
+ var eigenNieuw=groepMutaties.erbij.indexOf(n)>-1;
+ groepMutaties.erbij=groepMutaties.erbij.filter(function(x){return x!==n;});
+ if(!eigenNieuw&&groepMutaties.weg.indexOf(n)<0)groepMutaties.weg.push(n);
+}
 /* Mislukte het wegschrijven van de groepenlijst, dan bleef dat stil: geen
    Niet opgeslagen-balk en geen Opnieuw proberen, terwijl bij Groep verwijderen
    de personen al zonder groep in de database stonden (aangetoond met
@@ -4471,6 +4478,9 @@ async function werkGroepnamenBijInDatabase(wegNamen){
   if(res.error)return false;
   if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);st.groepen=g2;dbStandPersonen[r.id]=JSON.stringify(st);}
  }
+ /* Wie zo een groep kwijtraakte, kan rechten hebben op mensen met wie hij geen
+    groep meer deelt (ook tussen mensen die deze sessie niet kent). */
+ if(teDoen.length&&!(await ruimRechtenOpInDatabase(teDoen.map(function(r){return r.id;}),[])))return false;
  var kq=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',['groep_koppelingen']);
  if(kq.error)return false;
  var k=((kq.data||[])[0]||{}).waarde;
@@ -4485,16 +4495,27 @@ async function werkGroepnamenBijInDatabase(wegNamen){
  wegNamen.forEach(function(n){delete groepHernoemd[n];});
  return true;
 }
+var groepenTabelWasLeeg=false;
 async function schrijfGroepenWeg(){
  try{
   var bestaand=await sb.from('groepen').select('id,naam');
   if(bestaand.error||!bestaand.data)return false;
   var bestaandeNamen=bestaand.data.map(function(r){return r.naam;});
+  /* Een groep hernoemen die een andere beheerder intussen al hernoemde of
+     verwijderde, maakte stilletjes een tweede groep aan (de oude naam bestond
+     niet meer); de mensen stonden daarna in beide. Dat is een conflict: niets
+     wegschrijven en vragen om te herladen (aangetoond met invarianten.js). */
+  var verouderd=groepMutaties.weg.filter(function(n){return groepHernoemd[n]&&bestaandeNamen.indexOf(n)<0&&!groepenTabelWasLeeg;});
+  if(verouderd.length){groepConflict=verouderd;return false;}
   /* Alleen de groepen die in deze sessie zijn aangemaakt, hernoemd of
      verwijderd. Het verschil met de eigen lijst gebruiken verwijderde een
      groep die een andere beheerder net had aangemaakt. Een lege tabel wordt
      wel in één keer gevuld (eerste keer opslaan). */
-  var erbij=bestaandeNamen.length?groepMutaties.erbij:GROEPEN.slice();
+  /* Alleen de allereerste keer (lege tabel bij het laden) de hele eigen lijst.
+     Werd de tabel pas later leeg (twee beheerders verwijderden samen alle
+     groepen), dan zette dit de eigen, verouderde lijst terug en kwamen
+     verwijderde groepen weer tot leven (aangetoond met invarianten.js). */
+  var erbij=(!bestaandeNamen.length&&groepenTabelWasLeeg)?GROEPEN.slice():groepMutaties.erbij;
   var toevoegen=erbij.filter(function(n){return GROEPEN.indexOf(n)>-1&&bestaandeNamen.indexOf(n)<0;});
   if(toevoegen.length){
    var ins=await sb.from('groepen').insert(toevoegen.map(function(n){return {naam:n};}));
@@ -4513,7 +4534,7 @@ async function schrijfGroepenWeg(){
    var wegNamen=bestaand.data.filter(function(r){return overbodig.indexOf(r.id)>-1;}).map(function(r){return r.naam;});
    if(!(await werkGroepnamenBijInDatabase(wegNamen)))return false;
   }
-  groepMutaties={erbij:[],weg:[]};
+  groepMutaties={erbij:[],weg:[]};groepenTabelWasLeeg=false;
   await schrijfOrgWeg();
   return true;
  }catch(e){return false;}
@@ -4612,10 +4633,10 @@ async function schrijfOrgWeg(){
   if(lijsten.length){
    var nu=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',lijsten.map(function(r){return r.sleutel;}));
    if(nu.error)return registreerOpslag('organisatie',false);
-   var bestaandeGroepen=null;
-   if(lijsten.some(function(r){return r.sleutel==='groep_koppelingen';})){
+   var bestaandeGroepen=null,groepenInDb=null;
+   if(lijsten.some(function(r){return r.sleutel==='groep_koppelingen'||r.sleutel==='gearchiveerde_groepen';})){
     var gq=await sb.from('groepen').select('naam');
-    if(!gq.error&&gq.data)bestaandeGroepen=gq.data.map(function(x){return x.naam;}).concat(groepMutaties.erbij);
+    if(!gq.error&&gq.data){groepenInDb=gq.data.map(function(x){return x.naam;});bestaandeGroepen=groepenInDb.concat(groepMutaties.erbij);}
    }
    lijsten.forEach(function(r){
     var db=((nu.data||[]).filter(function(x){return x.sleutel===r.sleutel;})[0]||{}).waarde;
@@ -4629,6 +4650,11 @@ async function schrijfOrgWeg(){
      if(bestaandeGroepen)samen=samen.map(function(k){return Array.isArray(k)?k.filter(function(g){return bestaandeGroepen.indexOf(g)>-1;}):k;});
      samen=voegClustersSamen(samen);
     }
+    /* Een groep die in de database nog bestaat, staat niet in de lijst van
+       verwijderde groepen. Mislukte het verwijderen (bijvoorbeeld door een
+       conflict), dan schreef een ander opslagpad de lijst toch weg en stond de
+       groep op beide plekken (aangetoond met invarianten.js). */
+    if(r.sleutel==='gearchiveerde_groepen'&&groepenInDb)samen=samen.filter(function(g){return groepenInDb.indexOf(g)<0;});
     r.waarde.length=0;Array.prototype.push.apply(r.waarde,samen);
    });
   }

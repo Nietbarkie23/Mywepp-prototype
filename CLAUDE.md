@@ -210,6 +210,14 @@ Verder (29-09, gevonden met `invarianten.js ... twee`):
   stappen passen op het scherm alleen hun eigen wijziging toe.
 - Vangnet: wie alleen nog naar niet-bestaande groepen verwijst, staat onder
   Zonder groep. Test: `twee-groepen.js`.
+- Hernoemen van een groep die een ander intussen al hernoemde of verwijderde is
+  een conflict (niets wegschrijven, herladen). De lijst verwijderde groepen
+  bevat nooit een groep die in de database nog bestaat. Een lege groepentabel
+  wordt alleen bij de allereerste keer met de eigen lijst gevuld
+  (`groepenTabelWasLeeg`), anders kwamen samen verwijderde groepen terug.
+- `invarianten.js` wacht na elke handeling tot de opslag klaar is en herlaadt
+  bij de melding Pagina herladen, zoals een gebruiker; `DEBUG=1` toont per stap
+  de groepen in de database.
 
 **Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
 en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen
