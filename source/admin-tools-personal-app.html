@@ -813,6 +813,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       rechtensets -->
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
       <button type="button" class="abtn" data-adm="zonderGroep">Zonder<br>groep <span class="countchip" id="zondergroep-teller"></span></button>
+      <button type="button" class="abtn tab" data-admintab="verwijderd">Verwijderde<br>cliënten <span class="countchip" id="verwijderd-teller"></span></button>
       <!-- groepeer: knop op verzoek verborgen. Niet verwijderen — hij opende
            Standaardrollen, net als de eveneens verborgen knop Rechtensets, en
            zijn naam sloeg op het groeperen van meerdere groepen: precies de
@@ -921,6 +922,16 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <label class="chip" style="margin-bottom:10px"><input type="checkbox" id="controle-toon-beoordeeld"> Ook afgehandelde signalen tonen</label>
         <div id="controle-lijst"></div>
         <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admintab-verwijderd" hidden>
+    <div class="panel">
+      <div class="head"><h2>Verwijderde cliënten</h2><span class="sub">Alleen zichtbaar in de Admin Tools</span></div>
+      <div class="body">
+        <p class="note">Cliënten die je via de Admin Tools hebt verwijderd. Ze staan hier, niet in het archief dat medewerkers in hun groep zien. De gegevens blijven de bewaartermijn van <span id="verwijderd-termijn">15 jaar</span> staan, dus je kunt ze terugzetten of, met een reden, eerder definitief wissen.</p>
+        <div id="verwijderd-lijst"></div>
       </div>
     </div>
   </section>
@@ -1717,6 +1728,7 @@ function kiesAdmintab(naamVal){
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
  if(naamVal==='groepen')renderSysteembeheer();
  if(naamVal==='controle')renderControle();
+ if(naamVal==='verwijderd')renderVerwijderdeClienten();
  if(naamVal==='matrix')renderMatrix();
  if(naamVal==='zoeken')renderZoeken();
  if(naamVal==='datalek')renderDatalekken();
@@ -1899,7 +1911,7 @@ function personRowToDb(p){
   wettelijke_vertegenwoordiger:p.wettelijkeVertegenwoordiger||null,foto:p.foto||null,
   toegang_tot:geldigeDatum(p.toegangTot)?p.toegangTot:null,
   gearchiveerd_op:geldigeDatum(p.gearchiveerdOp)?p.gearchiveerdOp:null,
-  gearchiveerd_reden:p.gearchiveerdReden||null,
+  gearchiveerd_reden:p.gearchiveerdReden||null,archief_soort:p.archiefSoort||null,
   geblokkeerd:!!p.geblokkeerd,geblokkeerd_reden:p.geblokkeerdReden||null,
   toestemming:p.toestemming||{},
   tweestaps:!!p.tweestaps,tweestaps_datum:geldigeDatum(p.tweestapsDatum)?p.tweestapsDatum:null,
@@ -1919,6 +1931,7 @@ function dbRowToPerson(r){
  if(r.toegang_tot)p.toegangTot=String(r.toegang_tot).slice(0,10);
  if(r.gearchiveerd_op)p.gearchiveerdOp=String(r.gearchiveerd_op).slice(0,10);
  if(r.gearchiveerd_reden)p.gearchiveerdReden=r.gearchiveerd_reden;
+ if(r.archief_soort==='beheer')p.archiefSoort='beheer';
  if(r.toestemming&&typeof r.toestemming==='object')p.toestemming=r.toestemming;
  if(r.tweestaps)p.tweestaps=true;
  if(r.tweestaps_datum)p.tweestapsDatum=String(r.tweestaps_datum).slice(0,10);
@@ -3557,6 +3570,8 @@ function renderAll(){
  toonKoppelingInFormulier();
  toonAdminWie();
  if(el('admintab-controle')&&!el('admintab-controle').hidden)renderControle();
+ zetVerwijderdTeller();
+ if(el('admintab-verwijderd')&&!el('admintab-verwijderd').hidden)renderVerwijderdeClienten();
 }
 
 /* ============== SYSTEEMBEHEER (boven groepsniveau) ============== */
@@ -4044,7 +4059,8 @@ function controleSignalen(){
   var maanden=maandenSinds(pp.gearchiveerdOp);
   signalen.push({ernst:'hoog',groep:(pp.groepen||[]).join(', '),
    tekst:naam(pp)+' staat sinds '+datumNL(pp.gearchiveerdOp)+' in het archief. De bewaartermijn van '+bewaartermijnTekst()+' is verstreken; wissen of onderbouwen waarom dat niet kan.',
-   actie:{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
+   actie:doorBeheer(pp)?{soort:'verwijderd',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Verwijderde cliënten openen'}
+                       :{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
  });
  /* 9. Geblokkeerde accounts: een blokkade hoort tijdelijk te zijn. Blijft hij
        staan, dan moet er een besluit komen (opheffen of de persoon eruit). */
@@ -4260,6 +4276,7 @@ function renderControle(){
    /* Het nalopen van de toegang doe je vanuit het controlescherm zelf; daarvoor
       hoef je niet eerst naar het groepsprofiel. */
    if(s.actie.soort==='toegangscontrole'){openToegangscontrole(s.actie.client);return;}
+   if(s.actie.soort==='verwijderd'){kiesAdmintab('verwijderd');return;}
    /* Eerst openen, dan pas van weergave wisselen: zo weet het profiel dat het
       vanuit de Admin Tools kwam en keert het na opslaan daarheen terug. */
    if(s.actie.soort==='client')openProfielClient(s.actie.id);
@@ -4963,6 +4980,10 @@ function clientVerwijderenFlow(){
   huidigeGroep=g;verversGroepReferenties();renderAll();
   kiesUitLijstModal('Welke cliënt verwijderen?',personenVanType('client'),naam,function(p){
    markeerVerwijderd(p.id,'client');
+   /* Verwijderd door de beheerder: na doorvoeren in de eigen lijst van de
+      Admin Tools, niet in het archief dat medewerkers in hun groep zien. */
+   if(p._state==='verwijderd')p._doorBeheer=true;
+   zetVerwijderdTeller();
    verwijderPersoonBevestiging(p);
   });
  });
@@ -5040,7 +5061,7 @@ function zonderGroepFlow(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-zg-terug]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-zg-terug')),g=groepVoor(p&&p.id);if(!p||!g)return;
-   p.archived=false;delete p.gearchiveerdOp;delete p.gearchiveerdReden;p.groepen=[g];
+   p.archived=false;delete p.gearchiveerdOp;delete p.gearchiveerdReden;delete p.archiefSoort;p.groepen=[g];
    logActie(naam(p)+' teruggezet uit het archief in '+g,{soort:'Herstel'});
    klaar();
   });
@@ -6157,42 +6178,38 @@ function haalUitPrullenbak(id){
     aan hem was aangepast, anders ongewijzigd. */
  delete p._state;
  if(wijzigingDetails(p).length)p._state='gewijzigd';
- delete p._verwijderReden;
+ delete p._verwijderReden;delete p._doorBeheer;
  logActie(naam(p)+' terug uit de prullenbak',{soort:'Herstel'});
  renderGearchiveerd();renderAll();
 }
-function renderGearchiveerd(){
- if(el('archief-termijn'))el('archief-termijn').textContent=bewaartermijnTekst();
- var prullenbak=people.filter(function(p){return p._state==='verwijderd'&&!p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
- var gearchiveerd=people.filter(function(p){return p.archived&&p.groepen.indexOf(huidigeGroep)>-1;});
- var prullenbakHtml=prullenbak.length
-  ? '<div class="sublistlabel" style="margin:14px 16px 6px">Prullenbak — nog niet doorgevoerd</div><div style="padding:0 12px">'+prullenbak.map(prullenbakRijHtml).join('')+'</div>'+
-    '<div class="sublistlabel" style="margin:14px 16px 6px">Archief</div>'
+/* Wat de beheerder via de Admin Tools verwijderde, hoort niet in het archief
+   dat medewerkers in hun groep zien. Dat staat in Verwijderde cliënten. */
+function doorBeheer(p){return !!(p._doorBeheer||p.archiefSoort==='beheer');}
+function archiefRijHtml(p,metGroep){
+ var maanden=maandenSinds(p.gearchiveerdOp);
+ var termijn=bewaartermijnVerstreken(p)
+  ? ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Bewaartermijn verstreken</span>'
+  : (maanden!==null?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">'+maanden+' maand'+(maanden===1?'':'en')+' in archief</span>':'');
+ var datums=geldigeDatum(p.gearchiveerdOp)
+  ? '<div class="archiefdatum">'+(metGroep?'Groep: '+esc((p.groepen||[]).join(', ')||'geen')+' · ':'')+'Gearchiveerd op '+esc(datumNL(p.gearchiveerdOp))+' · bewaren tot '+esc(datumNL(bewaarTot(p)))+
+    (p.gearchiveerdReden?' · reden: '+esc(p.gearchiveerdReden):'')+'</div>'
   : '';
- el('gearchiveerd-lijst').innerHTML=prullenbakHtml+(gearchiveerd.length? gearchiveerd.map(function(p){
-  var maanden=maandenSinds(p.gearchiveerdOp);
-  var termijn=bewaartermijnVerstreken(p)
-   ? ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Bewaartermijn verstreken</span>'
-   : (maanden!==null?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">'+maanden+' maand'+(maanden===1?'':'en')+' in archief</span>':'');
-  var datums=geldigeDatum(p.gearchiveerdOp)
-   ? '<div class="archiefdatum">Gearchiveerd op '+esc(datumNL(p.gearchiveerdOp))+' · bewaren tot '+esc(datumNL(bewaarTot(p)))+
-     (p.gearchiveerdReden?' · reden: '+esc(p.gearchiveerdReden):'')+'</div>'
-   : '';
-  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+termijn+'</div><div class="mail">'+esc(p.mail||'—')+'</div>'+datums+'</div>'+
-   '<button type="button" class="small" data-avg="'+p.id+'">Inzage</button>'+
-   '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button>'+
-   '<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button></div>';
- }).join('') : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>');
- Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-uitprullenbak]'),function(b){
+ return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+termijn+'</div><div class="mail">'+esc(p.mail||'—')+'</div>'+datums+'</div>'+
+  '<button type="button" class="small" data-avg="'+p.id+'">Inzage</button>'+
+  '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button>'+
+  '<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button></div>';
+}
+function koppelArchiefKnoppen(lijst){
+ Array.prototype.forEach.call(lijst.querySelectorAll('[data-uitprullenbak]'),function(b){
   b.addEventListener('click',function(){haalUitPrullenbak(+b.getAttribute('data-uitprullenbak'));});
  });
- Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-avg]'),function(b){
+ Array.prototype.forEach.call(lijst.querySelectorAll('[data-avg]'),function(b){
   b.addEventListener('click',function(){openAvgDossier(+b.getAttribute('data-avg'));});
  });
- Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-wis]'),function(b){
+ Array.prototype.forEach.call(lijst.querySelectorAll('[data-wis]'),function(b){
   b.addEventListener('click',function(){wisDefinitief(+b.getAttribute('data-wis'));});
  });
- Array.prototype.forEach.call(el('gearchiveerd-lijst').querySelectorAll('[data-herstel]'),function(b){
+ Array.prototype.forEach.call(lijst.querySelectorAll('[data-herstel]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-herstel'));
    if(!p)return;
@@ -6207,7 +6224,7 @@ function renderGearchiveerd(){
     (verlopen?' De tijdelijke toegang is verlopen op '+esc(datumNL(p.toegangTot))+', dus inloggen kan pas na een nieuwe einddatum.':'')+
     (p.geblokkeerd?' Let op: dit account staat geblokkeerd en blijft dat.':'')+'</p>',
     'Ja, terugzetten',function(){
-     p.archived=false;delete p.gearchiveerdOp;
+     p.archived=false;delete p.gearchiveerdOp;delete p.archiefSoort;
      logActie(naam(p)+' teruggezet uit het archief'+(aantal?' met '+aantal+' recht'+(aantal===1?'':'en'):''),{soort:'Herstel'});
      delete p.gearchiveerdReden;
      renderGearchiveerd();renderAll();
@@ -6215,6 +6232,46 @@ function renderGearchiveerd(){
     });
   });
  });
+}
+function renderGearchiveerd(){
+ if(el('archief-termijn'))el('archief-termijn').textContent=bewaartermijnTekst();
+ var prullenbak=people.filter(function(p){return p._state==='verwijderd'&&!p.archived&&!doorBeheer(p)&&p.groepen.indexOf(huidigeGroep)>-1;});
+ var gearchiveerd=people.filter(function(p){return p.archived&&!doorBeheer(p)&&p.groepen.indexOf(huidigeGroep)>-1;});
+ var prullenbakHtml=prullenbak.length
+  ? '<div class="sublistlabel" style="margin:14px 16px 6px">Prullenbak — nog niet doorgevoerd</div><div style="padding:0 12px">'+prullenbak.map(prullenbakRijHtml).join('')+'</div>'+
+    '<div class="sublistlabel" style="margin:14px 16px 6px">Archief</div>'
+  : '';
+ el('gearchiveerd-lijst').innerHTML=prullenbakHtml+(gearchiveerd.length? gearchiveerd.map(function(p){return archiefRijHtml(p,false);}).join('')
+  : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>');
+ koppelArchiefKnoppen(el('gearchiveerd-lijst'));
+}
+/* ---- Verwijderde cliënten (alleen Admin Tools) ----
+   Over alle groepen heen: wat de beheerder heeft klaargezet maar nog niet is
+   doorgevoerd, en wat daarna gearchiveerd is. */
+function verwijderdeClienten(){
+ return people.filter(function(p){return p.type==='client'&&doorBeheer(p)&&(p.archived||p._state==='verwijderd');});
+}
+function zetVerwijderdTeller(){
+ var t=el('verwijderd-teller');
+ if(t)t.textContent=verwijderdeClienten().length||'';
+}
+function renderVerwijderdeClienten(){
+ if(el('verwijderd-termijn'))el('verwijderd-termijn').textContent=bewaartermijnTekst();
+ var lijst=verwijderdeClienten();
+ var klaar=lijst.filter(function(p){return !p.archived;}),weg=lijst.filter(function(p){return p.archived;});
+ var html='';
+ if(klaar.length){
+  html+='<div class="sublistlabel">Klaargezet — nog niet doorgevoerd</div>'+klaar.map(function(p){
+   return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+
+    ' <span class="statuschip" style="background:var(--amber-bg,#fff4e0);color:var(--amber)">Nog niet doorgevoerd</span></div>'+
+    '<div class="mail">Groep: '+esc((p.groepen||[]).join(', '))+' · wordt verwijderd bij Wijzigingen doorvoeren</div></div>'+
+    '<button type="button" class="small" data-uitprullenbak="'+p.id+'">Terugzetten</button></div>';
+  }).join('');
+  html+='<div class="sublistlabel" style="margin-top:14px">Verwijderd</div>';
+ }
+ html+=weg.length?weg.map(function(p){return archiefRijHtml(p,true);}).join(''):'<p class="empty-msg">Nog geen cliënten verwijderd via de Admin Tools.</p>';
+ el('verwijderd-lijst').innerHTML=html;
+ koppelArchiefKnoppen(el('verwijderd-lijst'));
 }
 el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
 
@@ -6736,7 +6793,8 @@ async function voerWijzigingenDoor(){
       de bewaartermijn vanaf die dag kan lopen en herstellen mogelijk blijft. */
    p.archived=true;p.gearchiveerdOp=vandaagISO();p.contactpersoon=false;delete p.contactVolgorde;delete p.status;gearchiveerd++;
    if(p._verwijderReden)p.gearchiveerdReden=p._verwijderReden; else delete p.gearchiveerdReden;
-   logActie(naam(p)+' gearchiveerd; bewaren tot '+datumNL(bewaarTot(p)),{soort:'Archivering',reden:p._verwijderReden});
+   if(p._doorBeheer)p.archiefSoort='beheer'; else delete p.archiefSoort;
+   logActie(naam(p)+(p._doorBeheer?' verwijderd via de Admin Tools':' gearchiveerd')+'; bewaren tot '+datumNL(bewaarTot(p)),{soort:'Archivering',reden:p._verwijderReden});
    /* Anders blijft er een "contactpersoon 2" over zonder dat er een eerste is. */
    if(wasContact===1){
     var tweede=contactpersonenVanGroep().filter(function(x){return x.contactVolgorde===2;})[0];
@@ -6750,7 +6808,7 @@ async function voerWijzigingenDoor(){
   if(idx>-1)p.groepen[idx]=p._nieuweGroep; else p.groepen.push(p._nieuweGroep);
   verplaatst++;
  });
- people.forEach(function(p){delete p._state;delete p._nieuweGroep;delete p._verwijderReden;});
+ people.forEach(function(p){delete p._state;delete p._nieuweGroep;delete p._verwijderReden;delete p._doorBeheer;});
  if(nieuw||gewijzigd||ontkoppeld||gearchiveerd||verplaatst){
   var delen=[];
   if(nieuw)delen.push(nieuw+' toegevoegd');

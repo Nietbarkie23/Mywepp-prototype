@@ -274,12 +274,20 @@ Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
   in één keer wissen vraagt een databasefunctie (transactie); opslag bij het
   sluiten van de pagina kan een fout niet meer tonen. Tests:
   `groep-opslagfout.cjs`, `stille-opslag-na.cjs`, `paneel-sluiten.cjs`.
+- Cliënt verwijderen via de Admin Tools komt in een eigen lijst, Overig ›
+  Verwijderde cliënten (`admintab-verwijderd`, `renderVerwijderdeClienten`,
+  teller `verwijderd-teller`), en niet in het archief dat medewerkers per groep
+  zien (`renderGearchiveerd` slaat `doorBeheer(p)` over). Tijdens het klaarzetten
+  `p._doorBeheer`, na doorvoeren kolom `personen.archief_soort='beheer'`
+  (migratie `personen_archief_soort`). Herstellen haalt de markering weg.
+  Herstellen, Inzage en Definitief wissen delen `archiefRijHtml` en
+  `koppelArchiefKnoppen`. Test: `verwijderd-beheer.js` (poort 8734).
 - MyWepp Personal, Info-scherm: rollen van betrokkenen staan vast (tekst, geen
   keuzelijst; `personRechtenRow(id,true)`). Wijzigen alleen via Gebruikers
   beheren. Test: `rollen-vast.cjs`.
 
 Supabase-kolommen die hiervoor zijn toegevoegd: `personen.rollen`,
-`personen.gearchiveerd_reden`, `logboek.soort`, `logboek.reden`.
+`personen.gearchiveerd_reden`, `personen.archief_soort`, `logboek.soort`, `logboek.reden`.
 
 ## Andere takken
 
