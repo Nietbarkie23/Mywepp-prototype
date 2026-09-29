@@ -573,6 +573,27 @@ function dbRowToPerson(r){
  if(r.archived)p.archived=true;
  return p;
 }
+/* Vangnet bij het laden. Twee beheerders die precies tegelijk werken, kunnen
+   zonder databasetransacties de samenhang toch nog breken (een koppeling met
+   een groep die een ander net verwijderde, een medewerker die het gedeelde team
+   mist). Wie daarna de pagina opent, zet dat hier recht en schrijft het weg,
+   zonder dat het als eigen wijziging meetelt (aangetoond met invarianten.js). */
+function herstelSamenhangNaLaden(){
+ var k2=voegClustersSamen(groepKoppelingen.map(function(k){return Array.isArray(k)?k.filter(function(g){return GROEPEN.indexOf(g)>-1;}):[];}));
+ var koppAnders=JSON.stringify(k2)!==JSON.stringify(groepKoppelingen);
+ if(koppAnders)groepKoppelingen=k2;
+ var weg=gearchiveerdeGroepen.filter(function(g){return GROEPEN.indexOf(g)<0;});
+ var wegAnders=weg.length!==gearchiveerdeGroepen.length;
+ if(wegAnders)gearchiveerdeGroepen=weg;
+ var mensen=0;
+ people.forEach(function(p){
+  if(p.archived)return;
+  var st=p._state;
+  if(vulKoppelingAan(p)){mensen++;if(st===undefined)delete p._state;else p._state=st;}
+ });
+ if(koppAnders||wegAnders)syncOrganisatieData();
+ if(mensen)syncToSupabase();
+}
 async function loadFromSupabase(){
  if(!sb){gegevensGeladen=null;toonLaadStatus();return;}
  gegevensGeladen=null;
@@ -641,6 +662,7 @@ async function loadFromSupabase(){
   await laadClientData();
   gegevensGeladen=true;
   toonLaadStatus();
+  herstelSamenhangNaLaden();
   /* De geladen stand is de nulstand waar wijzigingen tegen worden afgezet. */
   zetBasisVoorIedereen();
   if(typeof renderAll==='function')renderAll();
@@ -4640,7 +4662,11 @@ async function schrijfOrgWeg(){
    }
    lijsten.forEach(function(r){
     var db=((nu.data||[]).filter(function(x){return x.sleutel===r.sleutel;})[0]||{}).waarde;
-    if(!Array.isArray(db))return;
+    /* Bestaat de sleutel nog niet (de eerste keer), dan toch dezelfde weg:
+       anders ging bijvoorbeeld de allereerste koppeling ongecontroleerd de
+       database in, ook met een groep die een ander net had hernoemd
+       (aangetoond met invarianten.js). */
+    if(!Array.isArray(db))db=[];
     var vorig=dbStandOrg[r.sleutel]?JSON.parse(dbStandOrg[r.sleutel]):[];
     if(!Array.isArray(vorig))vorig=[];
     var samen=voegLijstSamen(db,vorig,r.waarde);

@@ -215,6 +215,11 @@ Verder (29-09, gevonden met `invarianten.js ... twee`):
   bevat nooit een groep die in de database nog bestaat. Een lege groepentabel
   wordt alleen bij de allereerste keer met de eigen lijst gevuld
   (`groepenTabelWasLeeg`), anders kwamen samen verwijderde groepen terug.
+- Vangnet bij elk laden (`herstelSamenhangNaLaden`): koppelingen alleen met
+  bestaande groepen, medewerkers in het hele gekoppelde team, geen bestaande
+  groep in de lijst verwijderde groepen; wordt weggeschreven zonder als eigen
+  wijziging mee te tellen. Een lijst-sleutel die nog niet in de database staat,
+  gaat ook door de samenvoeging en controle.
 - `invarianten.js` wacht na elke handeling tot de opslag klaar is en herlaadt
   bij de melding Pagina herladen, zoals een gebruiker; `DEBUG=1` toont per stap
   de groepen in de database.
