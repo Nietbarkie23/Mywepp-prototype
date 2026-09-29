@@ -5038,6 +5038,12 @@ function zonderGroep(){
 function zetZonderGroepTeller(){
  var t=el('zondergroep-teller');
  if(t)t.textContent=zonderGroep().filter(function(p){return !p.archived;}).length||'';
+ /* Op verzoek alleen zichtbaar als er iemand zonder groep is: meestal is die
+    lijst leeg en dan had de knop geen nut. Ook gearchiveerden zonder groep
+    tellen mee, anders zijn die nergens meer terug te zetten. Via style.display,
+    want hidden werkt niet op .abtn. */
+ var knop=document.querySelector('[data-adm="zonderGroep"]');
+ if(knop)knop.style.display=zonderGroep().length?'':'none';
 }
 var TYPENAAM={client:'Cliënt',medewerker:'Medewerker',naaste:'Naaste'};
 function zonderGroepFlow(){

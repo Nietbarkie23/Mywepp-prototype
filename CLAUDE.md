@@ -261,7 +261,8 @@ Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
 - Groep verwijderen (`verwijderGroep`) blokkeert niet meer bij mensen erin:
   de groep gaat uit koppelingen en bij iedereen eraf, rechten zonder gedeelde
   groep worden opgeruimd. Wie alleen in die groep zat, staat onder Overig ›
-  Zonder groep (`zonderGroepFlow`, teller `zondergroep-teller`): verplaatsen,
+  Zonder groep (`zonderGroepFlow`, teller `zondergroep-teller`; de knop staat er
+  alleen als iemand geen groep heeft, `zetZonderGroepTeller`): verplaatsen,
   naar het archief, of gearchiveerd terugzetten. Groep herstellen zet mensen,
   rechten en vertegenwoordigers terug uit `groepOntkoppeld` (organisatie_data
   `groep_ontkoppeld`). Tests: `groep-verwijderen.cjs`,
