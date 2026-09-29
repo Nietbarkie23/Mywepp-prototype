@@ -10,9 +10,13 @@ JS, Supabase als opslag, Vercel als hosting.
   ter goedkeuring moet. Dan een losse tak, en pas mergen als de klant ja zegt.
 - **Backuptak vóór een grote wijziging** (meer dan een handvol dingen in één
   commit).
-- **Twee bestanden, altijd identiek:** `mywepp-prototype/index.html` is wat
-  Vercel publiceert, `source/admin-tools-personal-app.html` is de kopie. Na elke
-  wijziging kopiëren en met `diff` controleren.
+- **Twee paren bestanden, altijd identiek:** `mywepp-prototype/index.html` is wat
+  Vercel publiceert, `source/admin-tools-personal-app.html` is de kopie; de
+  JavaScript staat sinds 29-09 apart in `mywepp-prototype/app.js`, met kopie
+  `source/app.js`. Na elke wijziging kopiëren en met `diff` controleren. Geen
+  JavaScript terugzetten in de pagina en geen `onclick=`/`onerror=` in HTML: de
+  CSP staat alleen scripts van de eigen site toe (`script-src 'self'`), dus dat
+  wordt door de browser geweigerd.
 - **Alles wordt aangetoond, niet beweerd.** Een bevinding pas melden als hij met
   Playwright is gereproduceerd; een fix pas af als dezelfde test hem groen laat
   zien. Bij twijfel of iets een regressie is: dezelfde test tegen de vorige
@@ -236,7 +240,11 @@ gewist of overschreven wordt, bewaart `bewaar_historie` 30 dagen in
 `private.historie`, met IP, om vandalisme terug te kunnen draaien.
 Site: geen CDN en geen Google Fonts meer. De bibliotheek en het lettertype
 Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
-`'self'` en de database toe.
+`'self'` en de database toe. Scripts: alleen `'self'`, zonder `'unsafe-inline'` (app.js apart);
+in de pagina geplakte code (inline `<script>`, `onerror`, `javascript:`) voert
+de browser niet uit. Tests: `csp-streng.js` (8735, met controle tegen de vorige
+versie), `csp-rondgang.js` (alle schermen, 0 CSP-meldingen). Backup van vóór
+deze stap: `backup/voor-strengere-csp`.
 
 - Rollen: categorie `locatie` (medewerker) en `clienten` = "Cliënt" (naaste)
   in `ROLLEN`/`RECHTEN`/`orgDefault`; oude opgeslagen standaarden worden
