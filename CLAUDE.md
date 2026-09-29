@@ -77,9 +77,10 @@ MCP-tools werken wel.
 ## Niet aankomen zonder overleg
 
 De productie-testrijen in `personen`: `Dean Huizen` (7), `Test Test` (8, 11),
-`Test Test Medewerker` (13), `Dean Schouten` (15), `Tttt TEST` (14),
-`TEST Ttt` (16), `Dit Is Een Test` (17), en de groep `Test groep`. Die staan in
-de live database en mogen alleen met expliciete toestemming weg.
+`Test Test Medewerker` (13), `Dean Schouten` (15), `TEST Ttt` (16),
+`Dit Is Een Test` (17), en de groep `Test groep`. Die staan in de live database
+en mogen alleen met expliciete toestemming weg. (`Tttt TEST`, id 14, is op
+23-09 via de app definitief gewist; zie het logboek.)
 
 ## Wat er in zit (grote brokken)
 
