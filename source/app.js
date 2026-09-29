@@ -657,6 +657,9 @@ async function loadFromSupabase(){
    dat merk je pas als iemand toegang blijkt te hebben die je had ingetrokken.
    Zonder database (de demo-stand) is er niets om over te melden. */
 var opslagMislukt={};
+/* Groepsnamen die een andere beheerder intussen verwijderde of hernoemde. Opnieuw
+   proberen helpt dan niet; herladen wel. */
+var groepConflict=null;
 /* Logboekregels en datalekmeldingen die niet in de database kwamen. Opnieuw
    proberen had er niets om opnieuw te versturen: de balk bleef staan en na
    herladen was de regel weg (aangetoond door Codex, stille-opslag-audit.cjs).
@@ -730,6 +733,13 @@ function toonOpslagStatus(){
  balk.hidden=!soorten.length;
  if(!soorten.length)return;
  var wat=soorten.map(function(k){return OPSLAGNAMEN[k]||k;}).join(' en ');
+ if(groepConflict&&groepConflict.length){
+  balk.innerHTML='<span class="tekst"><b>Niet opgeslagen.</b> Een andere beheerder heeft intussen de groep '+
+   groepConflict.map(function(g){return '"'+esc(g)+'"';}).join(', ')+' verwijderd of hernoemd. Wat je in die groep deed, is niet opgeslagen. Herlaad de pagina om met de actuele groepen verder te werken.</span>'+
+   '<button type="button" class="primary" id="opslag-herlaad">Pagina herladen</button>';
+  el('opslag-herlaad').addEventListener('click',function(){location.reload();});
+  return;
+ }
  balk.innerHTML='<span class="tekst"><b>Niet opgeslagen.</b> De wijziging in '+esc(wat)+
   ' staat wel op je scherm, maar is niet in de database beland. Sluit dit venster niet zonder het opnieuw te proberen.</span>'+
   '<button type="button" class="primary" id="opslag-opnieuw">Opnieuw proberen</button>';
@@ -815,7 +825,92 @@ async function maakNieuweIdsVrij(){
  nextId=Math.max(nextId,volgende);
  return true;
 }
-async function syncToSupabase(){
+/* Een recht hoort alleen te bestaan tussen mensen die een groep delen, en alleen
+   op iemand die nog bestaat. Opruimen gebeurde alleen bij de mensen die deze
+   sessie kende; wie een andere beheerder intussen had aangemaakt, hield zo
+   toegang tot een cliënt buiten zijn groep, of een recht op een gewiste persoon
+   (aangetoond met invarianten.js ... twee). Daarom na het wegschrijven in de
+   database zelf nakijken, voor de mensen die net veranderden (geraakt) en voor
+   rechten op gewiste id's (gewist). Gearchiveerden houden hun rechten: die
+   komen terug bij herstellen. */
+async function ruimRechtenOpInDatabase(geraakt,gewist){
+ var q=await sb.from('personen').select('id,groepen,archived,client_rechten,medewerker_rechten,naaste_rechten');
+ if(q.error||!q.data)return false;
+ var per={};q.data.forEach(function(r){per[r.id]=r;});
+ var deelt=function(a,b){return (a.groepen||[]).some(function(g){return (b.groepen||[]).indexOf(g)>-1;});};
+ var velden=['client_rechten','medewerker_rechten','naaste_rechten'];
+ for(var i=0;i<q.data.length;i++){
+  var r=q.data[i],wijz={};
+  velden.forEach(function(v){
+   var o=r[v]||{},n=null;
+   Object.keys(o).forEach(function(k){
+    var t=per[+k],weg=false;
+    if(!t)weg=gewist.indexOf(+k)>-1||geraakt.indexOf(r.id)>-1;
+    else if(!r.archived&&!t.archived&&(geraakt.indexOf(r.id)>-1||geraakt.indexOf(+k)>-1)&&!deelt(r,t))weg=true;
+    if(weg){n=n||Object.assign({},o);delete n[k];}
+   });
+   if(n)wijz[v]=n;
+  });
+  if(!Object.keys(wijz).length)continue;
+  var res=await sb.from('personen').update(wijz).eq('id',r.id);
+  if(res.error)return false;
+  var p=findPerson(r.id);
+  /* Alleen de weggehaalde rechten ook op het scherm weghalen. */
+  Object.keys(wijz).forEach(function(v){
+   var loc=p&&p[OBJECTVELD_PROP[v]];if(!loc)return;
+   Object.keys(r[v]||{}).forEach(function(k){if(!(k in wijz[v]))delete loc[k];});
+  });
+  if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);Object.assign(st,wijz);dbStandPersonen[r.id]=JSON.stringify(st);}
+ }
+ return true;
+}
+/* Gekoppelde groepen delen hun medewerkers. Een medewerker die een andere
+   beheerder (met een oude stand) in één van die groepen zette, of die er al in
+   zat toen deze sessie koppelde zonder hem te kennen, kwam niet in het hele
+   team (aangetoond met invarianten.js ... twee). Hier met de koppelingen en
+   groepen uit de database aanvullen: voor de meegegeven id's, of (null) voor
+   iedereen. */
+async function vulTeamsAanInDatabase(ids){
+ var kq=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',['groep_koppelingen']);
+ if(kq.error)return false;
+ var kopp=((kq.data||[])[0]||{}).waarde;
+ if(!Array.isArray(kopp)||!kopp.length)return true;
+ var gq=await sb.from('groepen').select('naam');
+ if(gq.error||!gq.data)return false;
+ var bestaand=gq.data.map(function(r){return r.naam;});
+ var q=await sb.from('personen').select('id,type,groepen,archived');
+ if(q.error||!q.data)return false;
+ for(var i=0;i<q.data.length;i++){
+  var r=q.data[i];
+  if(r.type!=='medewerker'||r.archived||(ids&&ids.indexOf(r.id)<0))continue;
+  var g=(r.groepen||[]).slice(),erbij=false;
+  kopp.forEach(function(k){
+   if(!Array.isArray(k)||!k.some(function(x){return g.indexOf(x)>-1;}))return;
+   k.forEach(function(x){if(g.indexOf(x)<0&&bestaand.indexOf(x)>-1){g.push(x);erbij=true;}});
+  });
+  if(!erbij)continue;
+  var res=await sb.from('personen').update({groepen:g}).eq('id',r.id);
+  if(res.error)return false;
+  var p=findPerson(r.id);
+  if(p)g.forEach(function(x){if((r.groepen||[]).indexOf(x)<0&&p.groepen.indexOf(x)<0&&GROEPEN.indexOf(x)>-1)p.groepen.push(x);});
+  if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);st.groepen=g;dbStandPersonen[r.id]=JSON.stringify(st);}
+ }
+ return true;
+}
+/* Alle schrijfacties van deze sessie op volgorde. Ze werden los van elkaar
+   gestart (koppelen, dan meteen een groep verwijderen) en liepen dan door
+   elkaar heen: een nakijkstap las een oude databasestand en zette een net
+   verwijderde groep terug (aangetoond met invarianten.js). Bij het sluiten van
+   de pagina wordt niet gewacht, anders komt het verzoek te laat. */
+var opslagRij=Promise.resolve();
+function inRij(fn){
+ if(paginaSluit)return fn();
+ var nu=opslagRij.then(fn,fn);
+ opslagRij=nu.catch(function(){});
+ return nu;
+}
+function syncToSupabase(){return inRij(schrijfPersonenWeg);}
+async function schrijfPersonenWeg(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;    /* zou de voorbeeldgegevens over de echte heen schrijven */
  try{
@@ -838,6 +933,40 @@ async function syncToSupabase(){
   });
   if(!nieuweRijen.length&&!updates.length)return registreerOpslag('personen',true);
   var fout=false;
+  /* Twee beheerders tegelijk: B werkt met een oude stand terwijl A een groep
+     hernoemde of verwijderde. Zonder deze stap schreef B mensen weg met een
+     groepsnaam die niet meer bestaat; die waren daarna nergens meer te vinden
+     (aangetoond met invarianten.js ... twee). Daarom: de groepen van een
+     persoon per naam samenvoegen met de databasestand (alleen wat deze sessie
+     toevoegde of weghaalde), en niets wegschrijven met een groep die niet
+     (meer) bestaat. */
+  var metGroepen=updates.filter(function(u){return 'groepen' in u.diff;});
+  if(metGroepen.length||nieuweRijen.length){
+   var gq=await sb.from('groepen').select('naam');
+   if(gq.error||!gq.data)return registreerOpslag('personen',false);
+   var bestaand=gq.data.map(function(r){return r.naam;}).concat(groepMutaties.erbij);
+   if(metGroepen.length){
+    var hq=await sb.from('personen').select('id,groepen').in('id',metGroepen.map(function(u){return u.rij.id;}));
+    if(hq.error)return registreerOpslag('personen',false);
+    metGroepen.forEach(function(u){
+     var db=((hq.data||[]).filter(function(r){return r.id===u.rij.id;})[0]||{}).groepen;
+     if(!Array.isArray(db))return;
+     var vorig=JSON.parse(dbStandPersonen[u.rij.id]).groepen||[];
+     var mijn=u.rij.groepen||[];
+     var samen=voegLijstSamen(db,vorig,mijn);
+     u.diff.groepen=samen;u.rij.groepen=samen;
+     /* Op het scherm: wat een ander deed erbij, zonder wat de gebruiker
+        intussen zelf nog veranderde terug te draaien. */
+     var p=findPerson(u.rij.id);if(p)p.groepen=voegLijstSamen(samen,mijn,p.groepen||[]);
+    });
+   }
+   var weg=function(r){return (r.groepen||[]).filter(function(g){return bestaand.indexOf(g)<0;});};
+   var conflict=[];
+   var houd=function(r){var mis=weg(r);mis.forEach(function(g){if(conflict.indexOf(g)<0)conflict.push(g);});return !mis.length;};
+   updates=updates.filter(function(u){return !('groepen' in u.diff)||houd(u.rij);});
+   nieuweRijen=nieuweRijen.filter(houd);
+   if(conflict.length){groepConflict=conflict;fout=true;}
+  }
   if(nieuweRijen.length){
    /* insert, geen upsert: een botsing die er toch doorheen komt geeft een
       fout in plaats van stilletjes iemand te overschrijven. */
@@ -869,6 +998,10 @@ async function syncToSupabase(){
   }
   var uitkomsten=await Promise.all(updates.map(function(u){return sb.from('personen').update(u.diff).eq('id',u.rij.id);}));
   uitkomsten.forEach(function(res,i){if(res.error)fout=true; else dbStandPersonen[updates[i].rij.id]=JSON.stringify(updates[i].rij);});
+  var geraakt=nieuweRijen.map(function(r){return r.id;}).concat(updates.filter(function(u){
+   return ['groepen','archived'].concat(OBJECTVELDEN).some(function(k){return k in u.diff;});}).map(function(u){return u.rij.id;}));
+  if(geraakt.length&&!(await vulTeamsAanInDatabase(geraakt)))fout=true;
+  if(geraakt.length&&!(await ruimRechtenOpInDatabase(geraakt,[])))fout=true;
   return registreerOpslag('personen',!fout);
  }
  catch(e){return registreerOpslag('personen',false);}
@@ -2405,9 +2538,14 @@ var groepBewerkType='medewerker';
    Groep bewerken en het potlood op het groepsprofiel, zodat die twee nooit
    uit elkaar lopen. Alleen aanroepen bij een échte naamswijziging: anders wist
    het verplaatsen naar dezelfde sleutel de waarde. */
+/* Oude naam -> nieuwe naam, voor de groepen die deze sessie hernoemde. Nodig om
+   in de database ook de mensen mee te nemen die een andere beheerder intussen
+   in de oude groep had gezet (die kent deze sessie niet). */
+var groepHernoemd={};
 function hernoemGroepOveral(g,nieuw){
  GROEPEN[GROEPEN.indexOf(g)]=nieuw;
  groepWeg(g);groepErbij(nieuw);
+ groepHernoemd[g]=nieuw;
  people.forEach(function(p){
   var idx=p.groepen.indexOf(g);
   if(idx>-1){p.groepen[idx]=nieuw;if(p._state!=='nieuw')p._state='gewijzigd';}
@@ -3692,8 +3830,11 @@ function toonBeheerArchief(g,soort){
    waar ze nog te zien zijn: verplaatsen naar een groep, of naar het archief.
    Ook gearchiveerden zonder groep staan hier, anders zou het archief ze kwijt
    zijn (dat toont alleen per groep). */
+/* Ook wie alleen nog naar groepen verwijst die niet (meer) bestaan: die is in
+   geen enkel ander scherm te zien. Vangnet voor oude of gelijktijdige
+   wijzigingen van twee beheerders. */
 function zonderGroep(){
- return people.filter(function(p){return p._state!=='nieuw'&&(!p.groepen||!p.groepen.length);});
+ return people.filter(function(p){return p._state!=='nieuw'&&!(p.groepen||[]).some(function(g){return GROEPEN.indexOf(g)>-1;});});
 }
 function zetZonderGroepTeller(){
  var t=el('zondergroep-teller');
@@ -4159,7 +4300,11 @@ function koppelGroepen(a,b){
    groepKoppelingen.push(samen);
    var aantal=pasKoppelingenToe();
    logActie('Groepen gekoppeld: '+samen.join(' + ')+(aantal?' — '+aantal+' medewerker'+(aantal===1?'':'s')+' gedeeld':''));
-   syncOrganisatieData();syncToSupabase();
+   /* Eerst de koppeling en de bekende medewerkers, dan in de database ook de
+      medewerkers die deze sessie niet kent. */
+   syncOrganisatieData().then(function(){return syncToSupabase();}).then(function(){
+    if(sb&&!opslagGeblokkeerd())return inRij(function(){return vulTeamsAanInDatabase(null);}).then(function(ok){registreerOpslag('personen',ok);renderAll();});
+   });
    renderSysteembeheer();renderAll();
    el('sb-koppel-bevestiging').innerHTML='<div class="bevestiging reveal">'+esc(samen.join(' + '))+' werken nu met hetzelfde team.</div>';
    if(el('admintab-groepen').hidden)openMelding('Groepen gekoppeld',samen.join(' + ')+' werken nu met hetzelfde team.');
@@ -4292,10 +4437,53 @@ function groepWeg(n){groepMutaties.erbij=groepMutaties.erbij.filter(function(x){
    Niet opgeslagen-balk en geen Opnieuw proberen, terwijl bij Groep verwijderen
    de personen al zonder groep in de database stonden (aangetoond met
    groep-opslagfout.cjs). De mutaties blijven staan tot het wel lukt. */
-async function syncGroepenToSupabase(){
+function syncGroepenToSupabase(){return inRij(schrijfGroepenEnMeld);}
+async function schrijfGroepenEnMeld(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;
  return registreerOpslag('groepen',await schrijfGroepenWeg());
+}
+/* Waar een verdwenen groepsnaam heen moet: de nieuwe naam als deze sessie hem
+   hernoemde (ook via tussenstappen), anders nergens. */
+function nieuweNaamVoor(n){
+ var gezien={};
+ while(groepHernoemd[n]&&!gezien[n]){gezien[n]=1;n=groepHernoemd[n];}
+ return GROEPEN.indexOf(n)>-1?n:null;
+}
+/* Na het hernoemen of verwijderen van groepen: iedereen in de database die nog
+   een oude naam heeft, en de koppelingen, bijwerken. Deze sessie kent alleen de
+   mensen die bij het laden bestonden; wie een ander intussen in die groep zette,
+   verwees daarna naar een groep die niet meer bestond en was onvindbaar
+   (aangetoond met invarianten.js ... twee). */
+async function werkGroepnamenBijInDatabase(wegNamen){
+ if(!wegNamen.length)return true;
+ var nieuw=function(lijst){
+  var uit=[];
+  lijst.forEach(function(g){var n=wegNamen.indexOf(g)>-1?nieuweNaamVoor(g):g;if(n&&uit.indexOf(n)<0)uit.push(n);});
+  return uit;
+ };
+ var rijen=await sb.from('personen').select('id,groepen');
+ if(rijen.error)return false;
+ var teDoen=(rijen.data||[]).filter(function(r){return (r.groepen||[]).some(function(g){return wegNamen.indexOf(g)>-1;});});
+ for(var i=0;i<teDoen.length;i++){
+  var r=teDoen[i],g2=nieuw(r.groepen||[]);
+  var res=await sb.from('personen').update({groepen:g2}).eq('id',r.id);
+  if(res.error)return false;
+  if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);st.groepen=g2;dbStandPersonen[r.id]=JSON.stringify(st);}
+ }
+ var kq=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',['groep_koppelingen']);
+ if(kq.error)return false;
+ var k=((kq.data||[])[0]||{}).waarde;
+ if(Array.isArray(k)){
+  var k2=voegClustersSamen(k.filter(Array.isArray).map(nieuw));
+  if(JSON.stringify(k2)!==JSON.stringify(k)){
+   var ku=await sb.from('organisatie_data').upsert([{sleutel:'groep_koppelingen',waarde:k2}],{onConflict:'sleutel'});
+   if(ku.error)return false;
+   groepKoppelingen=k2.map(function(x){return x.slice();});dbStandOrg.groep_koppelingen=JSON.stringify(k2);
+  }
+ }
+ wegNamen.forEach(function(n){delete groepHernoemd[n];});
+ return true;
 }
 async function schrijfGroepenWeg(){
  try{
@@ -4319,12 +4507,14 @@ async function schrijfGroepenWeg(){
       naam tot iemand "Wijzigingen doorvoeren" deed; na herladen was de hele
       groep dan uit beeld. Lukt het wegschrijven niet, dan blijft de oude naam
       staan: liever een groep te veel dan mensen zonder groep. */
-   if(!(await syncToSupabase()))return false;
+   if(!(await schrijfPersonenWeg()))return false;
    var del=await sb.from('groepen').delete().in('id',overbodig);
    if(del.error)return false;
+   var wegNamen=bestaand.data.filter(function(r){return overbodig.indexOf(r.id)>-1;}).map(function(r){return r.naam;});
+   if(!(await werkGroepnamenBijInDatabase(wegNamen)))return false;
   }
   groepMutaties={erbij:[],weg:[]};
-  await syncOrganisatieData();
+  await schrijfOrgWeg();
   return true;
  }catch(e){return false;}
 }
@@ -4382,7 +4572,8 @@ function voegClustersSamen(lijst){
  });
  return uit.filter(function(k){return k.length>1;});
 }
-async function syncOrganisatieData(){
+function syncOrganisatieData(){return inRij(schrijfOrgWeg);}
+async function schrijfOrgWeg(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;
  try{
@@ -4421,13 +4612,23 @@ async function syncOrganisatieData(){
   if(lijsten.length){
    var nu=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',lijsten.map(function(r){return r.sleutel;}));
    if(nu.error)return registreerOpslag('organisatie',false);
+   var bestaandeGroepen=null;
+   if(lijsten.some(function(r){return r.sleutel==='groep_koppelingen';})){
+    var gq=await sb.from('groepen').select('naam');
+    if(!gq.error&&gq.data)bestaandeGroepen=gq.data.map(function(x){return x.naam;}).concat(groepMutaties.erbij);
+   }
    lijsten.forEach(function(r){
     var db=((nu.data||[]).filter(function(x){return x.sleutel===r.sleutel;})[0]||{}).waarde;
     if(!Array.isArray(db))return;
     var vorig=dbStandOrg[r.sleutel]?JSON.parse(dbStandOrg[r.sleutel]):[];
     if(!Array.isArray(vorig))vorig=[];
     var samen=voegLijstSamen(db,vorig,r.waarde);
-    if(r.sleutel==='groep_koppelingen')samen=voegClustersSamen(samen);
+    if(r.sleutel==='groep_koppelingen'){
+     /* Een koppeling met een groep die een ander intussen verwijderde of
+        hernoemde, hoort niet terug te komen. */
+     if(bestaandeGroepen)samen=samen.map(function(k){return Array.isArray(k)?k.filter(function(g){return bestaandeGroepen.indexOf(g)>-1;}):k;});
+     samen=voegClustersSamen(samen);
+    }
     r.waarde.length=0;Array.prototype.push.apply(r.waarde,samen);
    });
   }
@@ -4993,8 +5194,13 @@ async function wisDefinitiefUitDatabase(id){
  /* Tijdens het laden hoort dit id bij een voorbeeldpersoon; wissen zou de
     echte persoon met hetzelfde id raken. */
  if(opslagGeblokkeerd())return false;
- try{var res=await sb.from('personen').delete().eq('id',id);return !res.error;}
- catch(e){return false;}
+ try{
+  var res=await sb.from('personen').delete().eq('id',id);
+  if(res.error)return false;
+  /* Rechten die anderen op deze persoon hadden, ook bij mensen die deze
+     sessie niet kent. */
+  return await ruimRechtenOpInDatabase([],[id]);
+ }catch(e){return false;}
 }
 /* Vergetelheid hield op bij de persoonsrij. Het dossier zelf — doelen,
    rapportages, agenda, Ik-Boek, geheugensteuntjes, instellingen en de
@@ -5078,11 +5284,11 @@ function wisDefinitief(id,terug){
       persoon, dat via de app niet meer te vinden en dus niet meer te wissen
       was. Nu blijft bij elke storing de persoon in het archief staan, en kan
       het wissen daar opnieuw. */
-   syncToSupabase().then(function(){
+   inRij(function(){return schrijfPersonenWeg().then(function(){
     return p.type==='client'?wisClientDossierUitDatabase(id,sleutels):true;
    }).then(function(dossierWeg){
     return dossierWeg?wisDefinitiefUitDatabase(id):false;
-   }).then(function(gelukt){
+   });}).then(function(gelukt){
     if(!gelukt)openMelding('Niet volledig gewist','De gegevens zijn hier weggehaald, maar het wissen uit de database is niet gelukt. Herlaad de pagina: '+naamVal+' staat dan nog in het archief en daar kun je het definitief wissen opnieuw doen.');
    });
    renderGearchiveerd();renderAll();

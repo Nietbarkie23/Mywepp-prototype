@@ -192,6 +192,24 @@ door een ander wordt teruggezet. Nieuwe personen: vlak voor het wegschrijven
 wordt het hoogste id opgevraagd en botsende nieuwe id's worden omgenummerd
 (`maakNieuweIdsVrij`, `hernummerPersoon`), daarna `insert` i.p.v. `upsert`.
 Tests: `intrekken.js`, `zelfde-id.js`, `hernummer.js`.
+Verder (29-09, gevonden met `invarianten.js ... twee`):
+- **Eén rij**: alle schrijfacties van een sessie lopen op volgorde (`inRij`;
+  `syncToSupabase`/`syncOrganisatieData`/`syncGroepenToSupabase` zijn de
+  wachtende versies, `schrijfPersonenWeg`/`schrijfOrgWeg`/`schrijfGroepenWeg` de
+  interne). Van binnenuit altijd de interne versie aanroepen, anders wacht de
+  rij op zichzelf. Bij het sluiten van de pagina wordt niet gewacht.
+- `groepen` van een persoon wordt per naam samengevoegd met de databasestand
+  (zoals rechten). Wat naar een groep verwijst die in de database niet (meer)
+  bestaat, wordt niet weggeschreven; dan een melding met Pagina herladen
+  (`groepConflict`).
+- Na hernoemen/verwijderen van een groep worden ook mensen die deze sessie niet
+  kent en de koppelingen in de database bijgewerkt (`groepHernoemd`,
+  `werkGroepnamenBijInDatabase`). Na het wegschrijven van personen worden het
+  gekoppelde team (`vulTeamsAanInDatabase`) en rechten zonder gedeelde groep of
+  op gewiste mensen (`ruimRechtenOpInDatabase`) in de database rechtgezet. Die
+  stappen passen op het scherm alleen hun eigen wijziging toe.
+- Vangnet: wie alleen nog naar niet-bestaande groepen verwijst, staat onder
+  Zonder groep. Test: `twee-groepen.js`.
 
 **Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
 en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen
