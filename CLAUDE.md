@@ -274,14 +274,17 @@ Inter (@fontsource) komen van de eigen server, en de CSP staat alleen nog
   in één keer wissen vraagt een databasefunctie (transactie); opslag bij het
   sluiten van de pagina kan een fout niet meer tonen. Tests:
   `groep-opslagfout.cjs`, `stille-opslag-na.cjs`, `paneel-sluiten.cjs`.
-- Cliënt of (non)prof. verwijderen via de Admin Tools komt in een eigen lijst,
-  Overig › Verwijderd via beheer (`admintab-verwijderd`, `renderVerwijderdeClienten`,
-  teller `verwijderd-teller`), en niet in het archief dat medewerkers per groep
-  zien (`renderGearchiveerd` slaat `doorBeheer(p)` over). Tijdens het klaarzetten
-  `p._doorBeheer`, na doorvoeren kolom `personen.archief_soort='beheer'`
-  (migratie `personen_archief_soort`). Herstellen haalt de markering weg.
-  Herstellen, Inzage en Definitief wissen delen `archiefRijHtml` en
-  `koppelArchiefKnoppen`. Test: `verwijderd-beheer.js` (poort 8734).
+- Cliënt of (non)prof. verwijderen via de Admin Tools komt niet in het archief
+  dat medewerkers per groep zien (`renderGearchiveerd` slaat `doorBeheer(p)`
+  over). Geen aparte knop: Cliënt herstellen / (Non)prof. herstellen tonen na de
+  groepkeuze `toonBeheerArchief(g,soort)` met twee kopjes, Verwijderd via beheer
+  en Archief van de groep. Tijdens het klaarzetten `p._doorBeheer`, na doorvoeren
+  kolom `personen.archief_soort='beheer'` (migratie `personen_archief_soort`).
+  Herstellen haalt de markering weg.
+- **Definitief wissen alleen intern** (support of systeembeheer, via die
+  herstellijst): `magDefinitiefWissen()` in `wisDefinitief`, en het archief van
+  medewerkers heeft geen wisknop (`archiefRijHtml(p,{wissen:true})` alleen in de
+  Admin Tools). Test: `verwijderd-beheer.js` (poort 8734).
 - MyWepp Personal, Info-scherm: rollen van betrokkenen staan vast (tekst, geen
   keuzelijst; `personRechtenRow(id,true)`). Wijzigen alleen via Gebruikers
   beheren. Test: `rollen-vast.cjs`.

@@ -813,7 +813,6 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       rechtensets -->
       <button type="button" class="abtn" data-adm="contactpersonen">Contact-<br>personen</button>
       <button type="button" class="abtn" data-adm="zonderGroep">Zonder<br>groep <span class="countchip" id="zondergroep-teller"></span></button>
-      <button type="button" class="abtn tab" data-admintab="verwijderd">Verwijderd<br>via beheer <span class="countchip" id="verwijderd-teller"></span></button>
       <!-- groepeer: knop op verzoek verborgen. Niet verwijderen — hij opende
            Standaardrollen, net als de eveneens verborgen knop Rechtensets, en
            zijn naam sloeg op het groeperen van meerdere groepen: precies de
@@ -922,16 +921,6 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
         <label class="chip" style="margin-bottom:10px"><input type="checkbox" id="controle-toon-beoordeeld"> Ook afgehandelde signalen tonen</label>
         <div id="controle-lijst"></div>
         <div class="actions end"><button type="button" id="controle-ververs">Opnieuw controleren</button></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="admintab-verwijderd" hidden>
-    <div class="panel">
-      <div class="head"><h2>Verwijderd via beheer</h2><span class="sub">Alleen zichtbaar in de Admin Tools</span></div>
-      <div class="body">
-        <p class="note">Cliënten, medewerkers en naasten die je via de Admin Tools hebt verwijderd. Ze staan hier, niet in het archief dat medewerkers in hun groep zien. De gegevens blijven de bewaartermijn van <span id="verwijderd-termijn">15 jaar</span> staan, dus je kunt ze terugzetten of, met een reden, eerder definitief wissen.</p>
-        <div id="verwijderd-lijst"></div>
       </div>
     </div>
   </section>
@@ -1117,7 +1106,7 @@ body.standalone-app .bottomnav{padding-bottom:max(8px,env(safe-area-inset-bottom
       <div class="crumbs"><b class="clink" data-back="pp-hub">Groep</b> › <b class="clink" data-back="pp-hub">Profiel</b> › <span class="clink" data-back="pp-formulier">Gebruikers beheren</span> › Gearchiveerd</div>
       <div class="crumbicons"><button type="button" data-back="pp-formulier" aria-label="Terug"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button></div>
     </div>
-    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Mensen die je hebt verwijderd. Hun gegevens blijven de wettelijke bewaartermijn van <span id="archief-termijn">15 jaar</span> staan, dus je kunt ze terugzetten. Daarna krijg je een seintje om ze definitief te wissen.</p></div>
+    <div class="intro" style="padding-top:6px;padding-bottom:14px"><h1 style="font-size:22px">Gearchiveerd</h1><p>Mensen die je hebt verwijderd. Hun gegevens blijven de wettelijke bewaartermijn van <span id="archief-termijn">15 jaar</span> staan, dus je kunt ze terugzetten. Definitief wissen doet MyWepp zelf, na de bewaartermijn of op verzoek.</p></div>
     <div class="panel" id="gearchiveerd-lijst" style="padding:0"></div>
     <div class="actions end" style="border:0"><button type="button" data-back="pp-formulier">Terug naar formulier</button></div>
   </div>
@@ -1728,7 +1717,6 @@ function kiesAdmintab(naamVal){
  Array.prototype.forEach.call(document.querySelectorAll('[id^="admintab-"]'),function(sec){sec.hidden=(sec.id!=='admintab-'+naamVal);});
  if(naamVal==='groepen')renderSysteembeheer();
  if(naamVal==='controle')renderControle();
- if(naamVal==='verwijderd')renderVerwijderdeClienten();
  if(naamVal==='matrix')renderMatrix();
  if(naamVal==='zoeken')renderZoeken();
  if(naamVal==='datalek')renderDatalekken();
@@ -3570,8 +3558,6 @@ function renderAll(){
  toonKoppelingInFormulier();
  toonAdminWie();
  if(el('admintab-controle')&&!el('admintab-controle').hidden)renderControle();
- zetVerwijderdTeller();
- if(el('admintab-verwijderd')&&!el('admintab-verwijderd').hidden)renderVerwijderdeClienten();
 }
 
 /* ============== SYSTEEMBEHEER (boven groepsniveau) ============== */
@@ -4059,8 +4045,7 @@ function controleSignalen(){
   var maanden=maandenSinds(pp.gearchiveerdOp);
   signalen.push({ernst:'hoog',groep:(pp.groepen||[]).join(', '),
    tekst:naam(pp)+' staat sinds '+datumNL(pp.gearchiveerdOp)+' in het archief. De bewaartermijn van '+bewaartermijnTekst()+' is verstreken; wissen of onderbouwen waarom dat niet kan.',
-   actie:doorBeheer(pp)?{soort:'verwijderd',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Verwijderd via beheer openen'}
-                       :{soort:'archief',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
+   actie:{soort:'herstellen',herstel:pp.type==='client'?'client':'persoon',groep:(pp.groepen||[])[0]||huidigeGroep,label:'Archief openen'}});
  });
  /* 9. Geblokkeerde accounts: een blokkade hoort tijdelijk te zijn. Blijft hij
        staan, dan moet er een besluit komen (opheffen of de persoon eruit). */
@@ -4276,7 +4261,7 @@ function renderControle(){
    /* Het nalopen van de toegang doe je vanuit het controlescherm zelf; daarvoor
       hoef je niet eerst naar het groepsprofiel. */
    if(s.actie.soort==='toegangscontrole'){openToegangscontrole(s.actie.client);return;}
-   if(s.actie.soort==='verwijderd'){kiesAdmintab('verwijderd');return;}
+   if(s.actie.soort==='herstellen'){toonBeheerArchief(s.actie.groep,s.actie.herstel);return;}
    /* Eerst openen, dan pas van weergave wisselen: zo weet het profiel dat het
       vanuit de Admin Tools kwam en keert het na opslaan daarheen terug. */
    if(s.actie.soort==='client')openProfielClient(s.actie.id);
@@ -4983,7 +4968,6 @@ function clientVerwijderenFlow(){
    /* Verwijderd door de beheerder: na doorvoeren in de eigen lijst van de
       Admin Tools, niet in het archief dat medewerkers in hun groep zien. */
    if(p._state==='verwijderd')p._doorBeheer=true;
-   zetVerwijderdTeller();
    verwijderPersoonBevestiging(p);
   });
  });
@@ -4997,7 +4981,6 @@ function persoonVerwijderenFlow(){
     /* Net als bij cliënten: verwijderd door de beheerder, dus in de eigen lijst
        van de Admin Tools en niet in het archief van de groep. */
     if(p._state==='verwijderd')p._doorBeheer=true;
-    zetVerwijderdTeller();
     verwijderPersoonBevestiging(p);
    });
   });
@@ -5006,13 +4989,42 @@ function persoonVerwijderenFlow(){
 function groepHerstellenFlow(){
  kiesUitLijstModal('Welke groep herstellen?',gearchiveerdeGroepen,function(g){return g;},herstelGroep);
 }
-function persoonHerstelFlow(){
- kiesGroepDan('In welke groep wil je iemand herstellen?',function(g){
-  huidigeGroep=g;verversGroepReferenties();
-  renderGearchiveerd();
-  showView('personal');
-  show('pp-gearchiveerd');
+/* Herstellen vanuit de Admin Tools: na de groepkeuze het archief zoals de
+   beheerder het ziet. Bovenaan wat via de Admin Tools is verwijderd (dat staat
+   niet in het archief van de groep), daaronder het archief van de groep zelf.
+   Alleen hier kan definitief gewist worden: dat doen wij intern, medewerkers niet. */
+var HERSTELTYPEN={client:['client'],persoon:['medewerker','naaste']};
+function clientHerstelFlow(){herstelFlow('client');}
+function persoonHerstelFlow(){herstelFlow('persoon');}
+function herstelFlow(soort){
+ kiesGroepDan(soort==='client'?'In welke groep wil je een cliënt herstellen?':'In welke groep wil je iemand herstellen?',function(g){
+  huidigeGroep=g;verversGroepReferenties();renderAll();
+  toonBeheerArchief(g,soort);
  });
+}
+function toonBeheerArchief(g,soort){
+ var typen=HERSTELTYPEN[soort]||HERSTELTYPEN.persoon;
+ var hier=people.filter(function(p){return typen.indexOf(p.type)>-1&&(p.groepen||[]).indexOf(g)>-1;});
+ var klaar=hier.filter(function(p){return doorBeheer(p)&&p._state==='verwijderd'&&!p.archived;});
+ var beheer=hier.filter(function(p){return doorBeheer(p)&&p.archived;});
+ var archief=hier.filter(function(p){return !doorBeheer(p)&&p.archived;});
+ /* In de Admin Tools staat de naam van de handeling al in de kop van het
+    paneel; de titel hoeft alleen nog de groep te noemen. */
+ var html='<h3>'+esc('Groep: '+g)+'</h3>'+
+  '<p class="mini" style="margin:0 0 10px">De gegevens blijven de bewaartermijn van '+esc(bewaartermijnTekst())+' staan. Definitief wissen kan alleen hier, in de Admin Tools.</p>';
+ html+='<div class="sublistlabel">Verwijderd via beheer</div>';
+ html+=klaar.map(function(p){
+  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+
+   ' <span class="statuschip" style="background:var(--amber-bg,#fff4e0);color:var(--amber)">Nog niet doorgevoerd</span></div>'+
+   '<div class="mail">Wordt verwijderd bij Wijzigingen doorvoeren</div></div>'+
+   '<button type="button" class="small" data-uitprullenbak="'+p.id+'">Terugzetten</button></div>';
+ }).join('')+(beheer.length?beheer.map(function(p){return archiefRijHtml(p,{wissen:true});}).join(''):(klaar.length?'':'<p class="empty-msg">Niemand via de Admin Tools verwijderd in deze groep.</p>'));
+ html+='<div class="sublistlabel" style="margin-top:14px">Archief van de groep</div>'+
+  '<p class="mini" style="margin:0 0 6px">Wat medewerkers zelf hebben verwijderd. Dit zien zij ook onder Gearchiveerd.</p>'+
+  (archief.length?archief.map(function(p){return archiefRijHtml(p,{wissen:true});}).join(''):'<p class="empty-msg">Niemand gearchiveerd in deze groep.</p>');
+ openModal(html+'<div class="modal-actions"><button type="button" class="primary" id="modal-snap">Sluiten</button></div>');
+ el('modal-snap').addEventListener('click',closeModal);
+ koppelArchiefKnoppen(el('modal-card'),function(){toonBeheerArchief(g,soort);});
 }
 /* ---- Zonder groep ----
    Na het verwijderen van een groep houden mensen die alleen daarin zaten geen
@@ -5360,7 +5372,7 @@ var ADMIN_TOOLBAR_ACTIES={
  zonderGroep:zonderGroepFlow,
  groepeer:function(){showView('admin');kiesAdmintab('bulk');},
  groepHerstellen:groepHerstellenFlow,
- clientHerstellen:persoonHerstelFlow,
+ clientHerstellen:clientHerstelFlow,
  persoonHerstellen:persoonHerstelFlow,
  doorvoeren:doorvoerenFlow,
  uitDienst:uitDienstFlow,
@@ -6187,31 +6199,32 @@ function haalUitPrullenbak(id){
  renderGearchiveerd();renderAll();
 }
 /* Wat de beheerder via de Admin Tools verwijderde, hoort niet in het archief
-   dat medewerkers in hun groep zien. Dat staat in Verwijderd via beheer. */
+   dat medewerkers in hun groep zien. Dat staat in Cliënt of (Non)prof.
+   herstellen in de Admin Tools. */
 function doorBeheer(p){return !!(p._doorBeheer||p.archiefSoort==='beheer');}
-function archiefRijHtml(p,metGroep){
+function archiefRijHtml(p,opties){
  var maanden=maandenSinds(p.gearchiveerdOp);
  var termijn=bewaartermijnVerstreken(p)
   ? ' <span class="statuschip" style="background:var(--brick-bg);color:var(--brick)">Bewaartermijn verstreken</span>'
   : (maanden!==null?' <span class="statuschip" style="background:var(--paper);color:var(--ink-soft)">'+maanden+' maand'+(maanden===1?'':'en')+' in archief</span>':'');
  var datums=geldigeDatum(p.gearchiveerdOp)
-  ? '<div class="archiefdatum">'+(metGroep?'Groep: '+esc((p.groepen||[]).join(', ')||'geen')+' · ':'')+'Gearchiveerd op '+esc(datumNL(p.gearchiveerdOp))+' · bewaren tot '+esc(datumNL(bewaarTot(p)))+
+  ? '<div class="archiefdatum">Gearchiveerd op '+esc(datumNL(p.gearchiveerdOp))+' · bewaren tot '+esc(datumNL(bewaarTot(p)))+
     (p.gearchiveerdReden?' · reden: '+esc(p.gearchiveerdReden):'')+'</div>'
   : '';
  return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+termijn+'</div><div class="mail">'+esc(p.mail||'—')+'</div>'+datums+'</div>'+
   '<button type="button" class="small" data-avg="'+p.id+'">Inzage</button>'+
   '<button type="button" class="small" data-herstel="'+p.id+'">Herstellen</button>'+
-  '<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button></div>';
+  (opties&&opties.wissen?'<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button>':'')+'</div>';
 }
-function koppelArchiefKnoppen(lijst){
+function koppelArchiefKnoppen(lijst,terug){
  Array.prototype.forEach.call(lijst.querySelectorAll('[data-uitprullenbak]'),function(b){
-  b.addEventListener('click',function(){haalUitPrullenbak(+b.getAttribute('data-uitprullenbak'));});
+  b.addEventListener('click',function(){haalUitPrullenbak(+b.getAttribute('data-uitprullenbak'));if(terug)terug();});
  });
  Array.prototype.forEach.call(lijst.querySelectorAll('[data-avg]'),function(b){
   b.addEventListener('click',function(){openAvgDossier(+b.getAttribute('data-avg'));});
  });
  Array.prototype.forEach.call(lijst.querySelectorAll('[data-wis]'),function(b){
-  b.addEventListener('click',function(){wisDefinitief(+b.getAttribute('data-wis'));});
+  b.addEventListener('click',function(){wisDefinitief(+b.getAttribute('data-wis'),terug);});
  });
  Array.prototype.forEach.call(lijst.querySelectorAll('[data-herstel]'),function(b){
   b.addEventListener('click',function(){
@@ -6233,6 +6246,7 @@ function koppelArchiefKnoppen(lijst){
      delete p.gearchiveerdReden;
      renderGearchiveerd();renderAll();
      syncToSupabase();
+     if(terug)terug();
     });
   });
  });
@@ -6245,37 +6259,9 @@ function renderGearchiveerd(){
   ? '<div class="sublistlabel" style="margin:14px 16px 6px">Prullenbak — nog niet doorgevoerd</div><div style="padding:0 12px">'+prullenbak.map(prullenbakRijHtml).join('')+'</div>'+
     '<div class="sublistlabel" style="margin:14px 16px 6px">Archief</div>'
   : '';
- el('gearchiveerd-lijst').innerHTML=prullenbakHtml+(gearchiveerd.length? gearchiveerd.map(function(p){return archiefRijHtml(p,false);}).join('')
+ el('gearchiveerd-lijst').innerHTML=prullenbakHtml+(gearchiveerd.length? gearchiveerd.map(function(p){return archiefRijHtml(p);}).join('')
   : '<p class="empty-msg" style="padding:16px 22px">Nog niemand gearchiveerd in deze groep.</p>');
  koppelArchiefKnoppen(el('gearchiveerd-lijst'));
-}
-/* ---- Verwijderd via beheer (alleen Admin Tools) ----
-   Over alle groepen heen: wat de beheerder heeft klaargezet maar nog niet is
-   doorgevoerd, en wat daarna gearchiveerd is. */
-function verwijderdeClienten(){
- return people.filter(function(p){return doorBeheer(p)&&(p.archived||p._state==='verwijderd');});
-}
-function zetVerwijderdTeller(){
- var t=el('verwijderd-teller');
- if(t)t.textContent=verwijderdeClienten().length||'';
-}
-function renderVerwijderdeClienten(){
- if(el('verwijderd-termijn'))el('verwijderd-termijn').textContent=bewaartermijnTekst();
- var lijst=verwijderdeClienten();
- var klaar=lijst.filter(function(p){return !p.archived;}),weg=lijst.filter(function(p){return p.archived;});
- var html='';
- if(klaar.length){
-  html+='<div class="sublistlabel">Klaargezet — nog niet doorgevoerd</div>'+klaar.map(function(p){
-   return '<div class="personrow"><div class="pinfo"><div class="naam">'+esc(naam(p))+' <span class="mini">— '+TYPELABEL[p.type]+'</span>'+
-    ' <span class="statuschip" style="background:var(--amber-bg,#fff4e0);color:var(--amber)">Nog niet doorgevoerd</span></div>'+
-    '<div class="mail">Groep: '+esc((p.groepen||[]).join(', '))+' · wordt verwijderd bij Wijzigingen doorvoeren</div></div>'+
-    '<button type="button" class="small" data-uitprullenbak="'+p.id+'">Terugzetten</button></div>';
-  }).join('');
-  html+='<div class="sublistlabel" style="margin-top:14px">Verwijderd</div>';
- }
- html+=weg.length?weg.map(function(p){return archiefRijHtml(p,true);}).join(''):'<p class="empty-msg">Nog niemand verwijderd via de Admin Tools.</p>';
- el('verwijderd-lijst').innerHTML=html;
- koppelArchiefKnoppen(el('verwijderd-lijst'));
 }
 el('naar-gearchiveerd').addEventListener('click',function(){renderGearchiveerd();show('pp-gearchiveerd');});
 
@@ -6327,8 +6313,12 @@ async function wisClientDossierUitDatabase(id,sleutels){
  }catch(e){goed=false;}
  return goed;
 }
-function wisDefinitief(id){
+/* Definitief wissen is voorbehouden aan MyWepp zelf (support of systeembeheer,
+   via de Admin Tools). Medewerkers kunnen archiveren en terugzetten, niet wissen. */
+function magDefinitiefWissen(){return el('rol-select').value==='support'||isSysteembeheerder;}
+function wisDefinitief(id,terug){
  var p=findPerson(id);if(!p)return;
+ if(!magDefinitiefWissen())return;
  var naamVal=naam(p);
  var maanden=maandenSinds(p.gearchiveerdOp);
  /* Binnen de bewaartermijn mag wissen alleen met een onderbouwing (bijvoorbeeld
@@ -6350,7 +6340,7 @@ function wisDefinitief(id){
   redenVeld+
   '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button>'+
   '<button type="button" class="danger" id="modal-bevestig">Ja, definitief wissen</button></div>');
- el('modal-annuleer').addEventListener('click',closeModal);
+ el('modal-annuleer').addEventListener('click',function(){if(terug)terug();else closeModal();});
  el('modal-bevestig').addEventListener('click',function(){
    var reden=kap(el('modal-wis-reden').value.trim(),200);
    if(binnenTermijn&&!reden){el('modal-wis-reden-fout').hidden=false;el('modal-wis-reden').style.borderColor='var(--brick)';return;}
@@ -6377,6 +6367,7 @@ function wisDefinitief(id){
     if(!gelukt)openMelding('Niet volledig gewist','De gegevens zijn hier weggehaald, maar het wissen uit de database is niet gelukt. Herlaad de pagina: '+naamVal+' staat dan nog in het archief en daar kun je het definitief wissen opnieuw doen.');
    });
    renderGearchiveerd();renderAll();
+   if(terug)terug();
   });
 }
 
