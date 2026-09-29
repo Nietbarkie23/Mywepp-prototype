@@ -2529,6 +2529,11 @@ function verwijderGroep(g){
  if(GROEPEN.length<=1){alert('Er moet minimaal één groep overblijven.');return;}
  var inGroep=people.filter(function(p){return !p.archived&&p.groepen.indexOf(g)>-1;});
  var zonder=inGroep.filter(function(p){return p.groepen.length===1;});
+ /* Ook gearchiveerden gaan uit de groep. Anders hielden ze de naam van een
+    groep die niet meer bestaat en waren ze nergens meer te vinden: niet bij
+    Herstellen (die toont alleen bestaande groepen) en niet bij Zonder groep,
+    dus ook nooit meer te herstellen of te wissen (aangetoond). */
+ var archiefInGroep=people.filter(function(p){return p.archived&&(p.groepen||[]).indexOf(g)>-1;});
  var elders=inGroep.length-zonder.length;
  var partners=partnersVan(g);
  var tekst='<p>Weet je zeker dat je de groep <b>'+esc(g)+'</b> wilt verwijderen? Je kunt haar daarna terugzetten via "Groep herstellen".</p>'+
@@ -2544,7 +2549,8 @@ function verwijderGroep(g){
       staan: dezelfde opruiming als bij losmaken uit een groep. */
    ruimRechtenZonderGedeeldeGroepOp(p);
   });
-  groepOntkoppeld[g]={personen:inGroep.map(function(p){return p.id;}),opgeruimd:opgeruimdSinds(voor)};
+  archiefInGroep.forEach(function(p){p.groepen=p.groepen.filter(function(x){return x!==g;});});
+  groepOntkoppeld[g]={personen:inGroep.concat(archiefInGroep).map(function(p){return p.id;}),opgeruimd:opgeruimdSinds(voor)};
   GROEPEN.splice(GROEPEN.indexOf(g),1);
   groepWeg(g);
   gearchiveerdeGroepen.push(g);
@@ -2583,7 +2589,8 @@ function herstelGroep(g){
  var bewaard=groepOntkoppeld[g]||{},terug=0,rechtenTerug=0;
  (Array.isArray(bewaard)?bewaard:(bewaard.personen||[])).forEach(function(id){
   var p=findPerson(id);
-  if(p&&!p.archived&&p.groepen.indexOf(vrijeNaam)<0){p.groepen.push(vrijeNaam);terug++;}
+  /* Gearchiveerden komen ook terug in de groep, en blijven gearchiveerd. */
+  if(p&&p.groepen.indexOf(vrijeNaam)<0){p.groepen.push(vrijeNaam);terug++;}
  });
  var opgeruimd=bewaard.opgeruimd||{};
  Object.keys(opgeruimd).forEach(function(id){
@@ -3704,7 +3711,9 @@ function zonderGroepFlow(){
  if(archief.length){
   html+='<div class="sublistlabel" style="margin-top:14px">Gearchiveerd, zonder groep</div>'+archief.map(function(p){
    return rij(p,'<select data-zg-groep="'+p.id+'" aria-label="Groep voor '+esc(naam(p))+'">'+groepOpties+'</select>'+
-    '<button type="button" class="small" data-zg-terug="'+p.id+'">Terugzetten</button>',
+    '<button type="button" class="small" data-zg-terug="'+p.id+'">Terugzetten</button>'+
+    '<button type="button" class="small" data-avg="'+p.id+'">Inzage</button>'+
+    (magDefinitiefWissen()?'<button type="button" class="small danger" data-wis="'+p.id+'">Definitief wissen</button>':''),
     geldigeDatum(p.gearchiveerdOp)?'Gearchiveerd op '+datumNL(p.gearchiveerdOp)+' · bewaren tot '+datumNL(bewaarTot(p)):'Gearchiveerd');
   }).join('');
  }
@@ -3712,6 +3721,9 @@ function zonderGroepFlow(){
  el('modal-snap').addEventListener('click',closeModal);
  var groepVoor=function(id){var s=document.querySelector('[data-zg-groep="'+id+'"]');return s?s.value:'';};
  var klaar=function(){renderAll();syncToSupabase();zonderGroepFlow();};
+ /* Inzage en Definitief wissen werken hier net als in de herstellijst; daarna
+    terug naar deze lijst. */
+ koppelArchiefKnoppen(el('modal-card'),zonderGroepFlow);
  Array.prototype.forEach.call(document.querySelectorAll('[data-zg-plaats]'),function(b){
   b.addEventListener('click',function(){
    var p=findPerson(+b.getAttribute('data-zg-plaats')),g=groepVoor(p&&p.id);if(!p||!g)return;

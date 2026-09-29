@@ -274,7 +274,9 @@ deze stap: `backup/voor-strengere-csp`.
   groep worden opgeruimd. Wie alleen in die groep zat, staat onder Overig ›
   Zonder groep (`zonderGroepFlow`, teller `zondergroep-teller`; de knop staat er
   alleen als iemand geen groep heeft, `zetZonderGroepTeller`): verplaatsen,
-  naar het archief, of gearchiveerd terugzetten. Groep herstellen zet mensen,
+  naar het archief, of gearchiveerd terugzetten (daar ook Inzage en, intern,
+  Definitief wissen). Ook gearchiveerden gaan bij het verwijderen uit de groep,
+  anders waren ze nergens meer te vinden (`archief-groep-weg.js`). Groep herstellen zet mensen,
   rechten en vertegenwoordigers terug uit `groepOntkoppeld` (organisatie_data
   `groep_ontkoppeld`). Tests: `groep-verwijderen.cjs`,
   `groep-verwijderen-db.cjs`, `groep-verwijderen-ui.cjs`.
