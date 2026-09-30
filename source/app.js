@@ -629,9 +629,9 @@ async function loadFromSupabase(){
     anders alleen even flitsen. */
  setTimeout(function(){if(gegevensGeladen===null)toonLaadStatus();},800);
  try{
-  var g=await sb.from('groepen').select('naam').order('id');
+  var g=await alleRijen(function(){return sb.from('groepen').select('naam').order('id');});
   var p=await alleRijen(function(){return sb.from('personen').select('*').order('id');});
-  var o=await sb.from('organisatie_data').select('sleutel,waarde');
+  var o=await alleRijen(function(){return sb.from('organisatie_data').select('sleutel,waarde').order('sleutel');});
   /* Een lege tabel is iets anders dan een mislukte vraag: bij leeg mag de app
      gewoon beginnen, bij een fout juist niet. */
   if(g.error||p.error||!p.data){gegevensGeladen=false;toonLaadStatus();return;}
@@ -926,7 +926,7 @@ async function vulTeamsAanInDatabase(ids){
  if(kq.error)return false;
  var kopp=((kq.data||[])[0]||{}).waarde;
  if(!Array.isArray(kopp)||!kopp.length)return true;
- var gq=await sb.from('groepen').select('naam');
+ var gq=await alleRijen(function(){return sb.from('groepen').select('naam').order('id');});
  if(gq.error||!gq.data)return false;
  var bestaand=gq.data.map(function(r){return r.naam;});
  var q=await alleRijen(function(){return sb.from('personen').select('id,type,groepen,archived').order('id');});
@@ -993,7 +993,7 @@ async function schrijfPersonenWeg(){
      (meer) bestaat. */
   var metGroepen=updates.filter(function(u){return 'groepen' in u.diff;});
   if(metGroepen.length||nieuweRijen.length){
-   var gq=await sb.from('groepen').select('naam');
+   var gq=await alleRijen(function(){return sb.from('groepen').select('naam').order('id');});
    if(gq.error||!gq.data)return registreerOpslag('personen',false);
    var bestaand=gq.data.map(function(r){return r.naam;}).concat(groepMutaties.erbij);
    if(metGroepen.length){
@@ -4548,7 +4548,7 @@ async function werkGroepnamenBijInDatabase(wegNamen){
 var groepenTabelWasLeeg=false;
 async function schrijfGroepenWeg(){
  try{
-  var bestaand=await sb.from('groepen').select('id,naam');
+  var bestaand=await alleRijen(function(){return sb.from('groepen').select('id,naam').order('id');});
   if(bestaand.error||!bestaand.data)return false;
   var bestaandeNamen=bestaand.data.map(function(r){return r.naam;});
   /* Een groep hernoemen die een andere beheerder intussen al hernoemde of
@@ -4685,7 +4685,7 @@ async function schrijfOrgWeg(){
    if(nu.error)return registreerOpslag('organisatie',false);
    var bestaandeGroepen=null,groepenInDb=null;
    if(lijsten.some(function(r){return r.sleutel==='groep_koppelingen'||r.sleutel==='gearchiveerde_groepen';})){
-    var gq=await sb.from('groepen').select('naam');
+    var gq=await alleRijen(function(){return sb.from('groepen').select('naam').order('id');});
     if(!gq.error&&gq.data){groepenInDb=gq.data.map(function(x){return x.naam;});bestaandeGroepen=groepenInDb.concat(groepMutaties.erbij);}
    }
    lijsten.forEach(function(r){
