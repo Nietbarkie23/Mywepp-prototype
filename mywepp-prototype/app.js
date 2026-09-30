@@ -6062,21 +6062,151 @@ function bewaarAllesNu(){
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')bewaarAllesNu();});
 window.addEventListener('pagehide',function(){paginaSluit=true;bewaarAllesNu();});
 window.addEventListener('pageshow',function(){paginaSluit=false;});
+/* ---- Dossier van een cliënt: samenvoegen in plaats van overschrijven ----
+   Het dossier (doelen, rapportages, agenda, Ik-Boek, gesprekken), het geheugen
+   en de instellingen gingen in hun geheel naar de database. Schreven twee
+   medewerkers tegelijk in hetzelfde dossier, dan was alles van de eerste weg en
+   kwam wat zij had verwijderd terug (aangetoond met dossier-samen.js). Nu, net
+   als bij de chat: per item (op id) alleen wat deze sessie toevoegde, wijzigde
+   of verwijderde, toegepast op wat er nu in de database staat. Nieuwe items
+   krijgen een uniek nummer, want een volgnummer per dossier gaven twee
+   medewerkers tegelijk aan twee verschillende items. */
+var laatsteNummer=0;
+function nieuwNummer(){
+ /* Een getal, omdat de knoppen het id met + uitlezen; uniek genoeg tussen
+    sessies (tijd in ms keer 1000 plus toeval) en oplopend binnen een sessie. */
+ var n=Date.now()*1000+Math.floor(Math.random()*1000);
+ if(n<=laatsteNummer)n=laatsteNummer+1;
+ laatsteNummer=n;return n;
+}
+var DOSSIERLIJSTEN={doelen:{kinderen:['rapportages']},agenda:{},ikboek:{},customChats:{sleutel:'key'}};
+function voegItemsSamen(db,basis,mijn,sleutel,kinderen){
+ sleutel=sleutel||'id';
+ var k=function(x){return String(x&&x[sleutel]);};
+ var js=function(x){return JSON.stringify(x);};
+ var inBasis={},inMijn={};
+ (basis||[]).forEach(function(x){inBasis[k(x)]=x;});
+ (mijn||[]).forEach(function(x){inMijn[k(x)]=x;});
+ var uit=[],gezien={};
+ (db||[]).forEach(function(x){
+  var id=k(x);gezien[id]=1;
+  if(inBasis[id]&&!inMijn[id])return; /* door deze sessie verwijderd */
+  var m=inMijn[id],b=inBasis[id],v=x;
+  if(m&&(!b||js(m)!==js(b)))v=JSON.parse(js(m)); /* door deze sessie gewijzigd */
+  else v=JSON.parse(js(x));
+  (kinderen||[]).forEach(function(c){
+   v[c]=voegItemsSamen((x&&x[c])||[],(b&&b[c])||[],(m&&m[c])||[],'id',null);
+  });
+  uit.push(v);
+ });
+ (mijn||[]).forEach(function(m){
+  var id=k(m);if(gezien[id])return;
+  if(inBasis[id])return; /* een ander verwijderde het intussen */
+  uit.push(JSON.parse(js(m))); /* nieuw van deze sessie */
+ });
+ return uit;
+}
+function voegObjectSamen(db,basis,mijn){
+ var uit=Object.assign({},db||{});
+ basis=basis||{};mijn=mijn||{};
+ Object.keys(mijn).forEach(function(k){if(JSON.stringify(mijn[k])!==JSON.stringify(basis[k]))uit[k]=mijn[k];});
+ Object.keys(basis).forEach(function(k){if(!(k in mijn))delete uit[k];});
+ return uit;
+}
+/* Eén rij client_data: dossier, geheugen, instellingen. */
+function voegClientRijSamen(db,basis,mijn){
+ db=db||{};basis=basis||{};mijn=mijn||{};
+ var dd=db.dossier||{},bd=basis.dossier||{},md=mijn.dossier||{};
+ var dossier=voegObjectSamen(dd,bd,md);
+ Object.keys(DOSSIERLIJSTEN).forEach(function(l){
+  if(!(l in dd)&&!(l in md))return;
+  dossier[l]=voegItemsSamen(dd[l]||[],bd[l]||[],md[l]||[],DOSSIERLIJSTEN[l].sleutel,DOSSIERLIJSTEN[l].kinderen);
+ });
+ var dg=db.geheugen||{},bg=basis.geheugen||{},mg=mijn.geheugen||{};
+ var geheugen=voegObjectSamen(dg,bg,mg);
+ if(dg.items||mg.items)geheugen.items=voegItemsSamen(dg.items||[],bg.items||[],mg.items||[]);
+ return {dossier:dossier,geheugen:geheugen,instellingen:voegObjectSamen(db.instellingen,basis.instellingen,mijn.instellingen)};
+}
+var dbStandClient={};
+/* JSON met de sleutels op volgorde, om inhoud te vergelijken los van de
+   volgorde waarin velden in een object staan. */
+function vasteJson(x){
+ if(Array.isArray(x))return '['+x.map(vasteJson).join(',')+']';
+ if(x&&typeof x==='object')return '{'+Object.keys(x).sort().map(function(k){return JSON.stringify(k)+':'+vasteJson(x[k]);}).join(',')+'}';
+ return JSON.stringify(x);
+}
+function clientRijVan(id){
+ return JSON.parse(JSON.stringify({dossier:CLIENTDATA[id]||{},geheugen:GEHEUGEN[id]||{},instellingen:CA_INSTELLINGEN[id]||{}}));
+}
+/* Het samengevoegde dossier op zijn plek bijwerken, met dezelfde objecten per
+   item (op id). Open formulieren houden het dossier en het doel vast dat er
+   was toen ze getekend werden; een nieuw object liet een rapportage in het
+   oude belanden, en die was dan weg (aangetoond met opslag-ui.js). */
+function sleutelVanItem(x){
+ if(!x||typeof x!=='object')return null;
+ if(x.id!==undefined)return 'i'+x.id;
+ if(x.key!==undefined)return 'k'+x.key;
+ return null;
+}
+function werkBijOpZijnPlek(oud,nieuw){
+ if(Array.isArray(oud)&&Array.isArray(nieuw)){
+  var per={};oud.forEach(function(x){var k=sleutelVanItem(x);if(k)per[k]=x;});
+  var uit=nieuw.map(function(n){var k=sleutelVanItem(n),o=k&&per[k];if(o){werkBijOpZijnPlek(o,n);return o;}return n;});
+  oud.length=0;Array.prototype.push.apply(oud,uit);
+  return oud;
+ }
+ if(oud&&nieuw&&typeof oud==='object'&&typeof nieuw==='object'){
+  Object.keys(oud).forEach(function(k){if(!(k in nieuw))delete oud[k];});
+  Object.keys(nieuw).forEach(function(k){
+   var o=oud[k],n=nieuw[k];
+   if(o&&n&&typeof o==='object'&&typeof n==='object'&&Array.isArray(o)===Array.isArray(n))werkBijOpZijnPlek(o,n);
+   else oud[k]=n;
+  });
+  return oud;
+ }
+ return nieuw;
+}
+function zetClientRij(id,r){
+ if(r.dossier&&r.dossier.doelen)CLIENTDATA[id]=CLIENTDATA[id]?werkBijOpZijnPlek(CLIENTDATA[id],r.dossier):r.dossier;
+ if(r.geheugen&&r.geheugen.items)GEHEUGEN[id]=GEHEUGEN[id]?werkBijOpZijnPlek(GEHEUGEN[id],r.geheugen):r.geheugen;
+ if(r.instellingen)CA_INSTELLINGEN[id]=CA_INSTELLINGEN[id]?werkBijOpZijnPlek(CA_INSTELLINGEN[id],r.instellingen):r.instellingen;
+}
+async function schrijfClientDataWeg(clientId){
+ try{
+  var mijn=clientRijVan(clientId);
+  var basis=dbStandClient[clientId]?JSON.parse(dbStandClient[clientId]):{};
+  var q=await sb.from('client_data').select('client_id,dossier,geheugen,instellingen').eq('client_id',clientId);
+  if(q.error)return registreerOpslag('clientdata',false);
+  /* Op cliënt kiezen, niet op 'de eerste rij': dan kan er nooit het dossier
+     van een andere cliënt tussen komen. */
+  var db=(q.data||[]).filter(function(r){return String(r.client_id)===String(clientId);})[0]||null;
+  /* Stond het dossier er bij het laden wel en nu niet, dan heeft iemand de
+     cliënt intussen definitief gewist. Dan niet opnieuw aanmaken: dat zou
+     gewiste gezondheidsgegevens terugzetten. */
+  if(!db&&dbStandClient[clientId])return registreerOpslag('clientdata',true);
+  var samen=db?voegClientRijSamen(db,basis,mijn):mijn;
+  var res=await sb.from('client_data').upsert([{client_id:clientId,dossier:samen.dossier,geheugen:samen.geheugen,instellingen:samen.instellingen,bijgewerkt:new Date().toISOString()}],{onConflict:'client_id'});
+  if(res.error)return registreerOpslag('clientdata',false);
+  dbStandClient[clientId]=JSON.stringify(samen);
+  /* Op het scherm: wat een ander deed erbij, zonder wat de gebruiker intussen
+     zelf nog veranderde terug te draaien. */
+  zetClientRij(clientId,voegClientRijSamen(samen,mijn,clientRijVan(clientId)));
+  /* Alleen opnieuw tekenen als er inhoudelijk iets van een ander bij kwam, en
+     nooit terwijl iemand in het dossier aan het typen is: dan was een half
+     geschreven rapportage weg (aangetoond met opslag-ui.js). */
+  var bezig=el('ca-body')&&(el('ca-body').contains(document.activeElement)||Array.prototype.some.call(el('ca-body').querySelectorAll('input[type=text],textarea'),function(x){return x.value;}));
+  if(vasteJson(samen)!==vasteJson(mijn)&&caClientId===clientId&&!bezig&&!el('view-clientapp').hidden&&!el('modal-overlay').offsetParent)renderCaTab(caTab);
+  return registreerOpslag('clientdata',true);
+ }catch(e){return registreerOpslag('clientdata',false);}
+}
 function bewaarClientDataNu(clientId){
  if(!sb||!clientId||opslagGeblokkeerd())return;
- var rij={
-   client_id:clientId,
-   dossier:CLIENTDATA[clientId]||{},
-   geheugen:GEHEUGEN[clientId]||{},
-   instellingen:CA_INSTELLINGEN[clientId]||{},
-   bijgewerkt:new Date().toISOString()
-  };
- if(paginaSluit){schrijfBijSluiten('client_data',[rij],'client_id');return;}
- try{
-  sb.from('client_data').upsert([rij],{onConflict:'client_id'}).then(
-   function(res){registreerOpslag('clientdata',!(res&&res.error));},
-   function(){registreerOpslag('clientdata',false);});
- }catch(e){registreerOpslag('clientdata',false);}
+ if(paginaSluit){
+  /* Bij het sluiten is er geen tijd om eerst de database te lezen. */
+  schrijfBijSluiten('client_data',[{client_id:clientId,dossier:CLIENTDATA[clientId]||{},geheugen:GEHEUGEN[clientId]||{},instellingen:CA_INSTELLINGEN[clientId]||{},bijgewerkt:new Date().toISOString()}],'client_id');
+  return;
+ }
+ return inRij(function(){return schrijfClientDataWeg(clientId);});
 }
 function bewaarClientData(clientId){
  if(!sb||!clientId)return;
@@ -6154,6 +6284,7 @@ async function laadClientData(){
   var cd=await sb.from('client_data').select('client_id,dossier,geheugen,instellingen');
   if(cd&&!cd.error&&cd.data){
    cd.data.forEach(function(r){
+    dbStandClient[r.client_id]=JSON.stringify({dossier:r.dossier||{},geheugen:r.geheugen||{},instellingen:r.instellingen||{}});
     if(r.dossier&&r.dossier.doelen)CLIENTDATA[r.client_id]=r.dossier;
     if(r.geheugen&&r.geheugen.items)GEHEUGEN[r.client_id]=r.geheugen;
     if(r.instellingen&&Object.keys(r.instellingen).length)CA_INSTELLINGEN[r.client_id]=r.instellingen;
@@ -6488,7 +6619,7 @@ function renderCaGeheugen(){
     var d=new Date(datum+'T00:00:00');
     dagen='Eenmalig · '+d.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
    }
-   g.items.push({id:g.nextId++,titel:titel,tijd:el('modal-geh-tijd').value.trim()||'—',dagen:dagen,actief:true});
+   g.items.push({id:nieuwNummer(),titel:titel,tijd:el('modal-geh-tijd').value.trim()||'—',dagen:dagen,actief:true});
    bewaarClientData(caClientId);closeModal();renderCaGeheugen();
   });
  });
@@ -6975,7 +7106,7 @@ function renderCaDoelen(){
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
    var titel=kap(el('modal-doel-titel').value.trim(),MAXLEN.titel);if(!titel){el('modal-doel-titel').style.borderColor='var(--brick)';return;}
-   d.doelen.push({id:d._nextDoelId++,titel:titel,rapportages:[]});bewaarClientData(caClientId);closeModal();renderCaDoelen();
+   d.doelen.push({id:nieuwNummer(),titel:titel,rapportages:[]});bewaarClientData(caClientId);closeModal();renderCaDoelen();
   });
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-newrapport]'),function(b){
@@ -7004,7 +7135,7 @@ function renderCaDoelen(){
     /* Een rapportage in een zorgdossier moet laten zien wie hem schreef en
        wanneer. 'Jij' en 'vandaag' zeggen een week later niets meer, en in het
        inzagedossier (art. 15) stond er dan geen auteur bij. */
-    doel.rapportages.push({id:d._nextRapportId++,tekst:tekst,tijd:rapportageTijd(datum),dienst:dienst,datum:datum,auteur:wieBenIk(),media:media,audio:audio,reacties:{}});bewaarClientData(caClientId);
+    doel.rapportages.push({id:nieuwNummer(),tekst:tekst,tijd:rapportageTijd(datum),dienst:dienst,datum:datum,auteur:wieBenIk(),media:media,audio:audio,reacties:{}});bewaarClientData(caClientId);
     nieuweMelding(caClientId,'nieuweRapportage',wieBenIk()+' schreef een rapportage bij “'+doel.titel+'”');
     renderCaDoelen();
    });
@@ -7231,7 +7362,7 @@ function renderCaAgenda(){
    var datumlabel=dt.getDate()+' '+MAAND_AFK[dt.getMonth()];
    var tijd=el('modal-afspr-uur').value+':'+el('modal-afspr-min').value;
    var herinnerdAan=Array.from(document.querySelectorAll('.afspr-herinner:checked')).map(function(c){return +c.value;});
-   d.agenda.push({id:d._nextAgendaId++,titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
+   d.agenda.push({id:nieuwNummer(),titel:titel,datumlabel:datumlabel,tijd:tijd,media:el('modal-afspr-media').checked,
     locatie:el('modal-afspr-locatie').value.trim(),herinnerdAan:herinnerdAan,klaar:false,
     herinnering:el('modal-afspr-herinnering').value,herhaling:el('modal-afspr-herhaling').value});
    bewaarClientData(caClientId);
@@ -7269,7 +7400,7 @@ function renderCaIkboek(){
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
    var tekst=el('modal-ikboek-tekst').value.trim();if(!tekst){el('modal-ikboek-tekst').style.borderColor='var(--brick)';return;}
-   d.ikboek.push({id:d._nextIkboekId++,tekst:tekst,tijd:rapportageTijd(''),auteur:wieBenIk(),mediaType:el('modal-ikboek-mediatype').value,reacties:{}});bewaarClientData(caClientId);
+   d.ikboek.push({id:nieuwNummer(),tekst:tekst,tijd:rapportageTijd(''),auteur:wieBenIk(),mediaType:el('modal-ikboek-mediatype').value,reacties:{}});bewaarClientData(caClientId);
    closeModal();renderCaIkboek();
   });
  });
@@ -7410,7 +7541,7 @@ function renderCaChatList(){
     var naamVal=el('modal-gesprek-naam').value.trim();if(!naamVal){el('modal-gesprek-naam').style.borderColor='var(--brick)';return;}
     var leden=Array.from(document.querySelectorAll('.gesprek-lid:checked')).map(function(c){return +c.value;});
     if(!leden.length)return;
-    var key='groep-custom-'+caClientId+'-'+(d._nextChatId++);
+    var key='groep-custom-'+caClientId+'-'+nieuwNummer();
     d.customChats.push({key:key,groep:true,naam:naamVal,leden:leden});
     caChatKey=key;
    }

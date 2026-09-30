@@ -224,6 +224,19 @@ Verder (29-09, gevonden met `invarianten.js ... twee`):
   bij de melding Pagina herladen, zoals een gebruiker; `DEBUG=1` toont per stap
   de groepen in de database.
 
+**Dossier van een cliënt** (client_data: dossier, geheugen, instellingen) wordt
+niet meer in zijn geheel overschreven: bij opslaan de databaserij lezen en per
+item op id alleen toepassen wat deze sessie toevoegde, wijzigde of verwijderde
+t.o.v. de stand bij laden (`voegClientRijSamen`, `voegItemsSamen`,
+`DOSSIERLIJSTEN`, basis in `dbStandClient`); rapportages binnen een doel ook per
+item. Nieuwe items krijgen een uniek getal (`nieuwNummer`, tijd×1000+toeval),
+geen volgnummer per dossier meer. Het samengevoegde dossier wordt op zijn plek
+bijgewerkt met dezelfde objecten per id (`werkBijOpZijnPlek`), anders
+schreven open formulieren in een los object. Opnieuw tekenen alleen bij
+inhoudelijk nieuwe dingen van een ander (`vasteJson`) en nooit terwijl iemand
+typt. Stond een dossier er bij laden wel en nu niet (definitief gewist), dan
+wordt het niet opnieuw aangemaakt. Test: `dossier-samen.js`.
+
 **Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
 en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen
 bepaald (`isMijnBericht`); oude berichten met `van:'Jij'` blijven als eigen
