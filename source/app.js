@@ -854,7 +854,7 @@ function hernummerPersoon(oud,nieuw){
   });
   if(x.wettelijkeVertegenwoordiger===oud)x.wettelijkeVertegenwoordiger=nieuw;
  });
- [CLIENTDATA,GEHEUGEN,CA_INSTELLINGEN,TOEGANGSCONTROLE,MAALTIJDRESERVERINGEN,MELDINGEN].forEach(function(opslag){
+ [CLIENTDATA,GEHEUGEN,CA_INSTELLINGEN,TOEGANGSCONTROLE,MAALTIJDRESERVERINGEN].forEach(function(opslag){
   if(opslag&&opslag[oud]!==undefined){opslag[nieuw]=opslag[oud];delete opslag[oud];}
  });
  if(huidigProfielId===oud)huidigProfielId=nieuw;
@@ -6107,7 +6107,7 @@ function nieuwNummer(){
  if(n<=laatsteNummer)n=laatsteNummer+1;
  laatsteNummer=n;return n;
 }
-var DOSSIERLIJSTEN={doelen:{kinderen:['rapportages']},agenda:{},ikboek:{},customChats:{sleutel:'key'}};
+var DOSSIERLIJSTEN={doelen:{kinderen:['rapportages']},agenda:{},ikboek:{},customChats:{sleutel:'key'},meldingen:{}};
 function voegItemsSamen(db,basis,mijn,sleutel,kinderen){
  sleutel=sleutel||'id';
  var k=function(x){return String(x&&x[sleutel]);};
@@ -6230,6 +6230,7 @@ async function schrijfClientDataWeg(clientId){
   /* Op het scherm: wat een ander deed erbij, zonder wat de gebruiker intussen
      zelf nog veranderde terug te draaien. */
   zetClientRij(clientId,voegClientRijSamen(samen,mijn,clientRijVan(clientId)));
+  if(caClientId===clientId)werkBelBij();
   /* Alleen opnieuw tekenen als er inhoudelijk iets van een ander bij kwam, en
      nooit terwijl iemand in het dossier aan het typen is: dan was een half
      geschreven rapportage weg (aangetoond met opslag-ui.js). */
@@ -6705,28 +6706,43 @@ function zetClientweergave(aan){
    bericht, agendaherinnering en SOS. Je zette daarmee iets aan wat nergens
    binnenkwam — er was geen plek waar een melding terechtkwam. Die is er nu,
    en de schakelaars bepalen echt wat je te zien krijgt. */
-var MELDINGEN={};
 var MELDSOORT={
  nieuweRapportage:{icoon:'\ud83d\udcdd',tab:'doelen'},
  nieuwBericht:{icoon:'\ud83d\udcac',tab:'chat'},
  agendaHerinnering:{icoon:'\ud83d\udcc5',tab:'agenda'},
  sosMelding:{icoon:'\ud83c\udd98',tab:null}
 };
+/* Meldingen stonden alleen in het geheugen: na herladen waren ze weg, en wat
+   Anna in het dossier deed kwam bij Bram nooit binnen. Nu staan ze in het
+   dossier van de cliënt (lijst meldingen, samengevoegd per item zoals de rest),
+   en gelezen is per persoon: dat Anna een melding las, betekent niet dat Bram
+   hem gezien heeft. */
 function meldingenVan(clientId){
- if(!MELDINGEN[clientId])MELDINGEN[clientId]=beginMeldingen(clientId);
- return MELDINGEN[clientId];
+ var d=ensureClientData(clientId);
+ if(!Array.isArray(d.meldingen))d.meldingen=beginMeldingen(clientId);
+ return d.meldingen;
+}
+/* Wat uit de database komt is niet op type afgedwongen; een onbekende soort
+   liet het scherm vastlopen op het icoon. */
+function geldigeMelding(m){return !!m&&typeof m==='object'&&!!MELDSOORT[m.soort];}
+function isGelezen(m){return !!(m.gelezenDoor&&typeof m.gelezenDoor==='object'&&m.gelezenDoor[reactieSleutel()]);}
+function markeerGelezen(m){
+ if(!m.gelezenDoor||typeof m.gelezenDoor!=='object'||Array.isArray(m.gelezenDoor))m.gelezenDoor={};
+ m.gelezenDoor[reactieSleutel()]=true;
 }
 /* Bij het openen is de lijst niet leeg: hij wordt opgebouwd uit wat er al in het
-   dossier staat, zodat je ziet waar het over gaat. */
+   dossier staat, zodat je ziet waar het over gaat. De nummers zijn vast (1, 2,
+   …): bouwen twee mensen hem tegelijk op, dan vallen ze bij het samenvoegen
+   samen in plaats van dubbel te staan. */
 function beginMeldingen(clientId){
  var d=CLIENTDATA[clientId],lijst=[],n=1;
  if(d&&d.doelen)d.doelen.forEach(function(doel){
   (doel.rapportages||[]).forEach(function(r){
-   lijst.push({id:n++,soort:'nieuweRapportage',tekst:(r.auteur||'Iemand')+' schreef een rapportage bij “'+doel.titel+'”',tijd:r.tijd||'',gelezen:false});
+   lijst.push({id:n++,soort:'nieuweRapportage',tekst:(r.auteur||'Iemand')+' schreef een rapportage bij “'+doel.titel+'”',tijd:r.tijd||'',gelezenDoor:{}});
   });
  });
  if(d&&d.agenda)d.agenda.slice(0,2).forEach(function(a){
-  lijst.push({id:n++,soort:'agendaHerinnering',tekst:a.titel+' staat gepland op '+a.datumlabel+' om '+a.tijd,tijd:a.datumlabel,gelezen:false});
+  lijst.push({id:n++,soort:'agendaHerinnering',tekst:a.titel+' staat gepland op '+a.datumlabel+' om '+a.tijd,tijd:a.datumlabel,gelezenDoor:{}});
  });
  return lijst;
 }
@@ -6735,13 +6751,16 @@ function nieuweMelding(clientId,soort,tekst){
  /* De schakelaar van de cliënt bepaalt of dit binnenkomt. */
  if(!ensureCaInstellingen(clientId)[soort])return;
  var lijst=meldingenVan(clientId);
- var volgend=lijst.reduce(function(m,x){return Math.max(m,x.id);},0)+1;
- lijst.unshift({id:volgend,soort:soort,tekst:tekst,tijd:'zojuist',gelezen:false});
+ /* Wie het zelf deed, hoeft er geen melding van te krijgen. */
+ var m={id:nieuwNummer(),soort:soort,tekst:tekst,tijd:new Date().toISOString(),gelezenDoor:{}};
+ markeerGelezen(m);
+ lijst.unshift(m);
  if(lijst.length>40)lijst.length=40;
  werkBelBij();
+ bewaarClientData(clientId);
 }
 function ongelezenMeldingen(clientId){
- return meldingenVan(clientId).filter(function(m){return !m.gelezen&&ensureCaInstellingen(clientId)[m.soort];}).length;
+ return meldingenVan(clientId).filter(function(m){return geldigeMelding(m)&&!isGelezen(m)&&ensureCaInstellingen(clientId)[m.soort];}).length;
 }
 function werkBelBij(){
  var teller=el('ca-bel-teller');if(!teller)return;
@@ -6752,16 +6771,16 @@ function werkBelBij(){
  teller.textContent=n>99?'99+':String(n);
 }
 function renderCaMeldingen(){
- var lijst=meldingenVan(caClientId).filter(function(m){return ensureCaInstellingen(caClientId)[m.soort];});
+ var lijst=meldingenVan(caClientId).filter(function(m){return geldigeMelding(m)&&ensureCaInstellingen(caClientId)[m.soort];});
  var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button type="button" class="ghost small" id="ca-meld-terug">← Terug</button><b style="font-size:15px">Meldingen</b></div>';
  if(!lijst.length){
   html+='<p class="empty-msg">Geen meldingen. Wat je hier ziet, bepaal je bij Meer instellingen.</p>';
  }else{
   html+=lijst.map(function(m,i){
-   return '<div class="meldrij'+(m.gelezen?'':' ongelezen')+'" data-meld="'+i+'">'+
+   return '<div class="meldrij'+(isGelezen(m)?'':' ongelezen')+'" data-meld="'+i+'">'+
     '<span class="micoon">'+MELDSOORT[m.soort].icoon+'</span>'+
-    '<span class="mtxt">'+esc(m.tekst)+'</span>'+
-    '<span class="mtijd">'+esc(m.tijd)+'</span></div>';
+    '<span class="mtxt">'+esc(String(m.tekst||''))+'</span>'+
+    '<span class="mtijd">'+esc(chatTijd(String(m.tijd||'')))+'</span></div>';
   }).join('');
   html+='<button type="button" class="small" style="width:100%;margin-top:14px" id="ca-meld-gelezen">Alles als gelezen markeren</button>';
  }
@@ -6769,13 +6788,14 @@ function renderCaMeldingen(){
  el('ca-meld-terug').addEventListener('click',function(){renderCaTab(caTab);});
  var alles=el('ca-meld-gelezen');
  if(alles)alles.addEventListener('click',function(){
-  meldingenVan(caClientId).forEach(function(m){m.gelezen=true;});
+  meldingenVan(caClientId).forEach(function(m){if(geldigeMelding(m))markeerGelezen(m);});
+  bewaarClientData(caClientId);
   werkBelBij();renderCaMeldingen();
  });
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-meld]'),function(rij){
   rij.addEventListener('click',function(){
    var m=lijst[+rij.getAttribute('data-meld')];if(!m)return;
-   m.gelezen=true;werkBelBij();
+   markeerGelezen(m);bewaarClientData(caClientId);werkBelBij();
    var doel=MELDSOORT[m.soort].tab;
    if(doel){zetCaTab(doel);}else{renderCaMeldingen();}
   });

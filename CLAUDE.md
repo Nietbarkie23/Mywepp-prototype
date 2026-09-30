@@ -87,7 +87,7 @@ en mogen alleen met expliciete toestemming weg. (`Tttt TEST`, id 14, is op
 Alles hieronder staat in master.
 
 **Cliëntkant (MyWepp Personal)** — Vandaag (`renderCaVandaag`), meldingen met
-een bel (`MELDINGEN`, `nieuweMelding`, `renderCaMeldingen`), cliëntweergave met
+een bel (`meldingenVan`, `nieuweMelding`, `renderCaMeldingen`), cliëntweergave met
 grote letters en een beperkt menu (`zetClientweergave`, `CA_CLIENTTABS`).
 
 **Adminkant** — periodieke toegangscontrole (`openToegangscontrole`,
@@ -241,6 +241,13 @@ Reacties (👍 ❤️ …) zijn per persoon: `reactiesVan` (sleutel `reactieSleu
 p<id>, support, systeembeheer); oude tellingen in `reacties` tellen mee maar
 zijn van niemand. Het oude gedeelde `mijnReactie` wordt niet meer gebruikt.
 Test: `reacties-twee.js`.
+Meldingen (de bel) staan in het dossier als lijst `meldingen` (in
+`DOSSIERLIJSTEN`, dus per item samengevoegd), met `gelezenDoor` per persoon
+(`isGelezen`, `markeerGelezen`, zelfde sleutel als reacties). Wie een melding
+veroorzaakt, heeft hem al gelezen. De startlijst uit het dossier
+(`beginMeldingen`) heeft vaste nummers, zodat twee sessies niet dubbel
+opbouwen. Onbekende soorten worden overgeslagen (`geldigeMelding`). Test:
+`meldingen-db.js`.
 
 **Meer dan 1000 rijen:** Supabase geeft per verzoek hooguit 1000 rijen terug,
 zonder foutmelding. Volledige selects (personen bij laden en bij het opruimen
