@@ -594,6 +594,34 @@ function herstelSamenhangNaLaden(){
  if(koppAnders||wegAnders)syncOrganisatieData();
  if(mensen)syncToSupabase();
 }
+/* Supabase geeft per verzoek hooguit 1000 rijen. Met meer personen (of
+   dossiers, gesprekken) laadde de app er stilletjes maar 1000, en zagen de
+   opruimstappen mensen voorbij de 1000 als "verdwenen" (aangetoond met
+   veel-personen.js). Daarom een hele tabel altijd in delen ophalen, op een
+   vaste volgorde. maak() geeft steeds een nieuwe vraag, al met .order(). */
+var DEELGROOTTE=1000;
+async function alleRijen(maak){
+ var uit=[],van=0;
+ while(true){
+  var r=await maak().range(van,van+DEELGROOTTE-1);
+  if(r.error)return r;
+  var d=r.data||[];uit=uit.concat(d);
+  if(d.length<DEELGROOTTE)break;
+  van+=DEELGROOTTE;
+ }
+ return {data:uit,error:null};
+}
+/* Een vraag op een lijst id's in stukken, zodat de URL niet te lang wordt en
+   geen stuk boven de 1000 rijen komt (bijvoorbeeld bij een bulkwijziging). */
+async function inStukken(ids,maak){
+ var uit=[];
+ for(var i=0;i<ids.length;i+=200){
+  var r=await maak(ids.slice(i,i+200));
+  if(r.error)return r;
+  uit=uit.concat(r.data||[]);
+ }
+ return {data:uit,error:null};
+}
 async function loadFromSupabase(){
  if(!sb){gegevensGeladen=null;toonLaadStatus();return;}
  gegevensGeladen=null;
@@ -602,7 +630,7 @@ async function loadFromSupabase(){
  setTimeout(function(){if(gegevensGeladen===null)toonLaadStatus();},800);
  try{
   var g=await sb.from('groepen').select('naam').order('id');
-  var p=await sb.from('personen').select('*').order('id');
+  var p=await alleRijen(function(){return sb.from('personen').select('*').order('id');});
   var o=await sb.from('organisatie_data').select('sleutel,waarde');
   /* Een lege tabel is iets anders dan een mislukte vraag: bij leeg mag de app
      gewoon beginnen, bij een fout juist niet. */
@@ -857,7 +885,7 @@ async function maakNieuweIdsVrij(){
    rechten op gewiste id's (gewist). Gearchiveerden houden hun rechten: die
    komen terug bij herstellen. */
 async function ruimRechtenOpInDatabase(geraakt,gewist){
- var q=await sb.from('personen').select('id,groepen,archived,client_rechten,medewerker_rechten,naaste_rechten');
+ var q=await alleRijen(function(){return sb.from('personen').select('id,groepen,archived,client_rechten,medewerker_rechten,naaste_rechten').order('id');});
  if(q.error||!q.data)return false;
  var per={};q.data.forEach(function(r){per[r.id]=r;});
  var deelt=function(a,b){return (a.groepen||[]).some(function(g){return (b.groepen||[]).indexOf(g)>-1;});};
@@ -901,7 +929,7 @@ async function vulTeamsAanInDatabase(ids){
  var gq=await sb.from('groepen').select('naam');
  if(gq.error||!gq.data)return false;
  var bestaand=gq.data.map(function(r){return r.naam;});
- var q=await sb.from('personen').select('id,type,groepen,archived');
+ var q=await alleRijen(function(){return sb.from('personen').select('id,type,groepen,archived').order('id');});
  if(q.error||!q.data)return false;
  for(var i=0;i<q.data.length;i++){
   var r=q.data[i];
@@ -969,7 +997,7 @@ async function schrijfPersonenWeg(){
    if(gq.error||!gq.data)return registreerOpslag('personen',false);
    var bestaand=gq.data.map(function(r){return r.naam;}).concat(groepMutaties.erbij);
    if(metGroepen.length){
-    var hq=await sb.from('personen').select('id,groepen').in('id',metGroepen.map(function(u){return u.rij.id;}));
+    var hq=await inStukken(metGroepen.map(function(u){return u.rij.id;}),function(d){return sb.from('personen').select('id,groepen').in('id',d);});
     if(hq.error)return registreerOpslag('personen',false);
     metGroepen.forEach(function(u){
      var db=((hq.data||[]).filter(function(r){return r.id===u.rij.id;})[0]||{}).groepen;
@@ -1003,7 +1031,7 @@ async function schrijfPersonenWeg(){
      staat. */
   var objectVelden=updates.filter(function(u){return OBJECTVELDEN.some(function(k){return k in u.diff;});});
   if(objectVelden.length){
-   var huidig=await sb.from('personen').select('id,'+OBJECTVELDEN.join(',')).in('id',objectVelden.map(function(u){return u.rij.id;}));
+   var huidig=await inStukken(objectVelden.map(function(u){return u.rij.id;}),function(d){return sb.from('personen').select('id,'+OBJECTVELDEN.join(',')).in('id',d);});
    if(huidig.error)return registreerOpslag('personen',false);
    objectVelden.forEach(function(u){
     var db=(huidig.data||[]).filter(function(r){return r.id===u.rij.id;})[0]||{};
@@ -4491,7 +4519,7 @@ async function werkGroepnamenBijInDatabase(wegNamen){
   lijst.forEach(function(g){var n=wegNamen.indexOf(g)>-1?nieuweNaamVoor(g):g;if(n&&uit.indexOf(n)<0)uit.push(n);});
   return uit;
  };
- var rijen=await sb.from('personen').select('id,groepen');
+ var rijen=await alleRijen(function(){return sb.from('personen').select('id,groepen').order('id');});
  if(rijen.error)return false;
  var teDoen=(rijen.data||[]).filter(function(r){return (r.groepen||[]).some(function(g){return wegNamen.indexOf(g)>-1;});});
  for(var i=0;i<teDoen.length;i++){
@@ -6292,7 +6320,7 @@ function bewaarChatThread(sleutel){
 async function laadClientData(){
  if(!sb)return;
  try{
-  var cd=await sb.from('client_data').select('client_id,dossier,geheugen,instellingen');
+  var cd=await alleRijen(function(){return sb.from('client_data').select('client_id,dossier,geheugen,instellingen').order('client_id');});
   if(cd&&!cd.error&&cd.data){
    cd.data.forEach(function(r){
     dbStandClient[r.client_id]=JSON.stringify({dossier:r.dossier||{},geheugen:r.geheugen||{},instellingen:r.instellingen||{}});
@@ -6301,7 +6329,7 @@ async function laadClientData(){
     if(r.instellingen&&Object.keys(r.instellingen).length)CA_INSTELLINGEN[r.client_id]=r.instellingen;
    });
   }
-  var ct=await sb.from('chat_threads').select('sleutel,thread');
+  var ct=await alleRijen(function(){return sb.from('chat_threads').select('sleutel,thread').order('sleutel');});
   if(ct&&!ct.error&&ct.data){
    ct.data.forEach(function(r){if(r.thread)CHATSTORE[r.sleutel]=r.thread;});
   }

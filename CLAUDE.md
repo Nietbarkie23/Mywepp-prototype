@@ -242,6 +242,15 @@ p<id>, support, systeembeheer); oude tellingen in `reacties` tellen mee maar
 zijn van niemand. Het oude gedeelde `mijnReactie` wordt niet meer gebruikt.
 Test: `reacties-twee.js`.
 
+**Meer dan 1000 rijen:** Supabase geeft per verzoek hooguit 1000 rijen terug,
+zonder foutmelding. Volledige selects (personen bij laden en bij het opruimen
+in de database, `client_data`, `chat_threads`) lopen daarom via `alleRijen`
+(`.range` in delen van 1000, met vaste `order`), en `.in('id',…)` via
+`inStukken` (200 id's per verzoek, anders wordt de URL te lang). Een nieuwe
+volledige select moet ook via `alleRijen`. `nepdb.js` speelt de grens na
+(offset/limit, max. 1000); eigen mocks in tests hebben `.range` nodig. Test:
+`veel-personen.js` (1200 personen), `dossier-fuzz.js`.
+
 **Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
 en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen
 bepaald (`isMijnBericht`); oude berichten met `van:'Jij'` blijven als eigen
