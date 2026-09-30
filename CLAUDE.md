@@ -236,6 +236,11 @@ schreven open formulieren in een los object. Opnieuw tekenen alleen bij
 inhoudelijk nieuwe dingen van een ander (`vasteJson`) en nooit terwijl iemand
 typt. Stond een dossier er bij laden wel en nu niet (definitief gewist), dan
 wordt het niet opnieuw aangemaakt. Test: `dossier-samen.js`.
+Binnen een gewijzigd item wordt per veld samengevoegd, objectvelden per sleutel.
+Reacties (👍 ❤️ …) zijn per persoon: `reactiesVan` (sleutel `reactieSleutel()`:
+p<id>, support, systeembeheer); oude tellingen in `reacties` tellen mee maar
+zijn van niemand. Het oude gedeelde `mijnReactie` wordt niet meer gebruikt.
+Test: `reacties-twee.js`.
 
 **Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
 en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen

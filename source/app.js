@@ -6091,9 +6091,20 @@ function voegItemsSamen(db,basis,mijn,sleutel,kinderen){
  (db||[]).forEach(function(x){
   var id=k(x);gezien[id]=1;
   if(inBasis[id]&&!inMijn[id])return; /* door deze sessie verwijderd */
-  var m=inMijn[id],b=inBasis[id],v=x;
-  if(m&&(!b||js(m)!==js(b)))v=JSON.parse(js(m)); /* door deze sessie gewijzigd */
-  else v=JSON.parse(js(x));
+  var m=inMijn[id],b=inBasis[id],v=JSON.parse(js(x));
+  if(m&&!b)v=JSON.parse(js(m)); /* nieuw van deze sessie, met toevallig hetzelfde id */
+  else if(m&&js(m)!==js(b)){
+   /* Door deze sessie gewijzigd: per veld, zodat twee mensen die tegelijk iets
+      anders aan hetzelfde item doen (tekst, reactie) elkaar niet wissen.
+      Objectvelden (reacties per persoon) per sleutel. */
+   Object.keys(m).forEach(function(f){
+    if((kinderen||[]).indexOf(f)>-1||js(m[f])===js(b[f]))return;
+    var mo=m[f],bo=b[f],xo=x[f];
+    if(mo&&typeof mo==='object'&&!Array.isArray(mo)&&(!xo||typeof xo==='object')&&!Array.isArray(xo))v[f]=voegObjectSamen(xo,bo&&typeof bo==='object'?bo:{},mo);
+    else v[f]=JSON.parse(js(mo));
+   });
+   Object.keys(b).forEach(function(f){if(!(f in m))delete v[f];});
+  }
   (kinderen||[]).forEach(function(c){
    v[c]=voegItemsSamen((x&&x[c])||[],(b&&b[c])||[],(m&&m[c])||[],'id',null);
   });
@@ -7040,22 +7051,37 @@ function emojiRowHtml(attrName,attrValuePrefix,item){
  /* Gegevens uit de database hebben niet altijd een reacties-object; zonder
     deze regel liep het hele scherm vast. */
  if(!item.reacties||typeof item.reacties!=='object')item.reacties={};
+ var mijn=mijnReactieOp(item);
  return '<div class="emojirow">'+EMOJIS.map(function(e){
-  var selected=item.mijnReactie===e;
-  var disabled=item.mijnReactie&&!selected;
-  return '<button type="button" class="'+(selected?'selected ':'')+(disabled?'disabled':'')+'" '+attrName+'="'+esc(attrValuePrefix)+'|'+e+'">'+e+(veiligeTeller(item.reacties[e])?'<span class="ecount">'+veiligeTeller(item.reacties[e])+'</span>':'')+'</button>';
+  var selected=mijn===e;
+  var disabled=mijn&&!selected;
+  var n=aantalReacties(item,e);
+  return '<button type="button" class="'+(selected?'selected ':'')+(disabled?'disabled':'')+'" '+attrName+'="'+esc(attrValuePrefix)+'|'+e+'">'+e+(n?'<span class="ecount">'+n+'</span>':'')+'</button>';
  }).join('')+'</div>';
+}
+/* Een reactie is van een persoon. "mijnReactie" stond in het gedeelde dossier:
+   reageerde Anna, dan zag Bram dat als zijn eigen reactie en kon niemand anders
+   nog kiezen; en reageerden twee mensen tegelijk, dan viel er een weg
+   (aangetoond met reacties-twee.js). Nu per persoon in reactiesVan. Oude
+   tellingen (reacties) blijven meetellen, maar zijn van niemand in het
+   bijzonder. */
+function reactieSleutel(){
+ if(isSupport)return 'support';
+ if(isSysteembeheerder)return 'systeembeheer';
+ return huidigeGebruikerId?'p'+huidigeGebruikerId:'onbekend';
+}
+function mijnReactieOp(item){return (item.reactiesVan&&item.reactiesVan[reactieSleutel()])||null;}
+function aantalReacties(item,e){
+ var n=veiligeTeller((item.reacties||{})[e]);
+ Object.keys(item.reactiesVan||{}).forEach(function(k){if(item.reactiesVan[k]===e)n++;});
+ return n;
 }
 function toggleReactie(item,emoji){
  bewaarStraks('reactie-'+caClientId,function(){bewaarClientData(caClientId);});
- if(item.mijnReactie===emoji){
-  item.reacties[emoji]=Math.max(0,(veiligeTeller(item.reacties[emoji])||1)-1);
-  if(!item.reacties[emoji])delete item.reacties[emoji];
-  item.mijnReactie=null;
- }else if(!item.mijnReactie){
-  item.reacties[emoji]=veiligeTeller(item.reacties[emoji])+1;
-  item.mijnReactie=emoji;
- }
+ var ik=reactieSleutel(),mijn=mijnReactieOp(item);
+ item.reactiesVan=item.reactiesVan&&typeof item.reactiesVan==='object'?item.reactiesVan:{};
+ if(mijn===emoji)delete item.reactiesVan[ik];
+ else if(!mijn)item.reactiesVan[ik]=emoji;
 }
 /* Id's van doelen, rapportages, agenda, Ik-Boek, geheugen en chat staan in het
    JSON-dossier: de database dwingt daar geen getal af. Een id met een
