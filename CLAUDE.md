@@ -182,7 +182,8 @@ nieuwe personen in hun geheel. Instellingen: alleen gewijzigde sleutels t.o.v.
 `groepErbij`/`groepWeg`), nooit "wat niet in mijn lijst staat". Instellingen
 die als object zijn opgeslagen (per groep: `groep_gegevens`, `groep_tweestaps`,
 `digibord`, `groep_rollen`, …) worden per onderdeel samengevoegd met de
-databasestand (`org-samen.js`). Lijsten (instituten, locaties, koppelingen,
+databasestand, tot op het diepste niveau (`voegDiepSamen`: maaltijden per
+cliënt per datum, groepsgegevens per veld; `org-samen.js`, `diep-samen.js`). Lijsten (instituten, locaties, koppelingen,
 verwijderde groepen) ook: alleen wat deze sessie toevoegde of weghaalde wordt op
 de databasestand toegepast (`voegLijstSamen`); overlappende koppelingen worden
 één groepje (`voegClustersSamen`). Test: `lijsten-samen.js`.

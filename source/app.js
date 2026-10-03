@@ -4643,6 +4643,23 @@ function voegClustersSamen(lijst){
  });
  return uit.filter(function(k){return k.length>1;});
 }
+/* Samenvoegen tot op het diepste niveau. Alleen het bovenste niveau (per groep,
+   per cliënt) was niet genoeg: meldden twee medewerkers tegelijk een andere dag
+   aan voor dezelfde cliënt, of pasten twee beheerders van dezelfde groep de één
+   het telefoonnummer en de ander het e-mailadres aan, dan verdween het werk van
+   de eerste (aangetoond met diep-samen.js). Lijsten blijven één waarde. */
+function isGewoonObject(x){return !!x&&typeof x==='object'&&!Array.isArray(x);}
+function voegDiepSamen(db,vorig,mijn){
+ var uit=Object.assign({},isGewoonObject(db)?db:{});
+ vorig=isGewoonObject(vorig)?vorig:{};
+ Object.keys(mijn).forEach(function(k){
+  if(JSON.stringify(mijn[k])===JSON.stringify(vorig[k]))return;
+  if(isGewoonObject(mijn[k])&&isGewoonObject(vorig[k])&&isGewoonObject(uit[k]))uit[k]=voegDiepSamen(uit[k],vorig[k],mijn[k]);
+  else uit[k]=JSON.parse(JSON.stringify(mijn[k]));
+ });
+ Object.keys(vorig).forEach(function(k){if(!(k in mijn))delete uit[k];});
+ return uit;
+}
 function syncOrganisatieData(){return inRij(schrijfOrgWeg);}
 async function schrijfOrgWeg(){
  if(!sb)return false;
@@ -4665,13 +4682,10 @@ async function schrijfOrgWeg(){
     if(!db||typeof db!=='object'||Array.isArray(db))return;
     var vorig=dbStandOrg[r.sleutel]?JSON.parse(dbStandOrg[r.sleutel]):{};
     if(!vorig||typeof vorig!=='object'||Array.isArray(vorig))vorig={};
-    var samen=Object.assign({},db);
-    Object.keys(r.waarde).forEach(function(k){if(JSON.stringify(r.waarde[k])!==JSON.stringify(vorig[k]))samen[k]=r.waarde[k];});
-    Object.keys(vorig).forEach(function(k){if(!(k in r.waarde))delete samen[k];});
+    var samen=voegDiepSamen(db,vorig,r.waarde);
     /* Het object in het geheugen zelf bijwerken, zodat ook in beeld komt wat
        een ander deed. */
-    Object.keys(r.waarde).forEach(function(k){delete r.waarde[k];});
-    Object.assign(r.waarde,samen);
+    werkBijOpZijnPlek(r.waarde,samen);
    });
   }
   /* Lijsten (instituten, locaties, koppelingen, verwijderde groepen) gingen in
