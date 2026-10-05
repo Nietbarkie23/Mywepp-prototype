@@ -28,6 +28,15 @@ function schrijfBijSluiten(tabel,rijen,conflictKolom){
    body:body});
  }catch(e){/* de pagina gaat dicht; er is niemand meer om iets te melden */}
 }
+function rpcBijSluiten(functie,args){
+ try{
+  var body=JSON.stringify(args);
+  fetch(SB_URL+'/rest/v1/rpc/'+functie,{
+   method:'POST',keepalive:body.length<60000,
+   headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+   body:body});
+ }catch(e){/* de pagina gaat dicht; er is niemand meer om iets te melden */}
+}
 
 function el(i){return document.getElementById(i);}
 /* Alles wat een gebruiker zelf intypt (namen, e-mail, groepsnamen, rapportages,
@@ -4660,7 +4669,23 @@ function voegDiepSamen(db,vorig,mijn){
  Object.keys(vorig).forEach(function(k){if(!(k in mijn))delete uit[k];});
  return uit;
 }
-function syncOrganisatieData(){return inRij(schrijfOrgWeg);}
+function instellingRijen(rijen){
+ return rijen.map(function(r){return {sleutel:r.sleutel,vorig:dbStandOrg[r.sleutel]?JSON.parse(dbStandOrg[r.sleutel]):null,mijn:r.waarde};});
+}
+/* Bij het sluiten van de pagina komt een tweede verzoek (eerst lezen, dan
+   schrijven) niet meer aan: een maaltijd die je vlak voor het wegvegen
+   aanmeldde, was weg (aangetoond met org-sluiten.js). Dan in één verzoek;
+   de database voegt zelf samen. Lijsten veranderen alleen via een knop en
+   worden meteen opgeslagen, die gaan hier niet mee. */
+function instellingenBijSluiten(){
+ if(!sb||opslagGeblokkeerd())return;
+ var rijen=orgRijen().filter(function(r){return isGewoonObject(r.waarde)&&dbStandOrg[r.sleutel]!==JSON.stringify(r.waarde);});
+ if(rijen.length)rpcBijSluiten('bewaar_instellingen',{p_rijen:instellingRijen(rijen)});
+}
+function syncOrganisatieData(){
+ if(paginaSluit){instellingenBijSluiten();return Promise.resolve(true);}
+ return inRij(schrijfOrgWeg);
+}
 async function schrijfOrgWeg(){
  if(!sb)return false;
  if(opslagGeblokkeerd())return false;
@@ -4674,6 +4699,23 @@ async function schrijfOrgWeg(){
      (aangetoond). Voor objecten dus per onderdeel samenvoegen met wat er nu in
      de database staat; lijsten gaan nog in hun geheel. */
   var objecten=rijen.filter(function(r){return r.waarde&&typeof r.waarde==='object'&&!Array.isArray(r.waarde);});
+  /* Bij voorkeur samenvoegen en wegschrijven in één handeling in de database
+     (bewaar_instellingen): hier lezen en daarna schrijven liet een gat waarin
+     een ander kon opslaan. Bestaat de functie niet, dan de oude weg. */
+  if(objecten.length&&sb.rpc){
+   var rr=await sb.rpc('bewaar_instellingen',{p_rijen:instellingRijen(objecten)});
+   if(rr.error&&rr.error.code!=='PGRST202')return registreerOpslag('organisatie',false);
+   if(!rr.error){
+    objecten.forEach(function(r){
+     var s=rr.data&&rr.data[r.sleutel];
+     if(isGewoonObject(s))werkBijOpZijnPlek(r.waarde,s);
+     dbStandOrg[r.sleutel]=JSON.stringify(r.waarde);
+    });
+    rijen=rijen.filter(function(r){return objecten.indexOf(r)<0;});
+    objecten=[];
+    if(!rijen.length)return registreerOpslag('organisatie',true);
+   }
+  }
   if(objecten.length){
    var huidig=await sb.from('organisatie_data').select('sleutel,waarde').in('sleutel',objecten.map(function(r){return r.sleutel;}));
    if(huidig.error)return registreerOpslag('organisatie',false);
@@ -6224,22 +6266,37 @@ function zetClientRij(id,r){
  if(r.geheugen&&r.geheugen.items)GEHEUGEN[id]=GEHEUGEN[id]?werkBijOpZijnPlek(GEHEUGEN[id],r.geheugen):r.geheugen;
  if(r.instellingen)CA_INSTELLINGEN[id]=CA_INSTELLINGEN[id]?werkBijOpZijnPlek(CA_INSTELLINGEN[id],r.instellingen):r.instellingen;
 }
+/* Lezen, samenvoegen en wegschrijven gebeurt in de database (bewaar_client_rij),
+   met de rij vergrendeld. Hier lezen en daarna wegschrijven liet een gat
+   waarin een ander kon opslaan, en bij het sluiten van de pagina was er geen
+   tijd om eerst te lezen: dan ging het dossier ongezien over dat van een ander
+   heen. Bestaat de functie niet (oudere database), dan de oude weg. */
+async function bewaarClientRij(clientId,basis,mijn){
+ if(sb.rpc){
+  var r=await sb.rpc('bewaar_client_rij',{p_client_id:clientId,p_basis:basis,p_mijn:mijn,p_lijsten:DOSSIERLIJSTEN});
+  if(!r.error)return {ok:true,samen:r.data,gewist:r.data===null};
+  if(r.error.code!=='PGRST202')return {ok:false};
+ }
+ var q=await sb.from('client_data').select('client_id,dossier,geheugen,instellingen').eq('client_id',clientId);
+ if(q.error)return {ok:false};
+ /* Op cliënt kiezen, niet op 'de eerste rij': dan kan er nooit het dossier
+    van een andere cliënt tussen komen. */
+ var db=(q.data||[]).filter(function(x){return String(x.client_id)===String(clientId);})[0]||null;
+ if(!db&&basis)return {ok:true,samen:null,gewist:true};
+ var samen=db?voegClientRijSamen(db,basis||{},mijn):mijn;
+ var res=await sb.from('client_data').upsert([{client_id:clientId,dossier:samen.dossier,geheugen:samen.geheugen,instellingen:samen.instellingen,bijgewerkt:new Date().toISOString()}],{onConflict:'client_id'});
+ return res.error?{ok:false}:{ok:true,samen:samen,gewist:false};
+}
 async function schrijfClientDataWeg(clientId){
  try{
   var mijn=clientRijVan(clientId);
-  var basis=dbStandClient[clientId]?JSON.parse(dbStandClient[clientId]):{};
-  var q=await sb.from('client_data').select('client_id,dossier,geheugen,instellingen').eq('client_id',clientId);
-  if(q.error)return registreerOpslag('clientdata',false);
-  /* Op cliënt kiezen, niet op 'de eerste rij': dan kan er nooit het dossier
-     van een andere cliënt tussen komen. */
-  var db=(q.data||[]).filter(function(r){return String(r.client_id)===String(clientId);})[0]||null;
+  var uit=await bewaarClientRij(clientId,dbStandClient[clientId]?JSON.parse(dbStandClient[clientId]):null,mijn);
+  if(!uit.ok)return registreerOpslag('clientdata',false);
   /* Stond het dossier er bij het laden wel en nu niet, dan heeft iemand de
      cliënt intussen definitief gewist. Dan niet opnieuw aanmaken: dat zou
      gewiste gezondheidsgegevens terugzetten. */
-  if(!db&&dbStandClient[clientId])return registreerOpslag('clientdata',true);
-  var samen=db?voegClientRijSamen(db,basis,mijn):mijn;
-  var res=await sb.from('client_data').upsert([{client_id:clientId,dossier:samen.dossier,geheugen:samen.geheugen,instellingen:samen.instellingen,bijgewerkt:new Date().toISOString()}],{onConflict:'client_id'});
-  if(res.error)return registreerOpslag('clientdata',false);
+  if(uit.gewist)return registreerOpslag('clientdata',true);
+  var samen=uit.samen;
   dbStandClient[clientId]=JSON.stringify(samen);
   /* Op het scherm: wat een ander deed erbij, zonder wat de gebruiker intussen
      zelf nog veranderde terug te draaien. */
@@ -6249,15 +6306,22 @@ async function schrijfClientDataWeg(clientId){
      nooit terwijl iemand in het dossier aan het typen is: dan was een half
      geschreven rapportage weg (aangetoond met opslag-ui.js). */
   var bezig=el('ca-body')&&(el('ca-body').contains(document.activeElement)||Array.prototype.some.call(el('ca-body').querySelectorAll('input[type=text],textarea'),function(x){return x.value;}));
-  if(vasteJson(samen)!==vasteJson(mijn)&&caClientId===clientId&&!bezig&&!el('view-clientapp').hidden&&!el('modal-overlay').offsetParent)renderCaTab(caTab);
+  /* Een melding van een ander is alleen voor de bel; daarvoor het scherm
+     opnieuw tekenen sloot een open chatgesprek (aangetoond met chat-twee.js).
+     Een open gesprek staat niet in het dossier, dus dan nooit opnieuw tekenen. */
+  var zonderMeldingen=function(r){var k=JSON.parse(JSON.stringify(r));if(k.dossier)delete k.dossier.meldingen;return vasteJson(k);};
+  var inGesprek=!!el('ca-chat-input');
+  if(caClientId===clientId&&el('ca-meld-terug')&&vasteJson(samen)!==vasteJson(mijn))renderCaMeldingen();
+  else if(zonderMeldingen(samen)!==zonderMeldingen(mijn)&&caClientId===clientId&&!bezig&&!inGesprek&&!el('view-clientapp').hidden&&!el('modal-overlay').offsetParent)renderCaTab(caTab);
   return registreerOpslag('clientdata',true);
  }catch(e){return registreerOpslag('clientdata',false);}
 }
 function bewaarClientDataNu(clientId){
  if(!sb||!clientId||opslagGeblokkeerd())return;
  if(paginaSluit){
-  /* Bij het sluiten is er geen tijd om eerst de database te lezen. */
-  schrijfBijSluiten('client_data',[{client_id:clientId,dossier:CLIENTDATA[clientId]||{},geheugen:GEHEUGEN[clientId]||{},instellingen:CA_INSTELLINGEN[clientId]||{},bijgewerkt:new Date().toISOString()}],'client_id');
+  /* Bij het sluiten is er geen tijd om op een antwoord te wachten; de
+     database voegt zelf samen, zodat ook dan niets van een ander verdwijnt. */
+  rpcBijSluiten('bewaar_client_rij',{p_client_id:clientId,p_basis:dbStandClient[clientId]?JSON.parse(dbStandClient[clientId]):null,p_mijn:clientRijVan(clientId),p_lijsten:DOSSIERLIJSTEN});
   return;
  }
  return inRij(function(){return schrijfClientDataWeg(clientId);});
@@ -6314,15 +6378,28 @@ function voegGesprekSamen(lokaal,db){
 function schrijfGesprek(sleutel){
  return sb.from('chat_threads').upsert([{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],{onConflict:'sleutel'});
 }
+/* Gesprekken die bij laden (of na opslaan) in de database stonden. Is zo'n
+   gesprek daar nu weg, dan is de cliënt definitief gewist en mag het niet
+   opnieuw aangemaakt worden. */
+var chatBestond={};
 function bewaarChatThreadNu(sleutel){
  if(!sb||!sleutel||!CHATSTORE[sleutel]||opslagGeblokkeerd())return;
  try{
-  /* Bij het sluiten van de pagina is er geen tijd voor eerst lezen: dan direct
-     schrijven, zodat in elk geval je eigen bericht bewaard blijft. */
-  if(paginaSluit){schrijfBijSluiten('chat_threads',[{sleutel:sleutel,thread:CHATSTORE[sleutel],bijgewerkt:new Date().toISOString()}],'sleutel');return;}
-  sb.from('chat_threads').select('thread').eq('sleutel',sleutel).then(function(res){
-   if(res&&!res.error&&res.data&&res.data[0])voegGesprekSamen(CHATSTORE[sleutel],res.data[0].thread);
-   return schrijfGesprek(sleutel);
+  /* Samenvoegen gebeurt in de database (bewaar_gesprek), ook bij het sluiten
+     van de pagina; eerst lezen en dan schrijven liet een ander bericht soms
+     verdwijnen. Zonder die functie (oudere database) de oude weg. */
+  var args={p_sleutel:sleutel,p_thread:CHATSTORE[sleutel],p_bestond:!!chatBestond[sleutel]};
+  if(paginaSluit){rpcBijSluiten('bewaar_gesprek',args);return;}
+  var oudeWeg=function(){
+   return sb.from('chat_threads').select('thread').eq('sleutel',sleutel).then(function(res){
+    if(res&&!res.error&&res.data&&res.data[0])voegGesprekSamen(CHATSTORE[sleutel],res.data[0].thread);
+    return schrijfGesprek(sleutel);
+   });
+  };
+  (sb.rpc?sb.rpc('bewaar_gesprek',args):Promise.resolve({error:{code:'PGRST202'}})).then(function(res){
+   if(res&&res.error&&res.error.code==='PGRST202')return oudeWeg();
+   if(res&&!res.error&&res.data){voegGesprekSamen(CHATSTORE[sleutel],res.data);chatBestond[sleutel]=true;}
+   return res;
   }).then(
    function(res){registreerOpslag('chat',!(res&&res.error));},
    function(){registreerOpslag('chat',false);});
@@ -6346,7 +6423,7 @@ async function laadClientData(){
   }
   var ct=await alleRijen(function(){return sb.from('chat_threads').select('sleutel,thread').order('sleutel');});
   if(ct&&!ct.error&&ct.data){
-   ct.data.forEach(function(r){if(r.thread)CHATSTORE[r.sleutel]=r.thread;});
+   ct.data.forEach(function(r){chatBestond[r.sleutel]=true;if(r.thread)CHATSTORE[r.sleutel]=r.thread;});
   }
  }catch(e){/* zonder verbinding blijft de demodata actief */}
 }

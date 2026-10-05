@@ -237,6 +237,31 @@ schreven open formulieren in een los object. Opnieuw tekenen alleen bij
 inhoudelijk nieuwe dingen van een ander (`vasteJson`) en nooit terwijl iemand
 typt. Stond een dossier er bij laden wel en nu niet (definitief gewist), dan
 wordt het niet opnieuw aangemaakt. Test: `dossier-samen.js`.
+Sinds 05-10 gebeurt dat samenvoegen in de database: `bewaar_client_rij(p_client_id,
+p_basis, p_mijn, p_lijsten)` (migratie `dossier_samenvoegen_in_database`)
+vergrendelt de rij, voegt samen met `private.voeg_client_rij_samen` (zelfde
+regels als `voegClientRijSamen`; de app geeft `DOSSIERLIJSTEN` mee) en schrijft
+weg. Zo verdwijnt er ook niets bij precies tegelijk opslaan of bij het sluiten
+van de pagina (`rpcBijSluiten`). `p_basis` null = er was bij laden geen dossier;
+anders en de rij is weg = gewist, geeft null. Zonder de functie (PGRST202) de
+oude weg in de browser (`bewaarClientRij`). Hulpfuncties in `private`, alleen
+de RPC is voor anon. Wie samenvoegregels in app.js verandert, moet de SQL
+meeveranderen: `sql-gelijk.js` vergelijkt beide. `nepdb.js` speelt de RPC na
+met de JavaScript-versie. Let op: de Supabase-tool vraagt bij `delete` om
+bevestiging en loopt dan na 60 s vast; test met een DO-blok dat eindigt op
+`raise exception` (alles teruggedraaid). Tests: `dossier-sluiten.js`.
+Zo ook de chat: `bewaar_gesprek(p_sleutel, p_thread, p_bestond)` (migratie
+`gesprek_samenvoegen_in_database`, `private.voeg_gesprek_samen` = 
+`voegGesprekSamen`); `chatBestond` onthoudt welke gesprekken er bij laden
+waren, zodat een gewist gesprek niet terugkomt (`chat-sluiten.js`,
+`chat-gelijk.js`). En instellingen die een object zijn:
+`bewaar_instellingen(p_rijen)` met `[{sleutel, vorig, mijn}]` (migratie
+`instellingen_samenvoegen_in_database`, `private.voeg_diep_samen` =
+`voegDiepSamen`); bij het sluiten van de pagina via `instellingenBijSluiten`
+(`org-sluiten.js`, `diep-gelijk.js`). Lijsten (koppelingen, verwijderde
+groepen, …) gaan nog via de browser, omdat daar de groepentabel bij komt kijken.
+Een melding van een ander tekent het scherm niet opnieuw (alleen de bel), en
+een open chatgesprek wordt nooit opnieuw getekend (`chat-twee.js`).
 Binnen een gewijzigd item wordt per veld samengevoegd, objectvelden per sleutel.
 Reacties (👍 ❤️ …) zijn per persoon: `reactiesVan` (sleutel `reactieSleutel()`:
 p<id>, support, systeembeheer); oude tellingen in `reacties` tellen mee maar
