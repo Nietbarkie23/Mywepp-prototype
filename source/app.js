@@ -638,9 +638,17 @@ async function loadFromSupabase(){
     anders alleen even flitsen. */
  setTimeout(function(){if(gegevensGeladen===null)toonLaadStatus();},800);
  try{
-  var g=await alleRijen(function(){return sb.from('groepen').select('naam').order('id');});
-  var p=await alleRijen(function(){return sb.from('personen').select('*').order('id');});
-  var o=await alleRijen(function(){return sb.from('organisatie_data').select('sleutel,waarde').order('sleutel');});
+  /* Tegelijk opvragen: na elkaar kostte elke tabel een volle rondgang, op een
+     trage verbinding samen ruim een seconde (laadtijd.js). */
+  /* Dossiers, gesprekken en logboek ook al ophalen, maar pas toepassen als de
+     personen goed binnen zijn. */
+  var logboekVooraf=haalLogboek(),clientVooraf=haalClientData();
+  logboekVooraf.then(null,function(){});clientVooraf.then(null,function(){});
+  var drie=await Promise.all([
+   alleRijen(function(){return sb.from('groepen').select('naam').order('id');}),
+   alleRijen(function(){return sb.from('personen').select('*').order('id');}),
+   alleRijen(function(){return sb.from('organisatie_data').select('sleutel,waarde').order('sleutel');})]);
+  var g=drie[0],p=drie[1],o=drie[2];
   /* Een lege tabel is iets anders dan een mislukte vraag: bij leeg mag de app
      gewoon beginnen, bij een fout juist niet. */
   if(g.error||p.error||!p.data){gegevensGeladen=false;toonLaadStatus();return;}
@@ -695,8 +703,7 @@ async function loadFromSupabase(){
      sessie ze allemaal weg, over die van een andere beheerder heen. */
   orgRijen().forEach(function(r){if(dbStandOrg[r.sleutel]===undefined)dbStandOrg[r.sleutel]=JSON.stringify(r.waarde);});
   synchroniseerGlobaleRollen();
-  await laadLogboek();
-  await laadClientData();
+  await Promise.all([laadLogboek(logboekVooraf),laadClientData(clientVooraf)]);
   gegevensGeladen=true;
   toonLaadStatus();
   herstelSamenhangNaLaden();
@@ -5094,10 +5101,14 @@ function logActie(tekst,extra){
    niets vindt, concludeert dat het niet gebeurd is. Eén grens, en die wordt
    genoemd. */
 var LOGBOEK_MAX=500;
-async function laadLogboek(){
+function haalLogboek(){
+ /* Promise.resolve: een supabase-query voert zich bij elke .then opnieuw uit. */
+ return Promise.resolve(sb.from('logboek').select('tijd,wie,groep,tekst,soort,reden').order('tijd',{ascending:false}).limit(LOGBOEK_MAX));
+}
+async function laadLogboek(vooraf){
  if(!sb)return;
  try{
-  var res=await sb.from('logboek').select('tijd,wie,groep,tekst,soort,reden').order('tijd',{ascending:false}).limit(LOGBOEK_MAX);
+  var res=await (vooraf||haalLogboek());
   if(res.error||!res.data)return;
   LOGBOEK=res.data.map(function(r){
    return {tijd:logboekTijd(new Date(r.tijd)),wie:r.wie,groep:r.groep,tekst:r.tekst,
@@ -6411,10 +6422,16 @@ function bewaarChatThread(sleutel){
  if(!sb||!sleutel||!CHATSTORE[sleutel])return;
  bewaarStraks('chat-'+sleutel,function(){bewaarChatThreadNu(sleutel);});
 }
-async function laadClientData(){
+function haalClientData(){
+ return Promise.all([
+  alleRijen(function(){return sb.from('client_data').select('client_id,dossier,geheugen,instellingen').order('client_id');}),
+  alleRijen(function(){return sb.from('chat_threads').select('sleutel,thread').order('sleutel');})]);
+}
+async function laadClientData(vooraf){
  if(!sb)return;
  try{
-  var cd=await alleRijen(function(){return sb.from('client_data').select('client_id,dossier,geheugen,instellingen').order('client_id');});
+  var beide=await (vooraf||haalClientData());
+  var cd=beide[0],ct=beide[1];
   if(cd&&!cd.error&&cd.data){
    cd.data.forEach(function(r){
     dbStandClient[r.client_id]=JSON.stringify({dossier:r.dossier||{},geheugen:r.geheugen||{},instellingen:r.instellingen||{}});
@@ -6423,7 +6440,6 @@ async function laadClientData(){
     if(r.instellingen&&Object.keys(r.instellingen).length)CA_INSTELLINGEN[r.client_id]=r.instellingen;
    });
   }
-  var ct=await alleRijen(function(){return sb.from('chat_threads').select('sleutel,thread').order('sleutel');});
   if(ct&&!ct.error&&ct.data){
    ct.data.forEach(function(r){chatBestond[r.sleutel]=true;if(r.thread)CHATSTORE[r.sleutel]=r.thread;});
   }

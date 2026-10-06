@@ -289,6 +289,13 @@ volledige select moet ook via `alleRijen`. `nepdb.js` speelt de grens na
 `veel-personen.js` (1200 personen), `veel-groepen.js` (1200 groepen; de
 tabel mag er 10.000 hebben), `dossier-fuzz.js`.
 
+**Laden** gaat tegelijk: groepen, personen en instellingen samen, en dossiers,
+gesprekken en logboek worden al opgehaald maar pas toegepast als de personen
+goed binnen zijn (`haalClientData`, `haalLogboek`). Op 200 ms per verzoek van
+~1,4 s naar ~0,33 s (`laadtijd.js <poort> [max ms]`). Let op: een
+supabase-query voert zich bij elke `.then` opnieuw uit; vooraf starten dus via
+`Promise.resolve(query)`.
+
 **Chat:** berichten hebben een uniek id (`nieuwBerichtId`), afzender met naam
 en `vanId`, en een ISO-tijdstip (`chatTijd`). "Jij" wordt bij het tonen
 bepaald (`isMijnBericht`); oude berichten met `van:'Jij'` blijven als eigen
