@@ -244,8 +244,11 @@ regels als `voegClientRijSamen`; de app geeft `DOSSIERLIJSTEN` mee) en schrijft
 weg. Zo verdwijnt er ook niets bij precies tegelijk opslaan of bij het sluiten
 van de pagina (`rpcBijSluiten`). `p_basis` null = er was bij laden geen dossier;
 anders en de rij is weg = gewist, geeft null. Zonder de functie (PGRST202) de
-oude weg in de browser (`bewaarClientRij`). Hulpfuncties in `private`, alleen
-de RPC is voor anon. Wie samenvoegregels in app.js verandert, moet de SQL
+oude weg in de browser (`bewaarClientRij`). De drie RPC's draaien als
+aanroeper (security invoker, migratie `samenvoegfuncties_als_aanroeper`), dus
+RLS en triggers gelden; anon heeft `usage` op `private` en `execute` op alleen
+de rekenfuncties daar, niet op de tabellen (`historie`, `verzoeken`). Nieuwe
+functies in `private` zijn standaard niet uitvoerbaar. Security-adviseur: 0. Wie samenvoegregels in app.js verandert, moet de SQL
 meeveranderen: `sql-gelijk.js` vergelijkt beide. `nepdb.js` speelt de RPC na
 met de JavaScript-versie. Let op: de Supabase-tool vraagt bij `delete` om
 bevestiging en loopt dan na 60 s vast; test met een DO-blok dat eindigt op
@@ -391,7 +394,10 @@ deze stap: `backup/voor-strengere-csp`.
   wissen wist eerst het dossier en pas daarna de persoon, zodat bij een storing
   de persoon in het archief blijft om opnieuw te wissen. Nog open: echt
   in één keer wissen vraagt een databasefunctie (transactie); opslag bij het
-  sluiten van de pagina kan een fout niet meer tonen. Tests:
+  sluiten van de pagina kan een fout niet meer tonen. Een functie
+  `wis_definitief` lag klaar maar is niet toegepast: de Supabase-tool vraagt bij
+  `delete` om bevestiging van de gebruiker. Gesprekken bij wissen: `group-<id>`
+  exact, anders wiste cliënt 1 ook die van 10, 11, … (`wis-sleutels.js`). Tests:
   `groep-opslagfout.cjs`, `stille-opslag-na.cjs`, `paneel-sluiten.cjs`.
 - Cliënt of (non)prof. verwijderen via de Admin Tools komt niet in het archief
   dat medewerkers per groep zien (`renderGearchiveerd` slaat `doorBeheer(p)`
