@@ -5350,7 +5350,9 @@ function chatSleutelsVanClient(id){
  var d=CLIENTDATA[id];
  if(d&&d.customChats)d.customChats.forEach(function(c){if(c.key)sleutels.push(c.key);});
  Object.keys(CHATSTORE).forEach(function(k){
-  if(k.indexOf('group-'+id)===0||k.indexOf('1on1-'+id+'-')===0||k.indexOf('groep-custom-'+id+'-')===0)sleutels.push(k);
+  /* 'group-'+id exact: als begin van de sleutel wiste cliënt 1 ook de
+     groepsgesprekken van cliënt 10, 11, 100 … (aangetoond met wis-sleutels.js). */
+  if(k==='group-'+id||k.indexOf('1on1-'+id+'-')===0||k.indexOf('groep-custom-'+id+'-')===0)sleutels.push(k);
  });
  return sleutels.filter(function(k,i,arr){return arr.indexOf(k)===i;});
 }
