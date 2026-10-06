@@ -289,6 +289,12 @@ volledige select moet ook via `alleRijen`. `nepdb.js` speelt de grens na
 `veel-personen.js` (1200 personen), `veel-groepen.js` (1200 groepen; de
 tabel mag er 10.000 hebben), `dossier-fuzz.js`.
 
+**Profielfoto's** worden in de browser verkleind (`verkleinFoto`: 320 px JPEG,
+zo nodig kleiner, max. `FOTO_MAX_TEKENS`). Ongewijzigd ging een telefoonfoto
+als base64 in `personen.foto` en de trigger `rijgrootte` (64 KB) weigerde de
+hele rij: foto's werden live nooit opgeslagen. `nepdb.js` speelt die grens na.
+Test: `foto-groot.js`.
+
 **Laden** gaat tegelijk: groepen, personen en instellingen samen, en dossiers,
 gesprekken en logboek worden al opgehaald maar pas toegepast als de personen
 goed binnen zijn (`haalClientData`, `haalLogboek`). Op 200 ms per verzoek van

@@ -96,6 +96,33 @@ function genereerEmail(voor,achter,domein){
    of aanhalingsteken zou anders uit de url(...) kunnen breken. */
 var FOTO_TYPES=['image/jpeg','image/png','image/webp'];
 var FOTO_MAX_BYTES=2*1024*1024;
+/* Een profielfoto ging ongewijzigd als base64 in de rij van de persoon, maar
+   de database weigert rijen boven 64 KB (trigger rijgrootte): een gewone
+   telefoonfoto werd dus nooit opgeslagen (aangetoond met foto-groot.js). Voor
+   een rond plaatje van een paar centimeter is 320 pixels ruim genoeg; als JPEG
+   is dat zo'n 20 KB. Lukt het niet onder de grens, dan kleiner en minder scherp. */
+var FOTO_MAX_TEKENS=45000;
+function verkleinFoto(dataUrl){
+ return new Promise(function(klaar,mis){
+  var img=new Image();
+  img.onerror=function(){mis(new Error('geen afbeelding'));};
+  img.onload=function(){
+   var pogingen=[[320,0.85],[320,0.7],[240,0.7],[200,0.6],[160,0.5]];
+   for(var i=0;i<pogingen.length;i++){
+    var max=pogingen[i][0],schaal=Math.min(1,max/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+    var c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.naturalWidth*schaal));c.height=Math.max(1,Math.round(img.naturalHeight*schaal));
+    var x=c.getContext('2d');
+    /* JPEG kent geen doorzichtigheid: zonder witte achtergrond werd een PNG zwart. */
+    x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    var uit=c.toDataURL('image/jpeg',pogingen[i][1]);
+    if(uit.length<=FOTO_MAX_TEKENS)return klaar(uit);
+   }
+   mis(new Error('te groot'));
+  };
+  img.src=dataUrl;
+ });
+}
 function veiligeFotoUrl(url){
  return typeof url==='string'&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(url);
 }
@@ -1629,8 +1656,10 @@ function openFotoModal(elId,persoon){
   reader.onerror=function(){alert('Het lezen van dit bestand is niet gelukt.');};
   reader.onload=function(ev){
    if(!veiligeFotoUrl(ev.target.result)){alert('Dit bestand wordt niet herkend als afbeelding.');return;}
-   nieuweFoto=ev.target.result;
-   zetFotoAchtergrond(el('foto-preview'),nieuweFoto);
+   verkleinFoto(ev.target.result).then(function(klein){
+    nieuweFoto=klein;
+    zetFotoAchtergrond(el('foto-preview'),nieuweFoto);
+   },function(){alert('Deze foto kon niet worden verwerkt. Probeer een andere.');});
   };
   reader.readAsDataURL(file);
  });
