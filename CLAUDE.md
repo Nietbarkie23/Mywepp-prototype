@@ -297,6 +297,11 @@ als base64 in `personen.foto` en de trigger `rijgrootte` (64 KB) weigerde de
 hele rij: foto's werden live nooit opgeslagen. `nepdb.js` speelt die grens na.
 Test: `foto-groot.js`.
 
+**Tekstvelden** in het dossier en de chat hebben een maximum (`MAXLEN.tekst`
+10.000, `MAXLEN.bericht` 4.000, via `maxlength` en `kap`). Zonder grens maakte
+één geplakt document het dossier groter dan 1 MB (rijgrootte) en mislukte
+daarna elke opslag ervan, ook die van anderen (`lange-tekst.js`).
+
 **Laden** gaat tegelijk: groepen, personen en instellingen samen, en dossiers,
 gesprekken en logboek worden al opgehaald maar pas toegepast als de personen
 goed binnen zijn (`haalClientData`, `haalLogboek`). Op 200 ms per verzoek van

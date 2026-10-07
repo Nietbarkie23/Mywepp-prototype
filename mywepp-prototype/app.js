@@ -71,7 +71,10 @@ function show(id){
 /* De beheerkant kapte namen op 60 tekens af, maar de clientapp en Mijn profiel
    deden dat niet: daar ging 500 tekens zo de database in, en daarmee ook het
    account. Eén set grenzen voor allebei. */
-var MAXLEN={naam:60,mail:120,tel:25,groep:60,functie:60,titel:80,tijd:20};
+/* tekst en bericht: zonder grens maakte één geplakt document het dossier of
+   gesprek groter dan de database toestaat (1 MB), en daarna mislukte elke
+   opslag ervan, ook die van anderen (aangetoond met lange-tekst.js). */
+var MAXLEN={naam:60,mail:120,tel:25,groep:60,functie:60,titel:80,tijd:20,tekst:10000,bericht:4000};
 function kap(tekst,max){return String(tekst==null?'':tekst).slice(0,max);}
 /* Elk woord een hoofdletter, behalve tussenvoegsels: die blijven precies zoals
    ze zijn getypt. Eerder werd "de Vries" bij elke keer opslaan "De Vries", en
@@ -7039,7 +7042,7 @@ function renderMijnProfiel(){
  html+='<button type="button" class="'+(p.tweestaps?'danger':'primary')+' small" style="width:100%;margin-bottom:14px" id="mp-tweestaps-toggle">'+(p.tweestaps?'Uitschakelen':'Aanzetten')+'</button>';
  html+='<div class="sublistlabel">Extra gegevens</div>';
  html+='<p class="mini" style="margin-top:-6px">Plaats geen gevoelige informatie in dit veld.</p>';
- html+='<textarea id="mp-opmerkingen" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:13.5px">'+esc(p.opmerkingen)+'</textarea>';
+ html+='<textarea maxlength="'+400+'" id="mp-opmerkingen" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:13.5px">'+esc(p.opmerkingen)+'</textarea>';
  html+='<div class="actions end" style="border:0;margin-top:14px"><button type="button" class="primary" id="mp-opslaan">Opslaan</button></div>';
  html+='<div id="mp-bevestiging"></div>';
  el('ca-body').innerHTML=html;
@@ -7339,7 +7342,7 @@ function renderCaDoelen(){
    el('newrapport-'+doelId).innerHTML='<div class="rapport">'+
     '<div class="row" style="margin-bottom:8px"><div class="field"><label style="font-size:11.5px">Dienst</label><select id="rapport-dienst-'+doelId+'"><option value="">Kies dienst…</option><option>Ochtenddienst</option><option>Middagdienst</option><option>Avonddienst</option></select></div>'+
     '<div class="field"><label style="font-size:11.5px">Datum</label><input type="date" id="rapport-datum-'+doelId+'" value="'+vandaag+'"></div></div>'+
-    '<textarea id="rapport-tekst-'+doelId+'" placeholder="Wat is er gebeurd?" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>'+
+    '<textarea maxlength="'+MAXLEN.tekst+'" id="rapport-tekst-'+doelId+'" placeholder="Wat is er gebeurd?" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:8px;font:inherit;font-size:13px"></textarea>'+
     '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:6px"><input type="checkbox" id="rapport-media-'+doelId+'" style="width:auto">Foto toevoegen</label>'+
     '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:4px"><input type="checkbox" id="rapport-audio-'+doelId+'" style="width:auto">🎤 Spraakbericht toevoegen</label>'+
     '<div class="field" style="margin-top:6px"><label style="font-size:11.5px">Bijlagen</label><button type="button" class="small" style="width:100%" id="rapport-bijlage-'+doelId+'">+ Bestanden toevoegen</button></div>'+
@@ -7349,7 +7352,7 @@ function renderCaDoelen(){
     el('modal-snap').addEventListener('click',closeModal);
    });
    document.querySelector('[data-opslaanrapport="'+doelId+'"]').addEventListener('click',function(){
-    var tekst=el('rapport-tekst-'+doelId).value.trim();if(!tekst)return;
+    var tekst=kap(el('rapport-tekst-'+doelId).value.trim(),MAXLEN.tekst);if(!tekst)return;
     var media=el('rapport-media-'+doelId).checked;
     var audio=el('rapport-audio-'+doelId).checked;
     var dienst=el('rapport-dienst-'+doelId).value;
@@ -7398,10 +7401,10 @@ function renderCaDoelen(){
   b.addEventListener('click',function(){
    var parts=b.getAttribute('data-editrapport').split('|'),doelId=+parts[0],rapId=+parts[1];
    var doel=d.doelen.filter(function(x){return x.id===doelId;})[0],r=doel.rapportages.filter(function(x){return x.id===rapId;})[0];
-   openModal('<h3>Rapportage bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-rap-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(r.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Rapportage bewerken</h3><div class="field"><label>Tekst</label><textarea maxlength="'+MAXLEN.tekst+'" id="modal-rap-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(r.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
-    var tekst=el('modal-rap-tekst').value.trim();if(!tekst){el('modal-rap-tekst').style.borderColor='var(--brick)';return;}
+    var tekst=kap(el('modal-rap-tekst').value.trim(),MAXLEN.tekst);if(!tekst){el('modal-rap-tekst').style.borderColor='var(--brick)';return;}
     r.tekst=tekst;bewaarClientData(caClientId);closeModal();renderCaDoelen();
    });
   });
@@ -7617,12 +7620,12 @@ function renderCaIkboek(){
  wireMediaThumbs(el('ca-body'));
  el('ca-nieuwe-ikboek').addEventListener('click',function(){
   openModal('<h3>Nieuwe Ik-Boek pagina</h3>'+
-   '<div class="field"><label>Wat wil je vastleggen?</label><textarea id="modal-ikboek-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px"></textarea></div>'+
+   '<div class="field"><label>Wat wil je vastleggen?</label><textarea maxlength="'+MAXLEN.tekst+'" id="modal-ikboek-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px"></textarea></div>'+
    '<div class="field"><label>Media</label><select id="modal-ikboek-mediatype"><option value="">Geen</option><option value="foto">Foto</option><option value="video">Video</option></select></div>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Plaatsen</button></div>');
   el('modal-annuleer').addEventListener('click',closeModal);
   el('modal-opslaan').addEventListener('click',function(){
-   var tekst=el('modal-ikboek-tekst').value.trim();if(!tekst){el('modal-ikboek-tekst').style.borderColor='var(--brick)';return;}
+   var tekst=kap(el('modal-ikboek-tekst').value.trim(),MAXLEN.tekst);if(!tekst){el('modal-ikboek-tekst').style.borderColor='var(--brick)';return;}
    d.ikboek.push({id:nieuwNummer(),tekst:tekst,tijd:rapportageTijd(''),auteur:wieBenIk(),mediaType:el('modal-ikboek-mediatype').value,reacties:{}});bewaarClientData(caClientId);
    closeModal();renderCaIkboek();
   });
@@ -7638,10 +7641,10 @@ function renderCaIkboek(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editikboek]'),function(b){
   b.addEventListener('click',function(){
    var e=d.ikboek.filter(function(x){return x.id===+b.getAttribute('data-editikboek');})[0];
-   openModal('<h3>Pagina bewerken</h3><div class="field"><label>Wat wil je vastleggen?</label><textarea id="modal-ikb-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(e.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Pagina bewerken</h3><div class="field"><label>Wat wil je vastleggen?</label><textarea maxlength="'+MAXLEN.tekst+'" id="modal-ikb-tekst" style="width:100%;min-height:70px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(e.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
-    var tekst=el('modal-ikb-tekst').value.trim();if(!tekst){el('modal-ikb-tekst').style.borderColor='var(--brick)';return;}
+    var tekst=kap(el('modal-ikb-tekst').value.trim(),MAXLEN.tekst);if(!tekst){el('modal-ikb-tekst').style.borderColor='var(--brick)';return;}
     e.tekst=tekst;bewaarClientData(caClientId);closeModal();renderCaIkboek();
    });
   });
@@ -7738,7 +7741,7 @@ function renderCaChatList(){
   openModal('<h3>Nieuw gesprek</h3>'+
    '<div class="minitabs"><button type="button" class="on" data-gesprektype="persoon">Met één persoon</button><button type="button" data-gesprektype="groep">Nieuwe groep</button></div>'+
    '<div id="gesprek-persoon-veld"><div class="field"><label>Kies iemand</label><select id="modal-gesprek-persoon">'+persoonOpties+'</select></div></div>'+
-   '<div id="gesprek-groep-veld" hidden><div class="field"><label>Groepsnaam</label><input id="modal-gesprek-naam" placeholder="Bijv. Ochtenddienst"></div><div class="field"><label>Leden</label>'+checklist+'</div></div>'+
+   '<div id="gesprek-groep-veld" hidden><div class="field"><label>Groepsnaam</label><input maxlength="'+MAXLEN.titel+'" id="modal-gesprek-naam" placeholder="Bijv. Ochtenddienst"></div><div class="field"><label>Leden</label>'+checklist+'</div></div>'+
    '<div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Starten</button></div>');
   var type='persoon';
   document.querySelectorAll('[data-gesprektype]').forEach(function(b){
@@ -7761,7 +7764,7 @@ function renderCaChatList(){
     if(!bestaatAl)d.customChats.push({key:key,groep:false,persoonId:pid});
     caChatKey=key;
    }else{
-    var naamVal=el('modal-gesprek-naam').value.trim();if(!naamVal){el('modal-gesprek-naam').style.borderColor='var(--brick)';return;}
+    var naamVal=kap(el('modal-gesprek-naam').value.trim(),MAXLEN.titel);if(!naamVal){el('modal-gesprek-naam').style.borderColor='var(--brick)';return;}
     var leden=Array.from(document.querySelectorAll('.gesprek-lid:checked')).map(function(c){return +c.value;});
     if(!leden.length)return;
     var key='groep-custom-'+caClientId+'-'+nieuwNummer();
@@ -7800,12 +7803,12 @@ function renderCaChatThread(){
  }
  html+=t.inactief
   ?'<p class="empty-msg" style="margin-top:10px">'+esc(th.naam)+' kan op dit moment niet inloggen. Je kunt dit gesprek teruglezen, maar niets versturen.</p>'
-  :'<div class="chatinputrow"><input id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
+  :'<div class="chatinputrow"><input maxlength="'+MAXLEN.bericht+'" id="ca-chat-input" placeholder="Typ een bericht…"><button type="button" class="primary" id="ca-chat-send">Stuur</button></div>';
  el('ca-body').innerHTML=html;
  wireMediaThumbs(el('ca-body'));
  el('ca-chat-terug').addEventListener('click',renderCaChatList);
  if(!t.inactief)el('ca-chat-send').addEventListener('click',function(){
-  var v=el('ca-chat-input').value.trim();if(!v)return;
+  var v=kap(el('ca-chat-input').value.trim(),MAXLEN.bericht);if(!v)return;
   var ik=huidigeGebruiker();
   th.berichten.push({id:nieuwBerichtId(),van:wieBenIk(),vanId:ik?ik.id:null,tekst:v,tijd:new Date().toISOString()});bewaarChatThread(caChatKey);
   nieuweMelding(caClientId,'nieuwBericht','Nieuw bericht in '+(th.naam||'een gesprek'));
@@ -7818,10 +7821,10 @@ function renderCaChatThread(){
  Array.prototype.forEach.call(el('ca-body').querySelectorAll('[data-editmsg]'),function(b){
   b.addEventListener('click',function(){
    var m=th.berichten.filter(function(x){return String(x.id)===b.getAttribute('data-editmsg');})[0];
-   openModal('<h3>Bericht bewerken</h3><div class="field"><label>Tekst</label><textarea id="modal-msg-tekst" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(m.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
+   openModal('<h3>Bericht bewerken</h3><div class="field"><label>Tekst</label><textarea maxlength="'+MAXLEN.bericht+'" id="modal-msg-tekst" style="width:100%;min-height:60px;border:1px solid var(--line-strong);border-radius:8px;padding:9px;font:inherit;font-size:14.5px">'+esc(m.tekst)+'</textarea></div><div class="modal-actions"><button type="button" id="modal-annuleer">Annuleren</button><button type="button" class="primary" id="modal-opslaan">Opslaan</button></div>');
    el('modal-annuleer').addEventListener('click',closeModal);
    el('modal-opslaan').addEventListener('click',function(){
-    var tekst=el('modal-msg-tekst').value.trim();if(!tekst){el('modal-msg-tekst').style.borderColor='var(--brick)';return;}
+    var tekst=kap(el('modal-msg-tekst').value.trim(),MAXLEN.bericht);if(!tekst){el('modal-msg-tekst').style.borderColor='var(--brick)';return;}
     m.tekst=tekst;m.bewerkt=true;m.bewerktOp=new Date().toISOString();bewaarChatThread(caChatKey);closeModal();renderCaChatThread();
    });
   });
