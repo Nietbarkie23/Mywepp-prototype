@@ -4031,8 +4031,12 @@ function contactpersonenFlow(){
    scheelt dat, mits je eerst laat zien wat er gaat gebeuren — een import die
    meteen doorvoert is precies hoe je per ongeluk vijftien dubbele accounts
    maakt. */
+/* Dezelfde controles als het gewone formulier. Ontbraken ze, dan kwamen er
+   dubbele accounts uit één plaklijst, twee mensen met hetzelfde inlogadres, en
+   een naam boven de 100 tekens liet de database de hele opslag weigeren
+   (aangetoond met plakken.js). */
 function leesImportregels(tekst,type){
- var rijen=[];
+ var rijen=[],namen={},mails={};
  (tekst||'').split(/\r?\n/).forEach(function(regel,i){
   regel=regel.trim();
   if(!regel)return;
@@ -4041,15 +4045,22 @@ function leesImportregels(tekst,type){
   var mail=delen[1]||'';
   var tel=delen[2]||'';
   var stukken=naamdeel.split(/\s+/);
-  var voor=stukken.shift()||'';
-  var achter=stukken.join(' ');
+  var voor=cap(stukken.shift()||'');
+  var achter=cap(stukken.join(' '));
+  var sleutelNaam=(voor+' '+achter).toLowerCase(),sleutelMail=mail.toLowerCase();
   var fout='';
   if(!voor||!achter)fout='vul een voor- en achternaam in';
+  else if(voor.length>MAXLEN.naam||achter.length>MAXLEN.naam)fout='de naam is te lang (hooguit '+MAXLEN.naam+' tekens per deel)';
   else if(!mail&&type!=='client')fout='vul een e-mailadres in';
+  else if(mail.length>MAXLEN.mail)fout='het e-mailadres is te lang';
   else if(mail&&!mailGeldig(mail))fout='dit e-mailadres klopt niet';
-  else if(tel&&!telGeldig(tel))fout='dit telefoonnummer klopt niet';
-  else if(people.some(function(p){return !p.archived&&naam(p).toLowerCase()===(voor+' '+achter).toLowerCase()&&p.groepen.indexOf(huidigeGroep)>-1;}))
+  else if(tel&&(tel.length>MAXLEN.tel||!telGeldig(tel)))fout='dit telefoonnummer klopt niet';
+  else if(namen[sleutelNaam])fout='staat al eerder in deze lijst (regel '+namen[sleutelNaam]+')';
+  else if(mail&&mails[sleutelMail])fout='dit e-mailadres staat al eerder in deze lijst (regel '+mails[sleutelMail]+')';
+  else if(mail&&mailInGebruik(mail))fout='dit e-mailadres is al in gebruik door iemand anders';
+  else if(people.some(function(p){return !p.archived&&naam(p).toLowerCase()===sleutelNaam&&p.groepen.indexOf(huidigeGroep)>-1;}))
    fout='staat al in deze groep';
+  if(!fout){namen[sleutelNaam]=i+1;if(mail)mails[sleutelMail]=i+1;}
   rijen.push({regel:i+1,voor:voor,achter:achter,mail:mail,tel:tel,fout:fout});
  });
  return rijen;

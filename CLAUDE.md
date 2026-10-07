@@ -93,7 +93,9 @@ grote letters en een beperkt menu (`zetClientweergave`, `CA_CLIENTTABS`).
 **Adminkant** — periodieke toegangscontrole (`openToegangscontrole`,
 `CONTROLE_MAANDEN`, opslag onder `toegangscontrole`), uit dienst als één
 handeling (`uitDienstFlow`, `wieBlijftLiggen`), meerdere mensen toevoegen door
-plakken (`importFlow`, `leesImportregels`), gekoppelde groepen
+plakken (`importFlow`, `leesImportregels`; met dezelfde controles als het
+formulier: `cap`, `MAXLEN`, `mailInGebruik`, dubbele regels binnen de lijst,
+`plakken.js`), gekoppelde groepen
 (`groepKoppelingen`, `clusterVan`, `vulKoppelingAan`), wijzigingen doorvoeren
 vanuit de Admin Tools (`voerWijzigingenDoor`).
 
