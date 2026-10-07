@@ -930,12 +930,37 @@ async function maakNieuweIdsVrij(){
    database zelf nakijken, voor de mensen die net veranderden (geraakt) en voor
    rechten op gewiste id's (gewist). Gearchiveerden houden hun rechten: die
    komen terug bij herstellen. */
+/* Veel personen bijwerken in één verzoek per 500 (werk_personen_bij), per
+   persoon alleen de opgegeven velden. Per persoon een eigen verzoek kostte bij
+   het hernoemen van een groep met 1200 mensen 1200 schrijfverzoeken, tegen een
+   grens van 2000 per twee minuten per adres (aangetoond met hernoem-groot.js).
+   Geeft per rij terug of het lukte. Zonder de functie: de oude weg. */
+async function werkPersonenBij(lijst){
+ var goed=lijst.map(function(){return false;});
+ for(var i=0;i<lijst.length;i+=500){
+  var stuk=lijst.slice(i,i+500),klaar=false;
+  if(sb.rpc){
+   var res=await sb.rpc('werk_personen_bij',{p_rijen:stuk.map(function(x){return {id:x.id,wijz:x.wijz};})});
+   if(!res.error){
+    var mis=(res.data||[]).map(String);
+    stuk.forEach(function(x,j){goed[i+j]=mis.indexOf(String(x.id))<0;});
+    klaar=true;
+   }else if(res.error.code!=='PGRST202')klaar=true;
+  }
+  if(!klaar){
+   var los=await Promise.all(stuk.map(function(x){return sb.from('personen').update(x.wijz).eq('id',x.id);}));
+   los.forEach(function(res,j){goed[i+j]=!res.error;});
+  }
+ }
+ return goed;
+}
 async function ruimRechtenOpInDatabase(geraakt,gewist){
  var q=await alleRijen(function(){return sb.from('personen').select('id,groepen,archived,client_rechten,medewerker_rechten,naaste_rechten').order('id');});
  if(q.error||!q.data)return false;
  var per={};q.data.forEach(function(r){per[r.id]=r;});
  var deelt=function(a,b){return (a.groepen||[]).some(function(g){return (b.groepen||[]).indexOf(g)>-1;});};
  var velden=['client_rechten','medewerker_rechten','naaste_rechten'];
+ var teDoen=[];
  for(var i=0;i<q.data.length;i++){
   var r=q.data[i],wijz={};
   velden.forEach(function(v){
@@ -949,17 +974,20 @@ async function ruimRechtenOpInDatabase(geraakt,gewist){
    if(n)wijz[v]=n;
   });
   if(!Object.keys(wijz).length)continue;
-  var res=await sb.from('personen').update(wijz).eq('id',r.id);
-  if(res.error)return false;
-  var p=findPerson(r.id);
-  /* Alleen de weggehaalde rechten ook op het scherm weghalen. */
-  Object.keys(wijz).forEach(function(v){
-   var loc=p&&p[OBJECTVELD_PROP[v]];if(!loc)return;
-   Object.keys(r[v]||{}).forEach(function(k){if(!(k in wijz[v]))delete loc[k];});
-  });
-  if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);Object.assign(st,wijz);dbStandPersonen[r.id]=JSON.stringify(st);}
+  teDoen.push({id:r.id,wijz:wijz,r:r});
  }
- return true;
+ var goed=await werkPersonenBij(teDoen);
+ teDoen.forEach(function(x,i){
+  if(!goed[i])return;
+  var p=findPerson(x.id);
+  /* Alleen de weggehaalde rechten ook op het scherm weghalen. */
+  Object.keys(x.wijz).forEach(function(v){
+   var loc=p&&p[OBJECTVELD_PROP[v]];if(!loc)return;
+   Object.keys(x.r[v]||{}).forEach(function(k){if(!(k in x.wijz[v]))delete loc[k];});
+  });
+  if(dbStandPersonen[x.id]){var st=JSON.parse(dbStandPersonen[x.id]);Object.assign(st,x.wijz);dbStandPersonen[x.id]=JSON.stringify(st);}
+ });
+ return goed.every(Boolean);
 }
 /* Gekoppelde groepen delen hun medewerkers. Een medewerker die een andere
    beheerder (met een oude stand) in één van die groepen zette, of die er al in
@@ -977,6 +1005,7 @@ async function vulTeamsAanInDatabase(ids){
  var bestaand=gq.data.map(function(r){return r.naam;});
  var q=await alleRijen(function(){return sb.from('personen').select('id,type,groepen,archived').order('id');});
  if(q.error||!q.data)return false;
+ var aanvullen=[];
  for(var i=0;i<q.data.length;i++){
   var r=q.data[i];
   if(r.type!=='medewerker'||r.archived||(ids&&ids.indexOf(r.id)<0))continue;
@@ -986,13 +1015,16 @@ async function vulTeamsAanInDatabase(ids){
    k.forEach(function(x){if(g.indexOf(x)<0&&bestaand.indexOf(x)>-1){g.push(x);erbij=true;}});
   });
   if(!erbij)continue;
-  var res=await sb.from('personen').update({groepen:g}).eq('id',r.id);
-  if(res.error)return false;
-  var p=findPerson(r.id);
-  if(p)g.forEach(function(x){if((r.groepen||[]).indexOf(x)<0&&p.groepen.indexOf(x)<0&&GROEPEN.indexOf(x)>-1)p.groepen.push(x);});
-  if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);st.groepen=g;dbStandPersonen[r.id]=JSON.stringify(st);}
+  aanvullen.push({id:r.id,wijz:{groepen:g},r:r});
  }
- return true;
+ var goed=await werkPersonenBij(aanvullen);
+ aanvullen.forEach(function(x,i){
+  if(!goed[i])return;
+  var g=x.wijz.groepen,p=findPerson(x.id);
+  if(p)g.forEach(function(y){if((x.r.groepen||[]).indexOf(y)<0&&p.groepen.indexOf(y)<0&&GROEPEN.indexOf(y)>-1)p.groepen.push(y);});
+  if(dbStandPersonen[x.id]){var st=JSON.parse(dbStandPersonen[x.id]);st.groepen=g;dbStandPersonen[x.id]=JSON.stringify(st);}
+ });
+ return goed.every(Boolean);
 }
 /* Alle schrijfacties van deze sessie op volgorde. Ze werden los van elkaar
    gestart (koppelen, dan meteen een groep verwijderen) en liepen dan door
@@ -1093,8 +1125,8 @@ async function schrijfPersonenWeg(){
     });
    });
   }
-  var uitkomsten=await Promise.all(updates.map(function(u){return sb.from('personen').update(u.diff).eq('id',u.rij.id);}));
-  uitkomsten.forEach(function(res,i){if(res.error)fout=true; else dbStandPersonen[updates[i].rij.id]=JSON.stringify(updates[i].rij);});
+  var uitkomsten=await werkPersonenBij(updates.map(function(u){return {id:u.rij.id,wijz:u.diff};}));
+  uitkomsten.forEach(function(ok,i){if(!ok)fout=true; else dbStandPersonen[updates[i].rij.id]=JSON.stringify(updates[i].rij);});
   var geraakt=nieuweRijen.map(function(r){return r.id;}).concat(updates.filter(function(u){
    return ['groepen','archived'].concat(OBJECTVELDEN).some(function(k){return k in u.diff;});}).map(function(u){return u.rij.id;}));
   if(geraakt.length&&!(await vulTeamsAanInDatabase(geraakt)))fout=true;
@@ -4581,12 +4613,12 @@ async function werkGroepnamenBijInDatabase(wegNamen){
  var rijen=await alleRijen(function(){return sb.from('personen').select('id,groepen').order('id');});
  if(rijen.error)return false;
  var teDoen=(rijen.data||[]).filter(function(r){return (r.groepen||[]).some(function(g){return wegNamen.indexOf(g)>-1;});});
- for(var i=0;i<teDoen.length;i++){
-  var r=teDoen[i],g2=nieuw(r.groepen||[]);
-  var res=await sb.from('personen').update({groepen:g2}).eq('id',r.id);
-  if(res.error)return false;
-  if(dbStandPersonen[r.id]){var st=JSON.parse(dbStandPersonen[r.id]);st.groepen=g2;dbStandPersonen[r.id]=JSON.stringify(st);}
- }
+ var nieuweGroepen=teDoen.map(function(r){return {id:r.id,wijz:{groepen:nieuw(r.groepen||[])}};});
+ var gelukt=await werkPersonenBij(nieuweGroepen);
+ if(!gelukt.every(Boolean))return false;
+ nieuweGroepen.forEach(function(x){
+  if(dbStandPersonen[x.id]){var st=JSON.parse(dbStandPersonen[x.id]);st.groepen=x.wijz.groepen;dbStandPersonen[x.id]=JSON.stringify(st);}
+ });
  /* Wie zo een groep kwijtraakte, kan rechten hebben op mensen met wie hij geen
     groep meer deelt (ook tussen mensen die deze sessie niet kent). */
  if(teDoen.length&&!(await ruimRechtenOpInDatabase(teDoen.map(function(r){return r.id;}),[])))return false;

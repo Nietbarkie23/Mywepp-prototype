@@ -291,6 +291,16 @@ volledige select moet ook via `alleRijen`. `nepdb.js` speelt de grens na
 `veel-personen.js` (1200 personen), `veel-groepen.js` (1200 groepen; de
 tabel mag er 10.000 hebben), `dossier-fuzz.js`.
 
+**Personen bijwerken gaat gebundeld:** `werkPersonenBij` stuurt per 500
+personen één verzoek naar `werk_personen_bij(p_rijen)` (migratie
+`personen_in_een_keer_bijwerken`, `[{id, wijz}]`, per persoon alleen die
+velden; geeft de id's terug die mislukten, de rest gaat door). Per persoon een
+verzoek kostte bij hernoemen van een groep met 1200 mensen 1203
+schrijfverzoeken, tegen de grens van 2000 per twee minuten; nu 6
+(`hernoem-groot.js <poort> <aantal> [max]`). Gebruikt in `schrijfPersonenWeg`,
+`ruimRechtenOpInDatabase`, `vulTeamsAanInDatabase`,
+`werkGroepnamenBijInDatabase`. Zonder de functie: per persoon.
+
 **Profielfoto's** worden in de browser verkleind (`verkleinFoto`: 320 px JPEG,
 zo nodig kleiner, max. `FOTO_MAX_TEKENS`). Ongewijzigd ging een telefoonfoto
 als base64 in `personen.foto` en de trigger `rijgrootte` (64 KB) weigerde de
